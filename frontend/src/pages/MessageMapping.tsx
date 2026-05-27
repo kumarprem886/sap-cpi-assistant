@@ -6,6 +6,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { mappingAPI } from '../api/client'
+import { IS_STATIC_HOST } from '../components/Layout'
 import ResultPanel from '../components/ResultPanel'
 import MarkdownResult from '../components/MarkdownResult'
 
@@ -587,19 +588,26 @@ export default function MessageMapping() {
             </div>
 
             {/* Mapping name + Generate */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <label className="text-xs text-gray-400 whitespace-nowrap">Mapping name:</label>
               <input type="text" className="input-field text-sm py-1 px-2 w-60"
                 placeholder="MM_SheetMapping"
                 value={sheetMmapName}
                 onChange={e => setSheetMmapName(e.target.value.replace(/\s+/g, '_'))} />
-              <button
-                onClick={generateFromSheet}
-                disabled={sheetLoading || !sheetSrcFile || !sheetTgtFile || !sheetFile}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50">
-                {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                {sheetLoading ? 'Building .mmap…' : 'Generate & Download .mmap'}
-              </button>
+              {IS_STATIC_HOST ? (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-amber-900/40 border border-amber-700/50 text-amber-300">
+                  <AlertCircle size={15} className="shrink-0" />
+                  Backend not available on GitHub Pages — run locally to use this feature
+                </div>
+              ) : (
+                <button
+                  onClick={generateFromSheet}
+                  disabled={sheetLoading || !sheetSrcFile || !sheetTgtFile || !sheetFile}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50">
+                  {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  {sheetLoading ? 'Building .mmap…' : 'Generate & Download .mmap'}
+                </button>
+              )}
             </div>
 
             {/* Success summary */}
@@ -619,8 +627,8 @@ export default function MessageMapping() {
             )}
 
             {/* Expected sheet format */}
-            <div className="border-t border-gray-700 pt-4">
-              <p className="text-xs text-gray-500 font-semibold mb-2">Expected sheet format (any extra columns are ignored):</p>
+            <div className="border-t border-gray-700 pt-4 space-y-4">
+              <p className="text-xs text-gray-500 font-semibold">Expected sheet format (any extra columns are ignored):</p>
               <div className="overflow-x-auto rounded-lg border border-gray-700">
                 <table className="text-xs w-full">
                   <thead className="bg-gray-800">
@@ -633,14 +641,14 @@ export default function MessageMapping() {
                   <tbody className="divide-y divide-gray-800">
                     {[
                       ['mn','Material number','','','MaterialNumber','',''],
-                      ['bn','Batch number','','','BatchNumber','',''],
                       ['pl','Plant','','','Plant','',''],
-                      ['sender','Sender ID','','','LSPId','',''],
-                      [null,'(derived)','','','RunDate','(/msg/header/date)+T+(/msg/header/time)','concat date+time'],
+                      ['sender','Sender ID','','','LSPId','toUpperCase((/msg/header/sender))','uppercase'],
+                      [null,'—','','','RunDate','(/msg/header/date)+T+(/msg/header/time)','concat shorthand'],
+                      ['date','','','','FormattedDate','formatDate((/msg/header/date), yyyyMMdd, yyyy-MM-dd)',''],
                     ].map((row, i) => (
                       <tr key={i} className="hover:bg-gray-800/40">
                         {row.map((cell, j) => (
-                          <td key={j} className={`px-2 py-1 ${j === 0 || j === 4 ? 'text-white font-mono' : 'text-gray-500'}`}>
+                          <td key={j} className={`px-2 py-1 ${j === 0 || j === 4 ? 'text-white font-mono' : j === 5 ? 'text-amber-400 font-mono text-[10px]' : 'text-gray-500'}`}>
                             {cell || <span className="italic text-gray-700">—</span>}
                           </td>
                         ))}
@@ -648,6 +656,51 @@ export default function MessageMapping() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Node function reference */}
+              <div>
+                <p className="text-xs text-gray-500 font-semibold mb-2">Mapping Rule column — supported syntax:</p>
+                <div className="rounded-lg border border-gray-700 overflow-hidden">
+                  <table className="text-xs w-full">
+                    <thead className="bg-gray-800/80">
+                      <tr>
+                        <th className="px-3 py-1.5 text-left text-gray-400 font-semibold w-1/3">Rule (Mapping Rule column)</th>
+                        <th className="px-3 py-1.5 text-left text-gray-400 font-semibold w-1/4">Function used</th>
+                        <th className="px-3 py-1.5 text-left text-gray-400 font-semibold">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {[
+                        ['(/field1)+CONST+(/field2)', 'concat', 'Concat shorthand — joins fields/constants with +'],
+                        ['concat((/f1), SEP, (/f2))', 'concat', 'Explicit concat — same result, more readable'],
+                        ['toUpperCase((/field))', 'toUpperCase', 'Convert text to upper case'],
+                        ['toLowerCase((/field))', 'toLowerCase', 'Convert text to lower case'],
+                        ['trim((/field))', 'trim', 'Remove leading/trailing whitespace'],
+                        ['substring((/field), start, len)', 'substring', 'Extract substring (0-based start)'],
+                        ['formatDate((/field), inFmt, outFmt)', 'formatDate', 'Reformat a date string'],
+                        ['mapWithDefault((/field), k1, v1, k2, v2, …)', 'mapWithDefault', 'Value lookup table with key→value pairs'],
+                        ['splitByValue((/field), DELIM)', 'splitByValue', 'Split a field by delimiter into occurrences'],
+                        ['if(equals((/field), VAL), YES, NO)', 'if + equals', 'Conditional: if field = VAL then YES else NO'],
+                        ['replaceAll((/field), REGEX, REPLACEMENT)', 'replaceAll', 'Regex replace within a field value'],
+                        ['length((/field))', 'length', 'String length as a number'],
+                        ['UseOneAsMany((/field))', 'UseOneAsMany', 'Repeat a single value for each occurrence of target'],
+                      ].map(([rule, func, desc], i) => (
+                        <tr key={i} className="hover:bg-gray-800/30">
+                          <td className="px-3 py-1.5 font-mono text-amber-400 text-[10px]">{rule}</td>
+                          <td className="px-3 py-1.5 text-emerald-400 text-[10px]">{func}</td>
+                          <td className="px-3 py-1.5 text-gray-400">{desc}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="px-3 py-2 bg-gray-900/50 text-[10px] text-gray-500 border-t border-gray-700">
+                    <strong className="text-gray-400">Args:</strong>&nbsp;
+                    <code className="text-amber-400">(/xpath/to/field)</code> or <code className="text-amber-400">/xpath/to/field</code> → source field &nbsp;|&nbsp;
+                    Bare text (no slashes) → constant string &nbsp;|&nbsp;
+                    Any SAP CPI standard node function name works — write it exactly as in the mapping editor.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
