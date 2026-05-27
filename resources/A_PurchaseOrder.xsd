@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="A_PurchaseOrder">
+    <xs:complexType>
+      <xs:sequence>
+
+        <!-- Purchase Order Headers -->
+        <xs:element name="PurchaseOrder" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderType" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingProcessingStatus" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="LastChangeDateTime" type="xs:string" minOccurs="0"/>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="Language" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentTerms" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingOrganization" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="ExchangeRate" type="xs:string" minOccurs="0"/>
+              <xs:element name="ValidityStartDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="ValidityEndDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierRespSalesPersonName" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierPhoneNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsClassification" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsTransferLocation" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsVersion" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsLocation1" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsLocation2" type="xs:string" minOccurs="0"/>
+              <xs:element name="ManualSupplierAddressID" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressName" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressStreetName" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressCityName" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressPostalCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressRegion" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressCountry" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressPhoneNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsEndOfPurposeBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoicingParty" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Purchase Order Items -->
+        <xs:element name="PurchaseOrderItem" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItemText" type="xs:string" minOccurs="0"/>
+              <xs:element name="Plant" type="xs:string" minOccurs="0"/>
+              <xs:element name="StorageLocation" type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingInfoRecord" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierMaterialNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrderQuantity" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderQuantityUnit" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrderPriceUnit" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetPriceAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetPriceQuantity" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="ShippingInstruction" type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsReceiptIsExpected" type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsReceiptIsNonValuated" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceIsExpected" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceIsGoodsReceiptBased" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItemCategory" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountAssignmentCategory" type="xs:string" minOccurs="0"/>
+              <xs:element name="MultipleAcctAssgmtDistribution" type="xs:string" minOccurs="0"/>
+              <xs:element name="PartialInvoiceDistribution" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsReturnsItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="RequisitionerName" type="xs:string" minOccurs="0"/>
+              <xs:element name="Material" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierQuotation" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierQuotationExternalID" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsOrderAcknRqd" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingDocumentDeletionCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="RequestedQuantity" type="xs:string" minOccurs="0"/>
+              <xs:element name="RequestedDeliveryDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="AssignmentNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="ExternalRequisitionDocNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="ShelfLifeExpirationDatePeriod" type="xs:string" minOccurs="0"/>
+              <xs:element name="RequirementTracking" type="xs:string" minOccurs="0"/>
+              <xs:element name="EvaldRcptSettlmtIsAllowed" type="xs:string" minOccurs="0"/>
+              <xs:element name="OverdelivTolrtdLmtRatioInPct" type="xs:string" minOccurs="0"/>
+              <xs:element name="UnlimitedOverdeliveryIsAllowed" type="xs:string" minOccurs="0"/>
+              <xs:element name="UnderdelivTolrtdLmtRatioInPct" type="xs:string" minOccurs="0"/>
+              <xs:element name="ValuationType" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsSubcontractingItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="GrossAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetPriceAmountInCompanyCodeCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrderedQuantity" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Purchase Order Schedule Lines -->
+        <xs:element name="PurchaseOrderScheduleLine" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="ScheduleLine" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="ScheduleLineOrderQuantity" type="xs:string" minOccurs="0"/>
+              <xs:element name="ScheduledQuantity" type="xs:string" minOccurs="0"/>
+              <xs:element name="ScheduleLineDeliveryDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="ScheduleLineDelivDateCategory" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Purchase Order Item Notes -->
+        <xs:element name="PurchaseOrderItemNote" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="TextObjectType" type="xs:string" minOccurs="0"/>
+              <xs:element name="Language" type="xs:string" minOccurs="0"/>
+              <xs:element name="PlainLongText" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

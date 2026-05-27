@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="A_SupplierInvoice">
+    <xs:complexType>
+      <xs:sequence>
+
+        <!-- Supplier Invoice Headers -->
+        <xs:element name="SupplierInvoice" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SupplierInvoice" type="xs:string" minOccurs="0"/>
+              <xs:element name="FiscalYear" type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentType" type="xs:string" minOccurs="0"/>
+              <xs:element name="PostingDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierInvoiceIDByInvcgParty" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoicingParty" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceGrossAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentHeaderText" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentTerms" type="xs:string" minOccurs="0"/>
+              <xs:element name="DueCalculationBaseDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetPaymentDays" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentBlockingReason" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountingDocumentType" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxIsCalculatedAutomatically" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessAreaForGL" type="xs:string" minOccurs="0"/>
+              <xs:element name="BranchCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="LedgerGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="AreComponentsDeliveredFreeOfChge" type="xs:string" minOccurs="0"/>
+              <xs:element name="BillingDocumentListCategory" type="xs:string" minOccurs="0"/>
+              <xs:element name="CashDiscount1Days" type="xs:string" minOccurs="0"/>
+              <xs:element name="CashDiscount1Percent" type="xs:string" minOccurs="0"/>
+              <xs:element name="CashDiscount2Days" type="xs:string" minOccurs="0"/>
+              <xs:element name="CashDiscount2Percent" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetPaymentAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPlace" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxDeterminationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceReference" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceReferenceFiscalYear" type="xs:string" minOccurs="0"/>
+              <xs:element name="FixedCashDiscount" type="xs:string" minOccurs="0"/>
+              <xs:element name="CalculatedTaxAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="NetAmount" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Supplier Invoice Items -->
+        <xs:element name="SupplierInvoiceItem" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SupplierInvoice" type="xs:string" minOccurs="0"/>
+              <xs:element name="FiscalYear" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierInvoiceItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="PlantForTax" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierInvoiceItemAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderQuantityUnit" type="xs:string" minOccurs="0"/>
+              <xs:element name="QuantityInPurchaseOrderUnit" type="xs:string" minOccurs="0"/>
+              <xs:element name="Plant" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocument" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocumentFiscalYear" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocumentItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="POSequentialDeliveryNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxJurisdiction" type="xs:string" minOccurs="0"/>
+              <xs:element name="FreightSupplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsNotCashDiscountLiable" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Supplier Invoice Tax -->
+        <xs:element name="SupplierInvoiceTax" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="SupplierInvoice" type="xs:string" minOccurs="0"/>
+              <xs:element name="FiscalYear" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxCountry" type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxBaseAmountInTransCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxBaseAmount" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

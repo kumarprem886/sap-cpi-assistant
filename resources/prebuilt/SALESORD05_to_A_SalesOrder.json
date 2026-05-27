@@ -1,0 +1,131 @@
+{
+  "id": "SALESORD05_to_A_SalesOrder",
+  "mapping_name": "MM_SALESORD_to_SalesOrder",
+  "source_schema": "SALESORD05.xsd",
+  "target_schema": "A_SalesOrder.xsd",
+  "source_root": "SALESORD05",
+  "target_root": "A_SalesOrder",
+  "field_mappings": [
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesOrderReasonCode",
+      "note": "Match reason code"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_SalesOrder/SalesOrder/TransactionCurrency",
+      "note": "Match currency code"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_SalesOrder/SalesOrder/TotalNetAmount",
+      "note": "Match total value in local currency"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_SalesOrder/SalesOrder/CustomerPaymentTerms",
+      "note": "Match payment terms"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/BELNR",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesOffice",
+      "note": "Match sales office number"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/VBELN",
+      "target_path": "/A_SalesOrder/SalesOrder/HeaderBillingBlockReason",
+      "note": "Match document number (invoiced sales order)"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/NTGEW",
+      "target_path": "/A_SalesOrder/SalesOrderItem/Material",
+      "note": "Match material number"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/BSTNK",
+      "target_path": "/A_SalesOrder/SalesOrder/TotalTaxAmount",
+      "note": "Match total tax amount"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/BRGEW",
+      "target_path": "/A_SalesOrder/SalesOrderItem/HigherLevelItem",
+      "note": "Match parent material (invoiced sales order)"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/GEWEI",
+      "target_path": "/A_SalesOrder/SalesOrderItem/SalesOrder",
+      "note": "Match order ID (invoiced sales order)"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/VSTEL",
+      "target_path": "/A_SalesOrder/SalesOrder/DeliveryDateTypeRule",
+      "note": "Match delivery date type"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKA1/PARTN",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesOffice",
+      "note": "Match vendor name"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKT1/TDOBJECT",
+      "target_path": "/A_SalesOrder/SalesOrder/ProposedDeliveryRoute",
+      "note": "Match delivery route"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKT2/TDFORMAT",
+      "target_path": "/A_SalesOrder/SalesOrder/ShippingType",
+      "note": "Match shipping type"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/POSEX",
+      "target_path": "/A_SalesOrder/SalesOrderItem/SalesOrderItem",
+      "note": "Match item counter"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/ACTION",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesDocApprovalStatus",
+      "note": "Match approval status"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/MENGE",
+      "target_path": "/A_SalesOrder/SalesOrderItem/SalesOrder",
+      "note": "Match requested quantity"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/NETWR",
+      "target_path": "/A_SalesOrder/SalesOrder/TotalGrossAmount",
+      "note": "Match total value in local currency"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/VSTEL",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesDistrict",
+      "note": "Match sales district"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/STATUS",
+      "target_path": "/A_SalesOrder/SalesOrder/DeliveryBlockReason",
+      "note": "Match delivery block reason"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/IDOCTYP",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesOrderReasonCode",
+      "note": "Match document type (sales order)"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/MESTYP",
+      "target_path": "/A_SalesOrder/SalesOrder/SalesOffice",
+      "note": "Match message type"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/SNDPRT",
+      "target_path": "/A_SalesOrder/SalesOrder/Shipper",
+      "note": "Match shipping method"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/CRETIM",
+      "target_path": "/A_SalesOrder/SalesOrder/ServicesRenderedDate",
+      "note": "Match creation date"
+    }
+  ],
+  "total_fields": 24
+}

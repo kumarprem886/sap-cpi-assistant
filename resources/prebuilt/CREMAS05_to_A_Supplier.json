@@ -1,0 +1,91 @@
+{
+  "id": "CREMAS05_to_A_Supplier",
+  "mapping_name": "MM_CREMAS_to_Supplier",
+  "source_schema": "CREMAS05.xsd",
+  "target_schema": "A_Supplier.xsd",
+  "source_root": "CREMAS05",
+  "target_root": "A_Supplier",
+  "field_mappings": [
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/LIFNR",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/Supplier",
+      "note": "Supplier"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/LIFNR",
+      "target_path": "/A_Supplier/SupplierPartnerFunc/Supplier",
+      "note": "Supplier"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ERDAT",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/DeletionIndicator",
+      "note": "Creation Date"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ERNAM",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/DeletionIndicator",
+      "note": "Created by user"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/XBLCK",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/UpdtGrpForSupplierTransData",
+      "note": "Blocked Indicator"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFB1M/AKONT",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/PurchaseOrderCurrency",
+      "note": "Accounting"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFB1M/FDGRV",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/ShippingCondition",
+      "note": "Shipping"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFB1M/E1LFBKM/IBAN",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/ValueAddedTaxRegistration",
+      "note": "IBAN"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/EKORG",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/PurchasingOrganization",
+      "note": "Purchasing Organization"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/EKORG",
+      "target_path": "/A_Supplier/SupplierPartnerFunc/PurchasingOrganization",
+      "note": "Purchasing Organization"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/WAERS",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/PurchaseOrderCurrency",
+      "note": "Currency"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/INCO1",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/IncotermsClassification",
+      "note": "Incoterms Classification"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/INCO2",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/IncotermsTransferLocation",
+      "note": "Incoterms Transfer Location"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/INCO1",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/IncotermsLocation1",
+      "note": "Incoterms Location 1"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/ZTERM",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/PaymentTerms",
+      "note": "Payment Terms"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/VERKF",
+      "target_path": "/A_Supplier/SupplierPurchasingOrg/ValueAddedTaxRegistration",
+      "note": "Verification Key"
+    }
+  ],
+  "total_fields": 16
+}

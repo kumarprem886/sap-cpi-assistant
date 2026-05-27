@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="A_MaterialDocument">
+    <xs:complexType>
+      <xs:sequence>
+
+        <!-- Material Document Header -->
+        <xs:element name="MaterialDocumentHeader" minOccurs="0">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="MaterialDocument"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialDocumentYear"                type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialDocumentHeaderText"          type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser"                       type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationTime"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsMovementCode"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="ReversedMaterialDocument"            type="xs:string" minOccurs="0"/>
+              <xs:element name="ReversedMaterialDocumentYear"        type="xs:string" minOccurs="0"/>
+              <xs:element name="ReverseDocument"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="ReverseDocumentYear"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="PostingDate"                         type="xs:string" minOccurs="0"/>
+              <xs:element name="VersionForPrintingSlip"              type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsReceiptNote"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="BillOfLading"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="DocumentDate"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="ManualEntrOfActlQtysIsRequired"      type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocument"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocumentItem"               type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocumentType"               type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocumentFiscalYear"         type="xs:string" minOccurs="0"/>
+              <xs:element name="Supplier"                            type="xs:string" minOccurs="0"/>
+              <xs:element name="Customer"                            type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Material Document Item -->
+        <xs:element name="MaterialDocumentItem" minOccurs="0" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="MaterialDocument"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialDocumentYear"                type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialDocumentItem"                type="xs:string" minOccurs="0"/>
+              <xs:element name="MovementType"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="Plant"                               type="xs:string" minOccurs="0"/>
+              <xs:element name="StorageLocation"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="Batch"                               type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsMovementType"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="Material"                            type="xs:string" minOccurs="0"/>
+              <xs:element name="ReasonForMovement"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsRecipientName"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="UnloadingPointName"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="Quantity"                            type="xs:string" minOccurs="0"/>
+              <xs:element name="QuantityUnit"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsMovementRefDocType"             type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsMovementRefDocNumber"           type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsMovementRefDocItem"             type="xs:string" minOccurs="0"/>
+              <xs:element name="MoveOrderedQuantityToUnrestricted"   type="xs:string" minOccurs="0"/>
+              <xs:element name="InventorySpecialStockType"           type="xs:string" minOccurs="0"/>
+              <xs:element name="InventoryStockType"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialDocumentItemText"            type="xs:string" minOccurs="0"/>
+              <xs:element name="NumberOfGoodsReceiptSlips"           type="xs:string" minOccurs="0"/>
+              <xs:element name="IssuingOrReceivingPlant"             type="xs:string" minOccurs="0"/>
+              <xs:element name="IssuingOrReceivingStorageLoc"        type="xs:string" minOccurs="0"/>
+              <xs:element name="IssuingOrReceivingBatch"             type="xs:string" minOccurs="0"/>
+              <xs:element name="EWMWarehouse"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrder"                       type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderItem"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocument"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceDocumentItem"               type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsReceiptOrigin"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="EntryUnit"                           type="xs:string" minOccurs="0"/>
+              <xs:element name="EntryQuantity"                       type="xs:string" minOccurs="0"/>
+              <xs:element name="ManufactureDate"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="ExpirationDate"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="MfgCountryCode"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="ShelfLifeExpirationDate"             type="xs:string" minOccurs="0"/>
+              <xs:element name="CostCenter"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyCode"                         type="xs:string" minOccurs="0"/>
+              <xs:element name="GLAccount"                           type="xs:string" minOccurs="0"/>
+              <xs:element name="ProfitCenter"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="WBSElement"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="SalesOrder"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="SalesOrderItem"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="SalesOrderScheduleLine"              type="xs:string" minOccurs="0"/>
+              <xs:element name="FunctionalArea"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessArea"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="PartnerCostCenter"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="PartnerCompanyCode"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="PartnerProfitCenter"                 type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

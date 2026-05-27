@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+  <xs:element name="MATMAS05">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="IDOC" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+
+              <!-- EDI_DC40: Control Record -->
+              <xs:element name="EDI_DC40" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="TABNAM"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MANDT"   type="xs:string" minOccurs="0"/>
+                    <xs:element name="DOCNUM"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="DOCREL"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="STATUS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="DIRECT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="OUTMOD"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="EXPRSS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="TEST"    type="xs:string" minOccurs="0"/>
+                    <xs:element name="IDOCTYP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="CIMTYP"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MESTYP"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MESCOD"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MESFCT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="STD"     type="xs:string" minOccurs="0"/>
+                    <xs:element name="STDVRS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="STDMES"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPOR"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPRT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPFC"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPRN"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDLAD"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPOR"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPRT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPFC"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPRN"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVLAD"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="CREDAT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="CRETIM"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="REFINT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="REFGRP"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="REFFIL"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="REFMES"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="ARCKEY"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SERIAL"  type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MARAM: Material Master General Data -->
+              <xs:element name="E1MARAM" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MATNR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MEINS"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MBRSH"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MTART"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MATKL"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="BISMT"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="NORMT"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="LABOR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="EKWSL"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="BRGEW"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="NTGEW"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="GEWEI"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOLUM"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOLEH"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="BEHVO"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="RAUBE"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="TEMPB"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="DISST"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="TRAGR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="STOFF"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="SPART"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="KUNNR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="EANVP"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="WESCH"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWVOR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWSCL"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="SAISO"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="ETIAR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="ETIFO"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="ENTAR"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="EAN11"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="NUMTP"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="LAENG"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="BREIT"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="HOEHE"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MEABM"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="PRDHA"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="CADKZ"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="ERGEW"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="ERGEWE"       type="xs:string" minOccurs="0"/>
+                    <xs:element name="MTPOS_MARA"   type="xs:string" minOccurs="0"/>
+                    <xs:element name="PACKCODE"     type="xs:string" minOccurs="0"/>
+                    <xs:element name="KZGVH"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZZGVHALT"     type="xs:string" minOccurs="0"/>
+                    <xs:element name="MHDRZ"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="MHDLP"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="IPRKZ"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="RDMHD"        type="xs:string" minOccurs="0"/>
+                    <xs:element name="PRZUS"        type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MAKTM: Material Description (repeating) -->
+              <xs:element name="E1MAKTM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SPRAS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MAKTX" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MAKTG" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MARCM: Plant Data (repeating) -->
+              <xs:element name="E1MARCM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="WERKS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="EKGRP"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="DISMM"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="DISPO"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="DISLS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MTVFP"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="KZDIE"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="KZPRO"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="PLIFZ"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="WEBAZ"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="WEPOS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="WEBRE"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="INSMK"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SSQSS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="KZDLK"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="UEETO"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="UEETK"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="UNETO"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="WZEIT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="EISBE"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MINBE"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MABST"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SBDKZ"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGPRO"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGFSB"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGPLA"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="SCHGT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="CCFIX"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="IPRKZ"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="DZEIT"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="AUSSS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWSCL"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="HERKR"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="PERKZ"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="KAUTB"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="KORDB"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="AHDIS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="RDPRF"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="VSPVB"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="LSTFL"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="LSTVZ"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="BSTMI"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="BSTMA"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="BSTFE"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="BSTRF"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="LOSGR"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MINLS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="MAXLS"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="TRAME"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="AKTNR"  type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MARDM: Storage Location Data (repeating) -->
+              <xs:element name="E1MARDM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="WERKS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGORT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LABST" type="xs:string" minOccurs="0"/>
+                    <xs:element name="UMLME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="INSME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="EINME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SPEME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="RETME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MENGE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LFGJA" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LFMON" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MARMM: Unit of Measure Data (repeating) -->
+              <xs:element name="E1MARMM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MATNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MEINH" type="xs:string" minOccurs="0"/>
+                    <xs:element name="UMREN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="UMREZ" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MEABG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MEAEN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LAENG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BREIT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="HOEHE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MEABM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BRGEW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NTGEW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="GEWEI" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOLUM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOLEH" type="xs:string" minOccurs="0"/>
+                    <xs:element name="GTIN"  type="xs:string" minOccurs="0"/>
+                    <xs:element name="EAN11" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NUMTP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KZWSO" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZIEME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="EANTP" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MVKEM: Sales Organization Data (repeating) -->
+              <xs:element name="E1MVKEM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VKORG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VTWEG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VKAUS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VERPR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PRCTR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MTPOS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="DWERK" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VMSTA" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VMSTD" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MTVFP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TRAGR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LADGR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SKTOF" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KVGR1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KVGR2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KVGR3" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KVGR4" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KVGR5" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KTPNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KONDM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KOND2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KOND3" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KOND4" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KOND5" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MBEWM: Valuation Data (repeating) -->
+              <xs:element name="E1MBEWM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWKEY" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWTAR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VPRSV" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VERPR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="STPRS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PEINH" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BKLAS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MYPOL" type="xs:string" minOccurs="0"/>
+                    <xs:element name="EKALR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MLAST" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWTTY" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SALK3" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SALKV" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZKPRS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZKDAT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LPLPR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWPH1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BWPH2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ABWKZ" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- E1MLGNM: Warehouse Management Data (repeating) -->
+              <xs:element name="E1MLGNM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGNUM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGTYP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGPLA" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LPMAX" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LPTYP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGBER" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BLOCK" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KOBER" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOMEB" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+            </xs:sequence>
+            <xs:attribute name="BEGIN" type="xs:string"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,111 @@
+{
+  "id": "A_SalesOrder_to_SALESORD05",
+  "mapping_name": "MM_SalesOrder_to_SALESORD",
+  "source_schema": "A_SalesOrder.xsd",
+  "target_schema": "SALESORD05.xsd",
+  "source_root": "A_SalesOrder",
+  "target_root": "SALESORD05",
+  "field_mappings": [
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/SalesOrderType",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/VBTYP",
+      "note": "Sales Order Type mapped as Billing Type"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/TransactionCurrency",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/WAERS",
+      "note": "Transaction Currency mapped as Currency"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/SalesOffice",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/VKBUR",
+      "note": "Sales Office mapped as Sales Office"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/DistributionChannel",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/VTWEG",
+      "note": "Distribution Channel mapped as Sales Organization"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/CreatedByUser",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/AUGRU",
+      "note": "Created By User mapped as Order User"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/LastChangeDate",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/BLDAT",
+      "note": "Last Change Date mapped as Sales Document Date"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/SalesGroup",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/KDGRP",
+      "note": "Sales Group mapped as Sales Group"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/DistributionChannel",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/VKORG",
+      "note": "Distribution Channel mapped as Sales Organization"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/SalesOrganization",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/VKORG",
+      "note": "Sales Organization mapped as Sales Organization"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/ItemGrossWeight",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/BRGEW",
+      "note": "Item Gross Weight mapped as Gross Weight"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/ItemNetWeight",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/NTGEW",
+      "note": "Item Net Weight mapped as Net Weight"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/TransactionCurrency",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/WAERS",
+      "note": "Transaction Currency mapped as Currency"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/CreationDate",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/LDDAT",
+      "note": "Creation date match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrder/PurchaseOrderByCustomer",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/VBELN",
+      "note": "Purchase order number match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/Material",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/MATNR",
+      "note": "Material match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/NetAmount",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/NETWR",
+      "note": "Net amount match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/RequestedQuantity",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/MENGE",
+      "note": "Requested quantity match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/ItemNetWeight",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/NTGEW",
+      "note": "Item net weight match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/ItemGrossWeight",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/BRGEW",
+      "note": "Item gross weight match"
+    },
+    {
+      "source_path": "/A_SalesOrder/SalesOrderItem/DeliveryGroup",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/LGORT",
+      "note": "Delivery group match"
+    }
+  ],
+  "total_fields": 20
+}

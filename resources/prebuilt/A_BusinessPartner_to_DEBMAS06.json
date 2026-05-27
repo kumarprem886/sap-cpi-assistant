@@ -1,0 +1,91 @@
+{
+  "id": "A_BusinessPartner_to_DEBMAS06",
+  "mapping_name": "MM_BusinessPartner_to_DEBMAS",
+  "source_schema": "A_BusinessPartner.xsd",
+  "target_schema": "DEBMAS06.xsd",
+  "source_root": "A_BusinessPartner",
+  "target_root": "DEBMAS06",
+  "field_mappings": [
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/BusinessPartner",
+      "target_path": "/DEBMAS06/IDOC/EDI_DC40/TABNAM",
+      "note": ""
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/NameCountry",
+      "target_path": "/DEBMAS06/IDOC/E1KNA1M/STCD1",
+      "note": ""
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/NameFormat",
+      "target_path": "/DEBMAS06/IDOC/E1KNA1M/GFORM",
+      "note": ""
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/SearchTerm1",
+      "target_path": "/DEBMAS06/IDOC/E1KNA1M/NAME1",
+      "note": ""
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/SearchTerm2",
+      "target_path": "/DEBMAS06/IDOC/E1KNA1M/NAME2",
+      "note": ""
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/Customer",
+      "target_path": "/DEBMAS06/IDOC/E1ADRM1/COUNTRY",
+      "note": "Country"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/AdditionalLastName",
+      "target_path": "/DEBMAS06/IDOC/E1ADRM1/NAME4",
+      "note": "Last Name"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/InternationalLocationNumber1",
+      "target_path": "/DEBMAS06/IDOC/E1ADRM1/POST_CODE1",
+      "note": "Postal Code"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartnerAddress/AddressTimeZone",
+      "target_path": "/DEBMAS06/IDOC/E1ADRM1/TIME_ZONE",
+      "note": "Time Zone"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartnerAddress/Floor",
+      "target_path": "/DEBMAS06/IDOC/E1ADRM1/FLOOR",
+      "note": "Floor"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/BusinessPartner",
+      "target_path": "/DEBMAS06/IDOC/E1KNVVM/LIFNR",
+      "note": "Business partner identification matching to Customer/Vendor number"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/BusinessPartnerCategory",
+      "target_path": "/DEBMAS06/IDOC/E1KNVVM/VKGRP",
+      "note": "Business partner category matching to Purchasing group"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/BusinessPartnerType",
+      "target_path": "/DEBMAS06/IDOC/E1KNVVM/BZIRK",
+      "note": "Business partner type matching to Account group"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/FirstName",
+      "target_path": "/DEBMAS06/IDOC/E1KNVVM/E1KNVKM/NAME1",
+      "note": "First name matching to Name 1"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/PersonFullName",
+      "target_path": "/DEBMAS06/IDOC/E1KNVVM/E1KNVKM/NAMEV",
+      "note": "Person's full name matching to Name"
+    },
+    {
+      "source_path": "/A_BusinessPartner/BusinessPartner/CorrespondenceLanguage",
+      "target_path": "/DEBMAS06/IDOC/E1KNVVM/E1KNVKM/SPRAS",
+      "note": "Language used for business correspondence matching to Language"
+    }
+  ],
+  "total_fields": 16
+}

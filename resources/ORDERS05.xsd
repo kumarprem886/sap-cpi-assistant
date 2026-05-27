@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="ORDERS05">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+
+              <!-- Control Record -->
+              <xs:element name="EDI_DC40" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="TABNAM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MANDT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="DOCNUM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="DOCREL" type="xs:string" minOccurs="0"/>
+                    <xs:element name="STATUS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="DIRECT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="OUTMOD" type="xs:string" minOccurs="0"/>
+                    <xs:element name="IDOCTYP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MESTYP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPOR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPRT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SNDPRN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPOR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPRT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="RCVPRN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="CREDAT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="CRETIM" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Order Header -->
+              <xs:element name="E1EDK01" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="ACTION" type="xs:string" minOccurs="0"/>
+                    <xs:element name="CURCY" type="xs:string" minOccurs="0"/>
+                    <xs:element name="WKURS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZTERM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BELNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NTGEW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BRGEW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="GEWEI" type="xs:string" minOccurs="0"/>
+                    <xs:element name="FKART_RL" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ABLAD" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BSART" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VSTEL" type="xs:string" minOccurs="0"/>
+                    <xs:element name="RECIPNT_NO" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Header Reference Numbers -->
+              <xs:element name="E1EDK02" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="QUALF" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BELNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="DATUM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="UZEIT" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Header Dates -->
+              <xs:element name="E1EDK03" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="IDDAT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="DATUM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="UZEIT" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Header Tax -->
+              <xs:element name="E1EDK04" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MWSKZ" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MSATZ" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MWSBT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="WMWST" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TXJCD" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Header Conditions -->
+              <xs:element name="E1EDK05" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="KSCHL" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KRATE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="WAERS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BETRG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TXJCD" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MWSKZ" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Org Data -->
+              <xs:element name="E1EDK14" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="ORGID" type="xs:string" minOccurs="0"/>
+                    <xs:element name="QUALF" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Transport -->
+              <xs:element name="E1EDK17" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="QUALF" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LKOND" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LKTEXT" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Header Terms -->
+              <xs:element name="E1EDK18" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="QUALF" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TAGE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PRZNT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZTERM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZTAG1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZPZT1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZTAG2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZPZT2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ZTAG3" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Partner -->
+              <xs:element name="E1EDKA1" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="PARVW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PARTN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LIFNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KUNNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="REGIO" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PSTLZ" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LAND1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NAME1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NAME2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NAME3" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NAME4" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ORT01" type="xs:string" minOccurs="0"/>
+                    <xs:element name="STRAS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="KNREF" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ILNNR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SPRAS" type="xs:string" minOccurs="0"/>
+                    <xs:element name="STCD1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="STCD2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TELF1" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TELFX" type="xs:string" minOccurs="0"/>
+                    <xs:element name="SMTP_ADDR" type="xs:string" minOccurs="0"/>
+                  </xs:all>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Header Text -->
+              <xs:element name="E1EDKT1" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="TDOBJECT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TDNAME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TDID" type="xs:string" minOccurs="0"/>
+                    <xs:element name="TDSPRAS" type="xs:string" minOccurs="0"/>
+                    <!-- Text Lines -->
+                    <xs:element name="E1EDKT2" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="TDLINE" type="xs:string" minOccurs="0"/>
+                          <xs:element name="TDFORMAT" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- Line Item -->
+              <xs:element name="E1EDP01" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="POSEX" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ACTION" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PSTYP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MENGE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="MENEE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BMNG2" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PMENE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="ABFTZ" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VPREI" type="xs:string" minOccurs="0"/>
+                    <xs:element name="PEINH" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NETWR" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BPRME" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BPUMN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BPUMZ" type="xs:string" minOccurs="0"/>
+                    <xs:element name="EBELN" type="xs:string" minOccurs="0"/>
+                    <xs:element name="EBELP" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LFMNG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LFMEE" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LFDAT" type="xs:string" minOccurs="0"/>
+                    <xs:element name="NTGEW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="BRGEW" type="xs:string" minOccurs="0"/>
+                    <xs:element name="GEWEI" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOLUM" type="xs:string" minOccurs="0"/>
+                    <xs:element name="VOLEH" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGMNG" type="xs:string" minOccurs="0"/>
+                    <xs:element name="LGPBE" type="xs:string" minOccurs="0"/>
+
+                    <!-- Item Reference -->
+                    <xs:element name="E1EDP02" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="QUALF" type="xs:string" minOccurs="0"/>
+                          <xs:element name="BELNR" type="xs:string" minOccurs="0"/>
+                          <xs:element name="ZEILE" type="xs:string" minOccurs="0"/>
+                          <xs:element name="DATUM" type="xs:string" minOccurs="0"/>
+                          <xs:element name="UZEIT" type="xs:string" minOccurs="0"/>
+                          <xs:element name="BSARK" type="xs:string" minOccurs="0"/>
+                          <xs:element name="IHREZ" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Item Dates -->
+                    <xs:element name="E1EDP03" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="IDDAT" type="xs:string" minOccurs="0"/>
+                          <xs:element name="DATUM" type="xs:string" minOccurs="0"/>
+                          <xs:element name="UZEIT" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Item Tax -->
+                    <xs:element name="E1EDP04" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MWSKZ" type="xs:string" minOccurs="0"/>
+                          <xs:element name="MSATZ" type="xs:string" minOccurs="0"/>
+                          <xs:element name="MWSBT" type="xs:string" minOccurs="0"/>
+                          <xs:element name="WMWST" type="xs:string" minOccurs="0"/>
+                          <xs:element name="TXJCD" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Item Conditions -->
+                    <xs:element name="E1EDP05" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="KSCHL" type="xs:string" minOccurs="0"/>
+                          <xs:element name="KRATE" type="xs:string" minOccurs="0"/>
+                          <xs:element name="WAERS" type="xs:string" minOccurs="0"/>
+                          <xs:element name="BETRG" type="xs:string" minOccurs="0"/>
+                          <xs:element name="TXJCD" type="xs:string" minOccurs="0"/>
+                          <xs:element name="MWSKZ" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Item Material -->
+                    <xs:element name="E1EDP19" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="QUALF" type="xs:string" minOccurs="0"/>
+                          <xs:element name="IDTNR" type="xs:string" minOccurs="0"/>
+                          <xs:element name="KTEXT" type="xs:string" minOccurs="0"/>
+                          <xs:element name="MFRPN" type="xs:string" minOccurs="0"/>
+                          <xs:element name="MFRNR" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Item Scheduling -->
+                    <xs:element name="E1EDP20" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="WMENG" type="xs:string" minOccurs="0"/>
+                          <xs:element name="AMENG" type="xs:string" minOccurs="0"/>
+                          <xs:element name="EDATU" type="xs:string" minOccurs="0"/>
+                          <xs:element name="AENDX" type="xs:string" minOccurs="0"/>
+                          <xs:element name="ORNUM" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Item Partner -->
+                    <xs:element name="E1EDPA1" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="PARVW" type="xs:string" minOccurs="0"/>
+                          <xs:element name="PARTN" type="xs:string" minOccurs="0"/>
+                          <xs:element name="LIFNR" type="xs:string" minOccurs="0"/>
+                          <xs:element name="KUNNR" type="xs:string" minOccurs="0"/>
+                          <xs:element name="REGIO" type="xs:string" minOccurs="0"/>
+                          <xs:element name="PSTLZ" type="xs:string" minOccurs="0"/>
+                          <xs:element name="LAND1" type="xs:string" minOccurs="0"/>
+                          <xs:element name="NAME1" type="xs:string" minOccurs="0"/>
+                          <xs:element name="NAME2" type="xs:string" minOccurs="0"/>
+                          <xs:element name="ORT01" type="xs:string" minOccurs="0"/>
+                          <xs:element name="STRAS" type="xs:string" minOccurs="0"/>
+                        </xs:all>
+                        <xs:attribute name="BEGIN" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                  </xs:sequence>
+                  <xs:attribute name="BEGIN" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+            </xs:sequence>
+            <xs:attribute name="BEGIN" type="xs:string"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+  <xs:element name="A_Product">
+    <xs:complexType>
+      <xs:sequence>
+
+        <!-- Product: Main product entity (repeating) -->
+        <xs:element name="Product" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Product"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductType"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="CrossPlantStatus"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="CrossPlantStatusValidityDate"     type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="LastChangeDate"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="LastChangedByUser"                type="xs:string" minOccurs="0"/>
+              <xs:element name="IsMarkedForDeletion"              type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductOldID"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="GrossWeight"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderQuantityUnit"        type="xs:string" minOccurs="0"/>
+              <xs:element name="SourceOfSupply"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="WeightUnit"                       type="xs:string" minOccurs="0"/>
+              <xs:element name="NetWeight"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="CountryOfOrigin"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="CompetitorID"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductGroup"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="BaseUnit"                         type="xs:string" minOccurs="0"/>
+              <xs:element name="ItemCategoryGroup"                type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductHierarchy"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="Division"                         type="xs:string" minOccurs="0"/>
+              <xs:element name="VarblPurOrdUnitIsActive"          type="xs:string" minOccurs="0"/>
+              <xs:element name="VolumeUnit"                       type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialVolume"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="ANPCode"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="BrandID"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="ProcurementRule"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="ValidityStartDate"                type="xs:string" minOccurs="0"/>
+              <xs:element name="LowLevelCode"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="ProdNoInGenProdInPrepackProd"     type="xs:string" minOccurs="0"/>
+              <xs:element name="SerialNoExplicitnessLevel"        type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductManufacturerNumber"        type="xs:string" minOccurs="0"/>
+              <xs:element name="ManufacturerNumber"               type="xs:string" minOccurs="0"/>
+              <xs:element name="ManufacturerPartProfile"          type="xs:string" minOccurs="0"/>
+              <xs:element name="ChangeNumber"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialRevisionLevel"            type="xs:string" minOccurs="0"/>
+              <xs:element name="HandlingIndicator"                type="xs:string" minOccurs="0"/>
+              <xs:element name="WrkCentersForParallelProcessing"  type="xs:string" minOccurs="0"/>
+              <xs:element name="HandlingUnitType"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="HasVariableTareWeight"            type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumPackagingLength"           type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumPackagingWidth"            type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumPackagingHeight"           type="xs:string" minOccurs="0"/>
+              <xs:element name="UnitForMaxPackagingDimensions"    type="xs:string" minOccurs="0"/>
+              <xs:element name="BaseUnitSpecificProductLength"    type="xs:string" minOccurs="0"/>
+              <xs:element name="BaseUnitSpecificProductWidth"     type="xs:string" minOccurs="0"/>
+              <xs:element name="BaseUnitSpecificProductHeight"    type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductSizeUnitOfMeasure"         type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumWeight"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumWeightUnit"                type="xs:string" minOccurs="0"/>
+              <xs:element name="SectorProductStandardID"          type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- ProductDescription: Language-specific descriptions (repeating) -->
+        <xs:element name="ProductDescription" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Product"            type="xs:string" minOccurs="0"/>
+              <xs:element name="Language"           type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductDescription" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- ProductPlant: Plant-specific data (repeating) -->
+        <xs:element name="ProductPlant" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Product"                             type="xs:string" minOccurs="0"/>
+              <xs:element name="Plant"                               type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingGroup"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductionSupervisor"                type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductProductionSchedulingProfile"  type="xs:string" minOccurs="0"/>
+              <xs:element name="FixedLotSizeQuantity"                type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumLotSizeQuantity"              type="xs:string" minOccurs="0"/>
+              <xs:element name="MinimumLotSizeQuantity"              type="xs:string" minOccurs="0"/>
+              <xs:element name="ProcurementType"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="IsAutoPurOrdCreationAllowed"         type="xs:string" minOccurs="0"/>
+              <xs:element name="IsStorageConditionsAllowed"          type="xs:string" minOccurs="0"/>
+              <xs:element name="MRPType"                             type="xs:string" minOccurs="0"/>
+              <xs:element name="MRPResponsible"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="MRPGroup"                            type="xs:string" minOccurs="0"/>
+              <xs:element name="ReorderThresholdQuantity"            type="xs:string" minOccurs="0"/>
+              <xs:element name="PlanningTimeFence"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="LotSizingProcedure"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="ReorderPoint"                        type="xs:string" minOccurs="0"/>
+              <xs:element name="SafetyStockQuantity"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="MinimumSafetyStockQuantity"          type="xs:string" minOccurs="0"/>
+              <xs:element name="PlannedDeliveryDurationInDays"       type="xs:string" minOccurs="0"/>
+              <xs:element name="GoodsReceiptDuration"                type="xs:string" minOccurs="0"/>
+              <xs:element name="StorageLocation"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="InspectionMemoDuration"              type="xs:string" minOccurs="0"/>
+              <xs:element name="TotalReplenishmentLeadTime"          type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- ProductSalesDelivery: Sales and delivery data (repeating) -->
+        <xs:element name="ProductSalesDelivery" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Product"                          type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductSalesOrg"                  type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductDistributionChnl"          type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplyingPlant"                   type="xs:string" minOccurs="0"/>
+              <xs:element name="PriceSpecificationProductGroup"   type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountDetnProductGroup"          type="xs:string" minOccurs="0"/>
+              <xs:element name="ItemCategoryGroup"                type="xs:string" minOccurs="0"/>
+              <xs:element name="SalesMeasureUnit"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductHierarchy"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="IsMarkedForDeletion"              type="xs:string" minOccurs="0"/>
+              <xs:element name="FirstSalesSpecDate"               type="xs:string" minOccurs="0"/>
+              <xs:element name="LastSalesSpecDate"                type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryNoteProcMinDelivQty"      type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryQuantity"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryQuantityUnit"             type="xs:string" minOccurs="0"/>
+              <xs:element name="BaseUnit"                         type="xs:string" minOccurs="0"/>
+              <xs:element name="ShippingPoint"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="ShippingCondition"                type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryToleranceUnderdelInPercent"  type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryToleranceOverdelInPercent"   type="xs:string" minOccurs="0"/>
+              <xs:element name="IsUnlimitedOverdeliveryAllowed"   type="xs:string" minOccurs="0"/>
+              <xs:element name="LoadingGroup"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="AvailCheckType"                   type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- ProductUnitOfMeasure: Alternate UoM data (repeating) -->
+        <xs:element name="ProductUnitOfMeasure" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Product"                    type="xs:string" minOccurs="0"/>
+              <xs:element name="AlternativeUnit"            type="xs:string" minOccurs="0"/>
+              <xs:element name="QuantityNumerator"          type="xs:string" minOccurs="0"/>
+              <xs:element name="QuantityDenominator"        type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialVolume"             type="xs:string" minOccurs="0"/>
+              <xs:element name="VolumeUnit"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="GrossWeight"                type="xs:string" minOccurs="0"/>
+              <xs:element name="WeightUnit"                 type="xs:string" minOccurs="0"/>
+              <xs:element name="GlobalTradeItemNumber"      type="xs:string" minOccurs="0"/>
+              <xs:element name="GlobalTradeItemNumberCategory" type="xs:string" minOccurs="0"/>
+              <xs:element name="Length"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="Width"                      type="xs:string" minOccurs="0"/>
+              <xs:element name="Height"                     type="xs:string" minOccurs="0"/>
+              <xs:element name="UnitSpecificProductLength"  type="xs:string" minOccurs="0"/>
+              <xs:element name="UnitSpecificProductWidth"   type="xs:string" minOccurs="0"/>
+              <xs:element name="UnitSpecificProductHeight"  type="xs:string" minOccurs="0"/>
+              <xs:element name="MaximumStackingFactor"      type="xs:string" minOccurs="0"/>
+              <xs:element name="CapacityUsage"              type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

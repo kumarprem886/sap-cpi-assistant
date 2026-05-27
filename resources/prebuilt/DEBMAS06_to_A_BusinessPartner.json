@@ -1,0 +1,201 @@
+{
+  "id": "DEBMAS06_to_A_BusinessPartner",
+  "mapping_name": "MM_DEBMAS_to_BusinessPartner",
+  "source_schema": "DEBMAS06.xsd",
+  "target_schema": "A_BusinessPartner.xsd",
+  "source_root": "DEBMAS06",
+  "target_root": "A_BusinessPartner",
+  "field_mappings": [
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/KUNNR",
+      "target_path": "/A_BusinessPartner/BusinessPartner/Customer",
+      "note": "Customer ID match"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/NAME1",
+      "target_path": "/A_BusinessPartner/BusinessPartner/PersonFullName",
+      "note": "Common first name and last name equivalent"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/NAME2",
+      "target_path": "/A_BusinessPartner/BusinessPartner/OrganizationBPName1",
+      "note": "Common first name and last name equivalent for organization"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/KONZS",
+      "target_path": "/A_BusinessPartner/BusinessPartner/LegalForm",
+      "note": "Organization structure match"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/NAME4",
+      "target_path": "/A_BusinessPartner/BusinessPartner/OrganizationBPName4",
+      "note": "Country specific name format"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/NAME1",
+      "target_path": "/A_BusinessPartner/BusinessPartner/FirstName",
+      "note": "Common first name equivalent"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/NAME2",
+      "target_path": "/A_BusinessPartner/BusinessPartner/MiddleName",
+      "note": "Common middle name equivalent"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/STREET",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/AddressID",
+      "note": "Common address match"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNB1M/PERNR",
+      "target_path": "/A_BusinessPartner/BusinessPartner/PersonNumber",
+      "note": "Personnel number match"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNB1M/KVERM",
+      "target_path": "/A_BusinessPartner/BusinessPartner/ETag",
+      "note": "Unique identifier match"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/KUNNR",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/AddressUUID",
+      "note": "Customer number"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/NAME1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/FullName",
+      "note": "Customer name"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/STCD1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/StreetPrefixName",
+      "note": "Street prefix"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/STKDE",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/HomeCityName",
+      "note": "Home city"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/STKZN",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/County",
+      "note": "County"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/ORT01",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Street",
+      "note": "Street"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/ORT02",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/CityName",
+      "note": "City"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/PSTLZ",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/PostalCode",
+      "note": "Postal code"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/LAND1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Country",
+      "note": "Country"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/CITY1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/HomeCityName",
+      "note": "Home city"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/COUNTRY",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Country",
+      "note": "Country"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/COUNTY",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/County",
+      "note": "County"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/STREET",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Street",
+      "note": "Street"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/POST_CODE1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/PostalCode",
+      "note": "Postal code"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/LANGU",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Language",
+      "note": "Language"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/TELEPHONE",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/PhoneNumber",
+      "note": "Phone number"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/MOBILE_NUMBER",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/MobilePhoneNumber",
+      "note": "Mobile phone number"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/KONZS",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/FullName",
+      "note": "Company name"
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/NAME1",
+      "target_path": "/A_BusinessPartner/Customer/CustomerFullName",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/BAHSV",
+      "target_path": "/A_BusinessPartner/Customer/AuthorizationGroup",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/ORT01",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/StreetSuffixName",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/PFACH",
+      "target_path": "/A_BusinessPartner/Customer/CityCode",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1ADRM1/NAME1",
+      "target_path": "/A_BusinessPartner/Customer/CustomerName",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNB1M/ERNAM",
+      "target_path": "/A_BusinessPartner/Customer/CreatedByUser",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNB1M/ICAUS",
+      "target_path": "/A_BusinessPartner/Customer/CreationDate",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNB1M/UPTIM",
+      "target_path": "/A_BusinessPartner/Customer/Supplier",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNB1M/XPBDP",
+      "target_path": "/A_BusinessPartner/Supplier/Supplier",
+      "note": ""
+    },
+    {
+      "source_path": "/DEBMAS06/IDOC/E1KNA1M/KUNNR",
+      "target_path": "/A_BusinessPartner/Supplier/ReconciliationAccount",
+      "note": "Supplier Number mapping"
+    }
+  ],
+  "total_fields": 38
+}

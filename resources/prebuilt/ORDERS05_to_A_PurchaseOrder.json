@@ -1,0 +1,136 @@
+{
+  "id": "ORDERS05_to_A_PurchaseOrder",
+  "mapping_name": "MM_ORDERS_to_PurchaseOrder",
+  "source_schema": "ORDERS05.xsd",
+  "target_schema": "A_PurchaseOrder.xsd",
+  "source_root": "ORDERS05",
+  "target_root": "A_PurchaseOrder",
+  "field_mappings": [
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_PurchaseOrder/PurchaseOrder/PurchasingProcessingStatus",
+      "note": "Purchasing processing status"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_PurchaseOrder/PurchaseOrder/DocumentCurrency",
+      "note": "Document currency"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_PurchaseOrder/PurchaseOrder/PurchaseOrderDate",
+      "note": "Purchase order date"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_PurchaseOrder/PurchaseOrder/PaymentTerms",
+      "note": "Payment terms"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/BELNR",
+      "target_path": "/A_PurchaseOrder/PurchaseOrder/ManualSupplierAddressID",
+      "note": "Manual supplier address ID"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK02/QUALF",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/PurchaseOrderItemCategory",
+      "note": "Purchase order item category"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDKT1/TDOBJECT",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/SupplierMaterialNumber",
+      "note": "Supplier material number"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDKT1/TDNAME",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/AccountAssignmentCategory",
+      "note": "Account assignment category"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/EBELN",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/PurchaseOrder",
+      "note": "Purchase order"
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/IsOrderAcknRqd",
+      "note": "Order action maps to order acknowledgement requirement."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/NTGEW",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/OrderedQuantity",
+      "note": "Gross weight maps to ordered quantity."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDK01/BRGEW",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/RequestedQuantity",
+      "note": "Base unit weight maps to requested quantity."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/POSEX",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/AssignmentNumber",
+      "note": "Position maps to assignment number."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/EBELN",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/ExternalRequisitionDocNumber",
+      "note": "Purchase order item maps to external requisition document number."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/EBELP",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/ShelfLifeExpirationDatePeriod",
+      "note": "Purchase order item category maps to shelf life expiration date period."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/NTGEW",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/OrderedQuantity",
+      "note": "Gross weight maps to ordered quantity."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/BRGEW",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/RequestedQuantity",
+      "note": "Base unit weight maps to requested quantity."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDKA1/KNREF",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/SupplierQuotation",
+      "note": "Plant map to supplier quotation."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDKA1/NAME1",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/RequisitionerName",
+      "note": "Name 1 maps to requisitioner name."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/NETWR",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/NetPriceAmountInCompanyCodeCurrency",
+      "note": "Gross weight maps to net price amount in company code currency."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/NETWR",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderItem/NetAmount",
+      "note": "Gross weight maps to net amount."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDKA1/PARVW",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderScheduleLine/PurchaseOrder",
+      "note": "Partner function maps to purchase order."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDKA1/LIFNR",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderScheduleLine/PurchaseOrderItem",
+      "note": "Partners maps to purchase order item."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/E1EDP02/UZEIT",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderScheduleLine/ScheduledQuantity",
+      "note": "Units maps to scheduled quantity."
+    },
+    {
+      "source_path": "/ORDERS05/IDOC/E1EDP01/E1EDP02/UZEIT",
+      "target_path": "/A_PurchaseOrder/PurchaseOrderScheduleLine/ScheduleLineDelivDateCategory",
+      "note": "Units maps to schedule line delivery date category."
+    }
+  ],
+  "total_fields": 25
+}

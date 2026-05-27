@@ -1,0 +1,151 @@
+{
+  "id": "CREMAS05_to_A_BusinessPartner",
+  "mapping_name": "MM_CREMAS_to_BusinessPartner",
+  "source_schema": "CREMAS05.xsd",
+  "target_schema": "A_BusinessPartner.xsd",
+  "source_root": "CREMAS05",
+  "target_root": "A_BusinessPartner",
+  "field_mappings": [
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME1",
+      "target_path": "/A_BusinessPartner/BusinessPartner/BusinessPartner",
+      "note": "Both represent a business partner name"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME2",
+      "target_path": "/A_BusinessPartner/BusinessPartner/OrganizationBPName2",
+      "note": "Both represent a business partner organization name"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME3",
+      "target_path": "/A_BusinessPartner/BusinessPartner/OrganizationBPName3",
+      "note": "Both represent a business partner organization name"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME4",
+      "target_path": "/A_BusinessPartner/BusinessPartner/OrganizationBPName4",
+      "note": "Both represent a business partner organization name"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/LAND1",
+      "target_path": "/A_BusinessPartner/BusinessPartner/Language",
+      "note": "Both represent a language or country"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ORT02",
+      "target_path": "/A_BusinessPartner/BusinessPartner/SearchTerm2",
+      "note": "Both represent a search term"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/MCOD2",
+      "target_path": "/A_BusinessPartner/BusinessPartner/PersonNumber",
+      "note": "Both represent a unique person number"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/CareOfName",
+      "note": "Semantic match between person name and care of name"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME2",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/CityName",
+      "note": "Semantic match between person name and city name"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME3",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/DeliveryServiceTypeCode",
+      "note": "Semantic match between person name and delivery service type code"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME4",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Region",
+      "note": "Semantic match between person name and region"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ORT01",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/CityCode",
+      "note": "Semantic match between street and city code"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ORT02",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/PostalCode",
+      "note": "Semantic match between postal code and street"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/EKORG",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/District",
+      "note": "Semantic match between organization and district"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/NAME4",
+      "target_path": "/A_BusinessPartner/Customer/CustomerName",
+      "note": "Customer name is often represented by 4th name in CREMAS05"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ORT01",
+      "target_path": "/A_BusinessPartner/Customer/CityCode",
+      "note": "City code is often provided as 1st city in CREMAS05"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/STRAS",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Street",
+      "note": "Street data in CREMAS05 often maps directly to street in A_BusinessPartner"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/LAND1",
+      "target_path": "/A_BusinessPartner/BusinessPartnerAddress/Country",
+      "note": "Country in CREMAS05 often maps to country in A_BusinessPartner"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/INCO1",
+      "target_path": "/A_BusinessPartner/Customer/DeliveryIsBlocked",
+      "note": "DeliveryIsBlocked in A_BusinessPartner matches INCOResponsibility1 in CREMAS05"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/WZEIT",
+      "target_path": "/A_BusinessPartner/Customer/DeliveryIsBlocked",
+      "note": "DeliveryisBlocked also matches WZeit in CREMAS05 - more specific match"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFA1M/ANRED",
+      "target_path": "/A_BusinessPartner/CustomerCompany/PaymentReason",
+      "note": "payment method term"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/INCO1",
+      "target_path": "/A_BusinessPartner/CustomerCompany/CollectiveInvoiceVariant",
+      "note": "incoterms term"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/LIFER",
+      "target_path": "/A_BusinessPartner/CustomerCompany/LayoutSortingRule",
+      "note": "life period"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/ZTERM",
+      "target_path": "/A_BusinessPartner/SupplierCompany/PaymentTerms",
+      "note": "payment term"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/EKORG",
+      "target_path": "/A_BusinessPartner/CustomerCompany/CompanyCode",
+      "note": "company code"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/WAERS",
+      "target_path": "/A_BusinessPartner/SupplierCompany/CompanyCode",
+      "note": "company code currency"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/MINBM",
+      "target_path": "/A_BusinessPartner/CustomerCompany/APARToleranceGroup",
+      "note": "minimum balance"
+    },
+    {
+      "source_path": "/CREMAS05/IDOC/E1LFM1M/KVGR1",
+      "target_path": "/A_BusinessPartner/CustomerCompany/InterestCalculationCode",
+      "note": "calendar period"
+    }
+  ],
+  "total_fields": 28
+}

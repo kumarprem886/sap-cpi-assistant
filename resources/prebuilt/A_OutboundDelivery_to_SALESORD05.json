@@ -1,0 +1,96 @@
+{
+  "id": "A_OutboundDelivery_to_SALESORD05",
+  "mapping_name": "MM_OutboundDelivery_to_DESADV",
+  "source_schema": "A_OutboundDelivery.xsd",
+  "target_schema": "SALESORD05.xsd",
+  "source_root": "A_OutboundDelivery",
+  "target_root": "SALESORD05",
+  "field_mappings": [
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/DeliveryDocument",
+      "target_path": "/SALESORD05/IDOC/EDI_DC40/DOCNUM",
+      "note": "delivery document number"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/DeliveryPriority",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/BSART",
+      "note": "business area"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/CustomerGroup",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/KDGRP",
+      "note": "customer group"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/BillingDocumentDate",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/BLDAT",
+      "note": "billing document date"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/DeliveryDocumentType",
+      "target_path": "/SALESORD05/IDOC/E1EDK01/VBTYP",
+      "note": "business type"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDeliveryItem/DeliveryDocument",
+      "target_path": "/SALESORD05/IDOC/E1EDK02/BELNR",
+      "note": "document number"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDeliveryItem/DeliveryDocumentItem",
+      "target_path": "/SALESORD05/IDOC/E1EDK02/DATUM",
+      "note": "document date"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDeliveryItem/ActualGoodsMovementDate",
+      "target_path": "/SALESORD05/IDOC/E1EDK03/IDDAT",
+      "note": "internal delivery date"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "target_path": "/SALESORD05/IDOC/E1EDKA1/KUNNR",
+      "note": "buyer account number"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/ShippingPoint",
+      "target_path": "/SALESORD05/IDOC/E1EDKA1/KUNNR",
+      "note": "buyer account number"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/DeliveryDocument",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/VBELN",
+      "note": "Delivery document"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/ActualGoodsMovementDate",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/LMEIN",
+      "note": "Goods movement date"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/Batch",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/BMNG2",
+      "note": "Batch size"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDeliveryItem/BillingDocumentDate",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/LDDAT",
+      "note": "Billing document date"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/ExternalIdentifyingNumber",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/ARKTX",
+      "note": "External document number"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDeliveryItem/ActualDeliveryQuantity",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/MENGE",
+      "note": "Delivered quantity"
+    },
+    {
+      "source_path": "/A_OutboundDelivery/OutboundDelivery/Supplier",
+      "target_path": "/SALESORD05/IDOC/E1EDP01/VKAUS",
+      "note": "Sales organization"
+    }
+  ],
+  "total_fields": 17
+}

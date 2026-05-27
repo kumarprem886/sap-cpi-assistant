@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="A_BusinessPartner">
+    <xs:complexType>
+      <xs:sequence>
+
+        <!-- Business Partner General Data -->
+        <xs:element name="BusinessPartner" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="BusinessPartner" type="xs:string" minOccurs="0"/>
+              <xs:element name="Customer" type="xs:string" minOccurs="0"/>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="AcademicTitle" type="xs:string" minOccurs="0"/>
+              <xs:element name="AuthorizationGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerCategory" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerFullName" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerGrouping" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerName" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerUUID" type="xs:string" minOccurs="0"/>
+              <xs:element name="CorrespondenceLanguage" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationTime" type="xs:string" minOccurs="0"/>
+              <xs:element name="FirstName" type="xs:string" minOccurs="0"/>
+              <xs:element name="FormOfAddress" type="xs:string" minOccurs="0"/>
+              <xs:element name="Industry" type="xs:string" minOccurs="0"/>
+              <xs:element name="InternationalLocationNumber1" type="xs:string" minOccurs="0"/>
+              <xs:element name="InternationalLocationNumber2" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsFemale" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsMale" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsNaturalPerson" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsSexUnknown" type="xs:string" minOccurs="0"/>
+              <xs:element name="GenderCodeName" type="xs:string" minOccurs="0"/>
+              <xs:element name="Language" type="xs:string" minOccurs="0"/>
+              <xs:element name="LastChangeDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="LastChangeTime" type="xs:string" minOccurs="0"/>
+              <xs:element name="LastChangedByUser" type="xs:string" minOccurs="0"/>
+              <xs:element name="LegalForm" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrganizationBPName1" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrganizationBPName2" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrganizationBPName3" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrganizationBPName4" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrganizationFoundationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="OrganizationLiquidationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="SearchTerm1" type="xs:string" minOccurs="0"/>
+              <xs:element name="SearchTerm2" type="xs:string" minOccurs="0"/>
+              <xs:element name="AdditionalLastName" type="xs:string" minOccurs="0"/>
+              <xs:element name="BirthDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerType" type="xs:string" minOccurs="0"/>
+              <xs:element name="ETag" type="xs:string" minOccurs="0"/>
+              <xs:element name="GroupBusinessPartnerName1" type="xs:string" minOccurs="0"/>
+              <xs:element name="GroupBusinessPartnerName2" type="xs:string" minOccurs="0"/>
+              <xs:element name="IndependentAddressID" type="xs:string" minOccurs="0"/>
+              <xs:element name="MiddleName" type="xs:string" minOccurs="0"/>
+              <xs:element name="NameCountry" type="xs:string" minOccurs="0"/>
+              <xs:element name="NameFormat" type="xs:string" minOccurs="0"/>
+              <xs:element name="PersonFullName" type="xs:string" minOccurs="0"/>
+              <xs:element name="PersonNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsMarkedForArchiving" type="xs:string" minOccurs="0"/>
+              <xs:element name="BusinessPartnerIDByExtSystem" type="xs:string" minOccurs="0"/>
+              <xs:element name="TradingPartner" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Business Partner Address -->
+        <xs:element name="BusinessPartnerAddress" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="BusinessPartner" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressID" type="xs:string" minOccurs="0"/>
+              <xs:element name="ValidityStartDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="ValidityEndDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="AuthorizationGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressUUID" type="xs:string" minOccurs="0"/>
+              <xs:element name="AdditionalStreetPrefixName" type="xs:string" minOccurs="0"/>
+              <xs:element name="AdditionalStreetSuffixName" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressTimeZone" type="xs:string" minOccurs="0"/>
+              <xs:element name="CareOfName" type="xs:string" minOccurs="0"/>
+              <xs:element name="CityCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="CityName" type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyPostalCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="Country" type="xs:string" minOccurs="0"/>
+              <xs:element name="County" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryServiceNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryServiceTypeCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="District" type="xs:string" minOccurs="0"/>
+              <xs:element name="EmailAddress" type="xs:string" minOccurs="0"/>
+              <xs:element name="FaxAreaCodeSubscriberNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="FaxCountryCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="FaxExtensionNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="Floor" type="xs:string" minOccurs="0"/>
+              <xs:element name="FullName" type="xs:string" minOccurs="0"/>
+              <xs:element name="HomeCityName" type="xs:string" minOccurs="0"/>
+              <xs:element name="HouseNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="HouseNumberSupplementText" type="xs:string" minOccurs="0"/>
+              <xs:element name="Language" type="xs:string" minOccurs="0"/>
+              <xs:element name="MobilePhoneCountry" type="xs:string" minOccurs="0"/>
+              <xs:element name="MobilePhoneNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="OfficialDeliveryAddressFlag" type="xs:string" minOccurs="0"/>
+              <xs:element name="PersonHouseNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="PhoneAreaCodeSubscriberNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="PhoneCountryCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="PhoneExtensionNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="PhoneNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBox" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBoxDeviatingCityName" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBoxDeviatingCountry" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBoxDeviatingRegion" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBoxIsWithoutNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBoxLobbyName" type="xs:string" minOccurs="0"/>
+              <xs:element name="POBoxPostalCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="Person" type="xs:string" minOccurs="0"/>
+              <xs:element name="PostalCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="PrfrdCommMediumType" type="xs:string" minOccurs="0"/>
+              <xs:element name="Region" type="xs:string" minOccurs="0"/>
+              <xs:element name="SecondaryRegion" type="xs:string" minOccurs="0"/>
+              <xs:element name="SecondaryRegionName" type="xs:string" minOccurs="0"/>
+              <xs:element name="StateInitials" type="xs:string" minOccurs="0"/>
+              <xs:element name="Street" type="xs:string" minOccurs="0"/>
+              <xs:element name="StreetName" type="xs:string" minOccurs="0"/>
+              <xs:element name="StreetPrefixName" type="xs:string" minOccurs="0"/>
+              <xs:element name="StreetSuffixName" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplementaryStreetPrefixName" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplementaryStreetSuffixName" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxJurisdiction" type="xs:string" minOccurs="0"/>
+              <xs:element name="TelegramNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="TelexNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="TransportZone" type="xs:string" minOccurs="0"/>
+              <xs:element name="WebsiteURL" type="xs:string" minOccurs="0"/>
+              <xs:element name="AddressRepresentationCode" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Customer General Data -->
+        <xs:element name="Customer" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Customer" type="xs:string" minOccurs="0"/>
+              <xs:element name="AuthorizationGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="BillingIsBlockedForCustomer" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerAccountGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerClassification" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerFullName" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerName" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeliveryIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="Industry" type="xs:string" minOccurs="0"/>
+              <xs:element name="NielsenRegion" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentIsBlockedForCustomer" type="xs:string" minOccurs="0"/>
+              <xs:element name="PostingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="SalesIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="ShippingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber1" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber2" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber3" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber4" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber5" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumberType" type="xs:string" minOccurs="0"/>
+              <xs:element name="VATRegistration" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeletionIndicator" type="xs:string" minOccurs="0"/>
+              <xs:element name="ExpressTrainStationName" type="xs:string" minOccurs="0"/>
+              <xs:element name="TrainStationName" type="xs:string" minOccurs="0"/>
+              <xs:element name="CityCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="County" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Supplier General Data -->
+        <xs:element name="Supplier" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="AuthorizationGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierAccountGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierFullName" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierName" type="xs:string" minOccurs="0"/>
+              <xs:element name="BirthDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsCentrallyBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentIsBlockedForSupplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="PostingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="Industry" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber1" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber2" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber3" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber4" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumber5" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxNumberType" type="xs:string" minOccurs="0"/>
+              <xs:element name="VATRegistration" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeletionIndicator" type="xs:string" minOccurs="0"/>
+              <xs:element name="Customer" type="xs:string" minOccurs="0"/>
+              <xs:element name="AlternativePayeeAccountNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReconciliationAccount" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Customer Company Code Data -->
+        <xs:element name="CustomerCompany" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Customer" type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="APARToleranceGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountByCustomer" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountingClerk" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountingClerkFaxNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountingClerkInternetAddress" type="xs:string" minOccurs="0"/>
+              <xs:element name="AccountingClerkPhoneNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="AlternativePayerAccount" type="xs:string" minOccurs="0"/>
+              <xs:element name="AuthorizationGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="CollectiveInvoiceVariant" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerAccountNote" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerHeadOffice" type="xs:string" minOccurs="0"/>
+              <xs:element name="CustomerSupplierClearingIsUsed" type="xs:string" minOccurs="0"/>
+              <xs:element name="HouseBank" type="xs:string" minOccurs="0"/>
+              <xs:element name="InterestCalculationCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="InterestCalculationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="IntrstCalcFrequencyInMonths" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsToBeLocallyProcessed" type="xs:string" minOccurs="0"/>
+              <xs:element name="IsToBeSubjectedToWthTax" type="xs:string" minOccurs="0"/>
+              <xs:element name="ItemIsToBePaidSeparately" type="xs:string" minOccurs="0"/>
+              <xs:element name="LayoutSortingRule" type="xs:string" minOccurs="0"/>
+              <xs:element name="MandateReferenceID" type="xs:string" minOccurs="0"/>
+              <xs:element name="MasterContractID" type="xs:string" minOccurs="0"/>
+              <xs:element name="MasterContractItem" type="xs:string" minOccurs="0"/>
+              <xs:element name="NextPaymentDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentMethodsList" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentReason" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentTerms" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentTerm" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReconciliationAccount" type="xs:string" minOccurs="0"/>
+              <xs:element name="RecordPaymentHistoryIndicator" type="xs:string" minOccurs="0"/>
+              <xs:element name="SuppliersAccountNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxExemptionCertificateIssuer" type="xs:string" minOccurs="0"/>
+              <xs:element name="TaxExemptionCertificate" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Supplier Company Code Data -->
+        <xs:element name="SupplierCompany" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="AuthorizationGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="CompanyCodeName" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentTerms" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReconciliationAccount" type="xs:string" minOccurs="0"/>
+              <xs:element name="HouseBank" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentMethodsList" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="PartnerFunctionInternalCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentIsBlockedForSupplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="PostingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="AlternativePayeeAccount" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

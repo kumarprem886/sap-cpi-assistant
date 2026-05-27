@@ -1,0 +1,71 @@
+{
+  "id": "A_BillingDocument_to_INVOIC02",
+  "mapping_name": "MM_BillingDocument_to_INVOIC",
+  "source_schema": "A_BillingDocument.xsd",
+  "target_schema": "INVOIC02.xsd",
+  "source_root": "A_BillingDocument",
+  "target_root": "INVOIC02",
+  "field_mappings": [
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/BillingDocument",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP04/MWSBT",
+      "note": "Billing document number matches with main item number"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/BillingDocumentType",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDPA1/PARVW",
+      "note": "Billing document type matches with sales document type"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/SDOrganization",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDPA1/PARTN",
+      "note": "Sales organization matches with partner number"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/CompanyCode",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDPA1/NAME1",
+      "note": "Company code matches with partner name"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/SalesOrganization",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP05/KSCHL",
+      "note": "Sales organization matches with sales organization code"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/DistributionChannel",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP05/KRATE",
+      "note": "Distribution channel matches with distribution channel code"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/Division",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP05/WAERS",
+      "note": "Division matches with fiscal year"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocument/SoldToParty",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDPA1/NAME1",
+      "note": "Sold-to party matches with partner name"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocumentItem/BillingDocument",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP04/MWSBT",
+      "note": "Line item billing document number matches with main item number"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocumentItem/BillingDocumentItem",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP04/WMWST",
+      "note": "Line item number matches with material document number"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocumentItem/RequestedQuantity",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP05/BETRG",
+      "note": "Line item requested quantity matches with base unit of measurement"
+    },
+    {
+      "source_path": "/A_BillingDocument/BillingDocumentItem/TransactionCurrency",
+      "target_path": "/INVOIC02/IDOC/E1EDP01/E1EDP05/WAERS",
+      "note": "Line item transaction currency matches with fiscal year"
+    }
+  ],
+  "total_fields": 12
+}

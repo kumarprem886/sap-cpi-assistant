@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="A_Supplier">
+    <xs:complexType>
+      <xs:sequence>
+
+        <!-- Supplier Purchasing Organisation Data -->
+        <xs:element name="SupplierPurchasingOrg" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingOrganization" type="xs:string" minOccurs="0"/>
+              <xs:element name="AutomaticEvaluatedRcptSettlmt" type="xs:string" minOccurs="0"/>
+              <xs:element name="CalculationSchemaGroupCode" type="xs:string" minOccurs="0"/>
+              <xs:element name="DeletionIndicator" type="xs:string" minOccurs="0"/>
+              <xs:element name="EvldReceiptSettlementIsActive" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsClassification" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsTransferLocation" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsVersion" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsLocation1" type="xs:string" minOccurs="0"/>
+              <xs:element name="IncotermsLocation2" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceIsGoodsReceiptBased" type="xs:string" minOccurs="0"/>
+              <xs:element name="InvoiceIsMMServiceEntryBased" type="xs:string" minOccurs="0"/>
+              <xs:element name="MaterialPlannedDeliveryDurn" type="xs:string" minOccurs="0"/>
+              <xs:element name="MinimumOrderAmount" type="xs:string" minOccurs="0"/>
+              <xs:element name="PaymentTerms" type="xs:string" minOccurs="0"/>
+              <xs:element name="PlanningCycle" type="xs:string" minOccurs="0"/>
+              <xs:element name="PricingDateControl" type="xs:string" minOccurs="0"/>
+              <xs:element name="ProdStockAndSlsDataTransfPrfl" type="xs:string" minOccurs="0"/>
+              <xs:element name="ProductUnitGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurOrdAutoGenerationIsAllowed" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchaseOrderCurrency" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingIsBlocked" type="xs:string" minOccurs="0"/>
+              <xs:element name="ShippingCondition" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierAccountGroup" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierIsReturnsSupplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierPhoneNumber" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierRespSalesPersonName" type="xs:string" minOccurs="0"/>
+              <xs:element name="SupplierRespSalesPersonNameName" type="xs:string" minOccurs="0"/>
+              <xs:element name="ValueAddedTaxRegistration" type="xs:string" minOccurs="0"/>
+              <xs:element name="UpdtGrpForSupplierTransData" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Supplier Purchasing Organisation Text -->
+        <xs:element name="SupplierPurchasingOrgText" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingOrganization" type="xs:string" minOccurs="0"/>
+              <xs:element name="Language" type="xs:string" minOccurs="0"/>
+              <xs:element name="LongText" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+        <!-- Supplier Partner Function -->
+        <xs:element name="SupplierPartnerFunc" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="Supplier" type="xs:string" minOccurs="0"/>
+              <xs:element name="PurchasingOrganization" type="xs:string" minOccurs="0"/>
+              <xs:element name="Plant" type="xs:string" minOccurs="0"/>
+              <xs:element name="PartnerFunction" type="xs:string" minOccurs="0"/>
+              <xs:element name="PartnerCounter" type="xs:string" minOccurs="0"/>
+              <xs:element name="DefaultPartner" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreationDate" type="xs:string" minOccurs="0"/>
+              <xs:element name="CreatedByUser" type="xs:string" minOccurs="0"/>
+              <xs:element name="ReferenceSupplier" type="xs:string" minOccurs="0"/>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

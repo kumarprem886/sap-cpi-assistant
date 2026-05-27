@@ -1,0 +1,716 @@
+import re
+from fastapi import APIRouter, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from io import BytesIO
+from typing import Optional, List
+from services.claude_service import generate, analyze_flow_image
+from services.iflow_packager import build_iflow_zip
+from services.doc_parser import parse_docx_to_text, sections_to_summary, extract_images_from_docx
+
+router = APIRouter(prefix="/api/iflow", tags=["iflow"])
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Standard Groovy script templates (deterministic — no AI needed)
+# ─────────────────────────────────────────────────────────────────────────────
+SET_PROPERTIES_GROOVY = """\
+import com.sap.gateway.ip.core.customdev.util.Message
+import java.text.SimpleDateFormat
+
+def Message processData(Message msg) {
+    def props = msg.getProperties()
+
+    // Set unique message ID
+    def msgId = "FLOW-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase()
+    msg.setProperty("msgId", msgId)
+
+    // Processing timestamp (UTC)
+    def sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS")
+    sdf.setTimeZone(TimeZone.getTimeZone("UTC"))
+    msg.setProperty("processingTimestamp", sdf.format(new Date()))
+
+    // Optional payload logging
+    def enableLog = props.get("ENABLE_PAYLOAD_LOGGING") ?: "FALSE"
+    if (enableLog.toUpperCase() == "TRUE") {
+        def body   = msg.getBody(String)
+        def msgLog = messageLogFactory.getMessageLog(msg)
+        if (msgLog != null) {
+            msgLog.addAttachmentAsString("Payload", body, "application/xml")
+        }
+    }
+
+    return msg
+}
+"""
+
+HANDLE_ERROR_GROOVY = """\
+import com.sap.gateway.ip.core.customdev.util.Message
+
+def Message processData(Message msg) {
+    def exception = msg.getProperty("CamelExceptionCaught")
+    def errorMsg  = exception ? exception.getMessage() : "Unknown error"
+    def msgId     = msg.getProperty("msgId") ?: "UNKNOWN"
+
+    def msgLog = messageLogFactory.getMessageLog(msg)
+    if (msgLog != null) {
+        msgLog.addAttachmentAsString("ErrorDetails",
+            "MessageId: ${msgId}\\nError: ${errorMsg}", "text/plain")
+    }
+
+    throw new Exception("Integration failed [${msgId}]: ${errorMsg}")
+}
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Compact tenant-specific system prompt
+# ─────────────────────────────────────────────────────────────────────────────
+IFLOW_SYSTEM = """\
+You are an SAP CPI iFlow generator. Produce complete, importable .iflw XML.
+Use ONLY the exact versions below — confirmed working on a live SAP Integration Suite tenant.
+
+══ CRITICAL RULES (violation = import failure) ══════════════════════════════
+
+1. ROOT ELEMENT — use EXACTLY this namespace declaration (copy verbatim):
+   <?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions
+       xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+       xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+       xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+       xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+       xmlns:ifl="http:///com.sap.ifl.model/Ifl.xsd"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       id="Definitions_1">
+   ⚠ The ifl namespace is http:///com.sap.ifl.model/Ifl.xsd (triple slash, NOT http://www.sap.com/...)
+
+2. PARTICIPANTS
+   - Receiver systems: ifl:type="EndpointRecevier"  ← SAP typo, single 'i' in Recevier
+   - Sender systems:   ifl:type="EndpointSender"
+   - Process participant: ifl:type="IntegrationProcess"
+   - Each participant MUST have extensionElements with inner <ifl:property>:
+     <bpmn2:participant id="Participant_Recv" ifl:type="EndpointRecevier" name="ReceiverName">
+         <bpmn2:extensionElements>
+             <ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property>
+         </bpmn2:extensionElements>
+     </bpmn2:participant>
+
+3. COLLABORATION extensionElements — ALL 16 properties REQUIRED:
+   namespaceMapping(empty), httpSessionHandling=None, accessControlMaxAge(empty),
+   returnExceptionToSender=false, log=All events, corsEnabled=false,
+   exposedHeaders(empty), componentVersion=1.2, allowedHeaderList(empty),
+   ServerTrace=false, allowedOrigins(empty), accessControlAllowCredentials=false,
+   allowedHeaders(empty), allowedMethods(empty),
+   cmdVariantUri=ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.3
+
+4. TIMER startEvent
+   - MUST include <bpmn2:timerEventDefinition/>  — MUST NOT include intervalInMinutes/runOnce
+   - Only 4 properties: activityType=StartTimerEvent, scheduleKey={{Scheduler}},
+     componentVersion=1.3, cmdVariantUri=ctype::FlowstepVariant/cname::intermediatetimer/version::1.3.0
+
+5. EXCEPTION SUBPROCESS — NO triggeredByEvent attribute on <bpmn2:subProcess>
+
+6. BPMN DIAGRAM (REQUIRED — missing causes "unable to load")
+   - <bpmndi:BPMNDiagram name="Default Collaboration Diagram">
+   - Every <di:waypoint> MUST have xsi:type="dc:Point"
+   - Every <bpmndi:BPMNEdge> MUST have sourceElement and targetElement (BPMNShape IDs)
+   - Shape IDs: BPMNShape_<elementId>   Edge IDs: BPMNEdge_<elementId>
+
+7. ADAPTER CONFIGS go on <bpmn2:messageFlow>, NOT on <bpmn2:participant>
+
+8. Message-triggered startEvent: <bpmn2:messageEventDefinition/>
+   Message endEvent: <bpmn2:messageEventDefinition/>
+
+9. Request Reply = bpmn2:serviceTask  |  All other steps = bpmn2:callActivity
+
+10. 4-space indent, multi-line XML. Externalize all URLs/creds as {{PARAM_NAME}}
+
+══ CONFIRMED STEP VERSIONS ══════════════════════════════════════════════════
+
+Step                   activityType                  cmdVariantUri (prefix: ctype::FlowstepVariant/cname::)
+Groovy Script          Script                        GroovyScript/version::1.1.2
+Content Modifier       Enricher                      Enricher/version::1.5.1
+Request Reply          ExternalCall                  ExternalCall/version::1.0.4
+Message Mapping        Mapping                       MessageMapping/version::1.3.1
+JSON→XML               JsonToXmlConverter            JsonToXmlConverter/version::1.0
+XML→JSON               XmlToJsonConverter            XmlToJsonConverter/version::1.0.8
+Router (CBR)           ExclusiveGateway              ExclusiveGateway/version::1.1.2
+General Splitter       Splitter                      GeneralSplitter/version::1.6.0
+DataStore Write        DBstorage                     put/version::1.7.1
+Timer startEvent       StartTimerEvent               intermediatetimer/version::1.3.0
+Error SubProcess       ErrorEventSubProcessTemplate  ErrorEventSubProcessTemplate/version::1.0.2
+Message End Event      (none)                        MessageEndEvent/version::1.1.0
+Message Start Event    (none)                        MessageStartEvent  (no version suffix)
+Error End Event        EndErrorEvent                 ErrorEndEvent  (no version suffix)
+Error Start Event      StartErrorEvent               ErrorStartEvent  (no version suffix)
+Process Call           ProcessCallElement            NonLoopingProcess/version::1.0.3
+
+Flow elements:
+  IntegrationProcess:  ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.0
+  IFlowConfig:         ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.3
+
+Adapters:
+  HTTPS Sender:   ctype::AdapterVariant/cname::sap:HTTPS/tp::HTTPS/mp::None/direction::Sender/version::1.5.2
+  HTTP Receiver:  ctype::AdapterVariant/cname::sap:HTTP/tp::HTTP/mp::None/direction::Receiver/version::1.17.1
+  OData Receiver: ctype::AdapterVariant/cname::sap:HCIOData/tp::HTTP/mp::OData V2/direction::Receiver/version::1.27.0
+  SOAP Receiver:  ctype::AdapterVariant/cname::sap:SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.12.3
+
+══ KEY XML PATTERNS ══════════════════════════════════════════════════════════
+
+── Collaboration extensionElements (all 16 properties — use exactly):
+<bpmn2:extensionElements>
+    <ifl:property><key>namespaceMapping</key><value/></ifl:property>
+    <ifl:property><key>httpSessionHandling</key><value>None</value></ifl:property>
+    <ifl:property><key>accessControlMaxAge</key><value/></ifl:property>
+    <ifl:property><key>returnExceptionToSender</key><value>false</value></ifl:property>
+    <ifl:property><key>log</key><value>All events</value></ifl:property>
+    <ifl:property><key>corsEnabled</key><value>false</value></ifl:property>
+    <ifl:property><key>exposedHeaders</key><value/></ifl:property>
+    <ifl:property><key>componentVersion</key><value>1.2</value></ifl:property>
+    <ifl:property><key>allowedHeaderList</key><value/></ifl:property>
+    <ifl:property><key>ServerTrace</key><value>false</value></ifl:property>
+    <ifl:property><key>allowedOrigins</key><value/></ifl:property>
+    <ifl:property><key>accessControlAllowCredentials</key><value>false</value></ifl:property>
+    <ifl:property><key>allowedHeaders</key><value/></ifl:property>
+    <ifl:property><key>allowedMethods</key><value/></ifl:property>
+    <ifl:property><key>cmdVariantUri</key><value>ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.3</value></ifl:property>
+</bpmn2:extensionElements>
+
+── Timer startEvent:
+<bpmn2:startEvent id="StartEvent_1" name="Timer Start">
+    <bpmn2:extensionElements>
+        <ifl:property><key>activityType</key><value>StartTimerEvent</value></ifl:property>
+        <ifl:property><key>scheduleKey</key><value>{{Scheduler}}</value></ifl:property>
+        <ifl:property><key>componentVersion</key><value>1.3</value></ifl:property>
+        <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::intermediatetimer/version::1.3.0</value></ifl:property>
+    </bpmn2:extensionElements>
+    <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    <bpmn2:timerEventDefinition/>
+</bpmn2:startEvent>
+
+── Exception Subprocess (NO triggeredByEvent):
+<bpmn2:subProcess id="SubProcess_Error" name="Exception Subprocess">
+    <bpmn2:extensionElements>
+        <ifl:property><key>componentVersion</key><value>1.1</value></ifl:property>
+        <ifl:property><key>activityType</key><value>ErrorEventSubProcessTemplate</value></ifl:property>
+        <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorEventSubProcessTemplate/version::1.0.2</value></ifl:property>
+    </bpmn2:extensionElements>
+    <bpmn2:startEvent id="ErrorStartEvent_1" name="Error Start">
+        <bpmn2:outgoing>ErrorFlow_1</bpmn2:outgoing>
+        <bpmn2:errorEventDefinition>
+            <bpmn2:extensionElements>
+                <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorStartEvent</value></ifl:property>
+                <ifl:property><key>activityType</key><value>StartErrorEvent</value></ifl:property>
+            </bpmn2:extensionElements>
+        </bpmn2:errorEventDefinition>
+    </bpmn2:startEvent>
+    <bpmn2:endEvent id="ErrorEndEvent_1" name="Error End">
+        <bpmn2:incoming>ErrorFlow_1</bpmn2:incoming>
+        <bpmn2:errorEventDefinition>
+            <bpmn2:extensionElements>
+                <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorEndEvent</value></ifl:property>
+                <ifl:property><key>activityType</key><value>EndErrorEvent</value></ifl:property>
+            </bpmn2:extensionElements>
+        </bpmn2:errorEventDefinition>
+    </bpmn2:endEvent>
+    <bpmn2:sequenceFlow id="ErrorFlow_1" sourceRef="ErrorStartEvent_1" targetRef="ErrorEndEvent_1"/>
+</bpmn2:subProcess>
+
+── HTTPS Sender messageFlow properties:
+ComponentType=HTTPS, ComponentNS=sap, componentVersion=1.5, urlPath={{Sender_Endpoint_Path}},
+Name=HTTPS, TransportProtocolVersion=1.5.2, ComponentSWCVName=external, ComponentSWCVId=1.5.2,
+system=SenderSystem, xsrfProtection=1, TransportProtocol=HTTPS, userRole=ESBMessaging.send,
+senderAuthType=RoleBased, MessageProtocol=None, MessageProtocolVersion=1.5.2,
+direction=Sender, maximumBodySize=40
+
+── HTTP Receiver messageFlow properties:
+ComponentNS=sap, httpMethod=POST, allowedResponseHeaders=*, Name=HTTP,
+TransportProtocolVersion=1.17.1, ComponentSWCVName=external, ComponentSWCVId=1.17.1,
+streaming=false, enableMPLAttachments=true, httpRequestTimeout=60000,
+MessageProtocol=None, direction=Receiver, ComponentType=HTTP,
+throwExceptionOnFailure=true, proxyType=default, componentVersion=1.17,
+retryIteration=1, retryOnConnectionFailure=false, system=ReceiverSystem,
+authenticationMethod=Basic, credentialName={{Receiver_Credential}},
+retryInterval=5, TransportProtocol=HTTP, MessageProtocolVersion=1.17.1,
+httpAddressWithoutQuery={{Receiver_Endpoint_URL}}
+
+══ REQUIRED DOCUMENT STRUCTURE (element ORDER is critical) ══════════════════
+
+<?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions [all 6 namespaces] id="Definitions_1">
+
+  1. <bpmn2:collaboration id="Collaboration_1" name="Default Collaboration">
+       <bpmn2:documentation .../>
+       <bpmn2:extensionElements>  ← ALL 16 collaboration properties
+       </bpmn2:extensionElements>
+       <bpmn2:participant id="Participant_Sender"  ifl:type="EndpointSender"   name="SenderName">
+           <bpmn2:extensionElements><ifl:property><key>ifl:type</key><value>EndpointSender</value></ifl:property></bpmn2:extensionElements>
+       </bpmn2:participant>
+       <bpmn2:participant id="Participant_Receiver" ifl:type="EndpointRecevier" name="ReceiverName">
+           <bpmn2:extensionElements><ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property></bpmn2:extensionElements>
+       </bpmn2:participant>
+       <bpmn2:participant id="Participant_Process_1" ifl:type="IntegrationProcess"
+                          name="Integration Process" processRef="Process_1">
+           <bpmn2:extensionElements/>
+       </bpmn2:participant>
+       <bpmn2:messageFlow id="MF_Sender"   sourceRef="Participant_Sender"   targetRef="StartEvent_1">
+           ← HTTPS sender adapter properties
+       </bpmn2:messageFlow>
+       <bpmn2:messageFlow id="MF_Receiver" sourceRef="EndEvent_1" targetRef="Participant_Receiver">
+           ← HTTP receiver adapter properties
+       </bpmn2:messageFlow>
+  </bpmn2:collaboration>
+
+  2. <bpmn2:process id="Process_1" name="Integration Process">   ← name ALWAYS "Integration Process", NO isExecutable
+       <bpmn2:extensionElements>
+           <ifl:property><key>transactionTimeout</key><value>30</value></ifl:property>
+           <ifl:property><key>componentVersion</key><value>1.2</value></ifl:property>
+           <ifl:property><key>cmdVariantUri</key><value>ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.0</value></ifl:property>
+           <ifl:property><key>transactionalHandling</key><value>Not Required</value></ifl:property>
+       </bpmn2:extensionElements>
+       ← Exception Subprocess (if needed), then startEvent, steps, endEvent, sequenceFlows
+  </bpmn2:process>
+
+  3. <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Default Collaboration Diagram">
+       <bpmndi:BPMNPlane bpmnElement="Collaboration_1" id="BPMNPlane_1">
+           ← BPMNShape for every participant, startEvent, callActivity, endEvent, subProcess
+           ← BPMNEdge for every sequenceFlow and messageFlow
+               Each BPMNEdge MUST have sourceElement="BPMNShape_<srcId>" targetElement="BPMNShape_<tgtId>"
+               Each di:waypoint MUST have xsi:type="dc:Point"
+       </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn2:definitions>
+
+══ OUTPUT FORMAT ═════════════════════════════════════════════════════════════
+Return ONLY the raw .iflw XML — no JSON, no markdown fences, no explanation.
+Start directly with: <?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions
+End with: </bpmn2:definitions>
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# XML post-processor — fix common AI namespace and structural mistakes
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Required extensionElements for <bpmn2:process> — CPI won't open without these
+_PROCESS_EXT = (
+    '\n    <bpmn2:extensionElements>\n'
+    '        <ifl:property><key>transactionTimeout</key><value>30</value></ifl:property>\n'
+    '        <ifl:property><key>componentVersion</key><value>1.2</value></ifl:property>\n'
+    '        <ifl:property><key>cmdVariantUri</key>'
+    '<value>ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.0</value></ifl:property>\n'
+    '        <ifl:property><key>transactionalHandling</key><value>Not Required</value></ifl:property>\n'
+    '    </bpmn2:extensionElements>'
+)
+
+
+def _extract_xml_block(xml: str, open_prefix: str, close_tag: str) -> str:
+    """Return the first complete XML block that starts with open_prefix and ends with close_tag."""
+    start = xml.find(open_prefix)
+    if start == -1:
+        return ''
+    end = xml.find(close_tag, start)
+    if end == -1:
+        return ''
+    return xml[start : end + len(close_tag)].strip()
+
+
+def _parse_attrs(tag: str) -> dict:
+    """Extract attribute name → value pairs from a single XML opening tag string."""
+    return dict(re.findall(r'\b([\w:]+)\s*=\s*"([^"]*)"', tag))
+
+
+def _fix_bpmn_edges(xml: str) -> str:
+    """Add missing sourceElement / targetElement attributes to every BPMNEdge."""
+    # Build flowId → (sourceRef, targetRef) from sequenceFlow and messageFlow elements
+    flow_map: dict = {}
+    for m in re.finditer(r'<bpmn2:(?:sequenceFlow|messageFlow)\b[^>]*>', xml):
+        attrs = _parse_attrs(m.group(0))
+        fid, src, tgt = attrs.get('id'), attrs.get('sourceRef'), attrs.get('targetRef')
+        if fid and src and tgt:
+            flow_map[fid] = (src, tgt)
+
+    if not flow_map:
+        return xml
+
+    def _patch_edge(m: re.Match) -> str:
+        tag = m.group(0)
+        flow_id = _parse_attrs(tag).get('bpmnElement', '')
+        refs = flow_map.get(flow_id)
+        if not refs:
+            return tag
+        src_id, tgt_id = refs
+        # Strip the trailing > so we can append attributes
+        core = tag[:-1].rstrip()
+        if 'sourceElement=' not in tag:
+            core += f' sourceElement="BPMNShape_{src_id}"'
+        if 'targetElement=' not in tag:
+            core += f' targetElement="BPMNShape_{tgt_id}"'
+        return core + '>'
+
+    return re.sub(r'<bpmndi:BPMNEdge\b[^>]*>', _patch_edge, xml)
+
+
+def _fix_iflw_xml(xml: str) -> str:
+    """
+    Repair common AI-generated iflw mistakes so SAP CPI can open the artifact.
+
+    Fixes applied (in order):
+      1  Strip markdown fences / leading text before <?xml
+      2  Fix wrong ifl namespace (triple-slash URI)
+      3  Add any missing required namespaces
+      4  Fix ifl:type="System" → EndpointRecevier
+      5  Add xsi:type="dc:Point" to di:waypoints
+      6  Remove triggeredByEvent from subProcess
+      7  Fix process name → "Integration Process"; remove isExecutable
+      8  Add processRef="Process_1" to IntegrationProcess participant
+      9  Ensure process has correct extensionElements (cmdVariantUri etc.)
+     10  Enforce element order: collaboration → process → BPMNDiagram
+     11  Add missing sourceElement / targetElement to BPMNEdge elements
+    """
+    # ── 1. Strip markdown fences / leading whitespace ──────────────────────────
+    xml = xml.strip()
+    if xml.startswith("```"):
+        xml = xml.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
+    # Skip any preamble text before the XML declaration
+    start = xml.find("<?xml")
+    if start == -1:
+        start = xml.find("<bpmn2:definitions")
+    if start > 0:
+        xml = xml[start:]
+
+    # ── 2. Fix wrong ifl namespace ─────────────────────────────────────────────
+    xml = re.sub(r'xmlns:ifl="[^"]*"',
+                 'xmlns:ifl="http:///com.sap.ifl.model/Ifl.xsd"', xml)
+
+    # ── 3. Add missing required namespaces ────────────────────────────────────
+    for ns, uri in [
+        ('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance'),
+        ('xmlns:dc',  'http://www.omg.org/spec/DD/20100524/DC'),
+        ('xmlns:di',  'http://www.omg.org/spec/DD/20100524/DI'),
+    ]:
+        if f'{ns}=' not in xml:
+            xml = re.sub(r'(<bpmn2:definitions\b)', rf'\1 {ns}="{uri}"', xml, count=1)
+
+    # ── 4. Fix ifl:type="System" → EndpointRecevier ───────────────────────────
+    xml = xml.replace('ifl:type="System"', 'ifl:type="EndpointRecevier"')
+    xml = xml.replace('<value>System</value>', '<value>EndpointRecevier</value>')
+
+    # ── 5. Add xsi:type="dc:Point" to waypoints that are missing it ───────────
+    xml = re.sub(
+        r'(<di:waypoint\b(?![^>]*xsi:type)[^>]*?)/>',
+        lambda m: m.group(1).rstrip() + ' xsi:type="dc:Point"/>',
+        xml,
+    )
+
+    # ── 6. Remove triggeredByEvent from subProcess ─────────────────────────────
+    xml = re.sub(
+        r'(<bpmn2:subProcess\b[^>]*?)\s+triggeredByEvent="[^"]*"',
+        r'\1', xml,
+    )
+
+    # ── 7. Fix process element: name must be "Integration Process", no isExecutable
+    xml = re.sub(
+        r'(<bpmn2:process\b[^>]*)name="[^"]*"',
+        r'\1name="Integration Process"', xml,
+    )
+    xml = re.sub(r'\s+isExecutable="[^"]*"', '', xml)
+
+    # ── 8. Ensure IntegrationProcess participant has processRef="Process_1" ────
+    def _add_process_ref(m: re.Match) -> str:
+        tag = m.group(0)
+        if 'processRef=' not in tag:
+            tag = tag[:-1].rstrip() + ' processRef="Process_1">'
+        return tag
+
+    xml = re.sub(
+        r'<bpmn2:participant\b[^>]*ifl:type="IntegrationProcess"[^>]*>',
+        _add_process_ref, xml,
+    )
+
+    # ── 9. Ensure <bpmn2:process> has the required extensionElements ───────────
+    if 'IntegrationProcess/version::1.2.0' not in xml:
+        # Does the process element already have an extensionElements child?
+        has_proc_ext = re.search(
+            r'<bpmn2:process\b[^>]*>\s*<bpmn2:extensionElements>',
+            xml,
+        )
+        if has_proc_ext:
+            # Replace the whole existing extensionElements block (it lacks cmdVariantUri)
+            xml = re.sub(
+                r'(<bpmn2:process\b[^>]*>)\s*<bpmn2:extensionElements>.*?</bpmn2:extensionElements>',
+                r'\1' + _PROCESS_EXT,
+                xml, count=1, flags=re.DOTALL,
+            )
+        else:
+            # No extensionElements at all — inject right after the process opening tag
+            xml = re.sub(
+                r'(<bpmn2:process\b[^>]*>)',
+                r'\1' + _PROCESS_EXT,
+                xml, count=1,
+            )
+
+    # ── 10. Enforce element order: collaboration → process → BPMNDiagram ──────
+    #  (AI often emits process before collaboration, which causes CPI load errors)
+    def_open_m = re.match(r'(.*?<bpmn2:definitions\b[^>]*>)', xml, re.DOTALL)
+    if def_open_m:
+        def_open = def_open_m.group(1)
+        inner    = xml[len(def_open):]
+        if inner.rstrip().endswith('</bpmn2:definitions>'):
+            inner = inner.rstrip()[: -len('</bpmn2:definitions>')].rstrip()
+
+        collab  = _extract_xml_block(inner, '<bpmn2:collaboration', '</bpmn2:collaboration>')
+        process = _extract_xml_block(inner, '<bpmn2:process',       '</bpmn2:process>')
+        diagram = _extract_xml_block(inner, '<bpmndi:BPMNDiagram',  '</bpmndi:BPMNDiagram>')
+
+        if collab and process and diagram:
+            # Strip the three known blocks to preserve any other declarations
+            remaining = inner
+            for blk in (collab, process, diagram):
+                remaining = remaining.replace(blk, '', 1).strip()
+
+            xml = (
+                def_open + '\n\n'
+                + (remaining + '\n\n' if remaining else '')
+                + collab  + '\n\n'
+                + process + '\n\n'
+                + diagram + '\n\n'
+                + '</bpmn2:definitions>'
+            )
+
+    # ── 11. Add missing sourceElement / targetElement to BPMNEdge elements ─────
+    xml = _fix_bpmn_edges(xml)
+
+    return xml
+
+
+def _default_scripts(include_error_handling: bool) -> dict[str, str]:
+    scripts = {"SetProperties.groovy": SET_PROPERTIES_GROOVY}
+    if include_error_handling:
+        scripts["HandleError.groovy"] = HANDLE_ERROR_GROOVY
+    return scripts
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Generate iFlow from form
+# ─────────────────────────────────────────────────────────────────────────────
+class IFlowRequest(BaseModel):
+    name: str
+    description: str
+    sender_adapter: str = "HTTPS"
+    receiver_adapter: str = "HTTP"
+    transformation_type: str = "None"
+    include_error_handling: bool = True
+    extra_steps: str = ""
+    version: str = "1.0.0"
+    package_id: str = ""
+    package_name: str = ""
+
+
+@router.post("/generate")
+def generate_iflow(req: IFlowRequest):
+    is_timer = req.sender_adapter.upper() == "TIMER"
+    trigger  = "Timer trigger (no sender participant — use startEvent with timerEventDefinition)" \
+               if is_timer else f"Sender adapter: {req.sender_adapter}"
+
+    prompt = f"""Generate the complete .iflw XML for this SAP CPI iFlow.
+Return ONLY the raw XML — start with <?xml and end with </bpmn2:definitions>.
+
+iFlow Name   : {req.name}
+Description  : {req.description}
+Trigger      : {trigger}
+Receiver     : {req.receiver_adapter}
+Transformation: {req.transformation_type}
+Error Handling: {"Yes — include Exception Subprocess with ErrorStartEvent→ErrorEndEvent" if req.include_error_handling else "No"}
+Extra Steps  : {req.extra_steps or "None"}
+
+Requirements:
+- The iflw references SetProperties.groovy (script file, key=script, value=SetProperties.groovy)
+{"- The iflw references HandleError.groovy in the Exception Subprocess" if req.include_error_handling else ""}
+- Externalize all URLs, credentials, endpoint paths as {{PARAM_NAME}}
+- Use exact cmdVariantUri versions and adapter properties from the system instructions
+- Include complete bpmndi:BPMNDiagram section with all shapes and edges
+"""
+
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=8192)
+    iflw = _fix_iflw_xml(raw)
+    scripts = _default_scripts(req.include_error_handling)
+
+    return {
+        "result":      iflw,
+        "scripts":     scripts,
+        "description": req.description,
+        "name":        req.name,
+        "type":        "xml",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ZIP Download
+# ─────────────────────────────────────────────────────────────────────────────
+class IFlowZipRequest(BaseModel):
+    xml:         str
+    name:        str
+    description: str = ""
+    version:     str = "1.0.0"
+    scripts:     Optional[dict[str, str]] = None
+    xsds:        Optional[dict[str, str]] = None
+    mmaps:       Optional[dict[str, str]] = None
+
+
+@router.post("/download-zip")
+def download_iflow_zip(req: IFlowZipRequest):
+    """Package the iFlow XML + scripts + schemas into a SAP CPI-importable ZIP."""
+    zip_bytes = build_iflow_zip(
+        iflow_xml   = req.xml,
+        name        = req.name,
+        description = req.description,
+        version     = req.version,
+        scripts     = req.scripts or {},
+        xsds        = req.xsds   or {},
+        mmaps       = req.mmaps  or {},
+    )
+    safe_name = req.name.replace(" ", "_") or "iflow"
+    return StreamingResponse(
+        BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={safe_name}.zip"},
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FD → iFlow
+# ─────────────────────────────────────────────────────────────────────────────
+@router.post("/fd-to-iflow")
+async def fd_to_iflow(
+    file:        UploadFile        = File(...),
+    attachments: List[UploadFile]  = File([]),
+    name:        str               = Form(""),
+    version:     str               = Form("1.0.0"),
+):
+    file_bytes = await file.read()
+
+    # Step 1: parse FD text
+    sections   = parse_docx_to_text(file_bytes)
+    fd_summary = sections_to_summary(sections)
+
+    # Step 2: analyse embedded flow diagram image
+    images        = extract_images_from_docx(file_bytes)
+    image_context = ""
+    for img in images:
+        result = analyze_flow_image(img["bytes"], img["content_type"])
+        if result.get("is_flow_diagram"):
+            image_context = (
+                "\nFLOW DIAGRAM EXTRACTED FROM FD IMAGE:\n"
+                f"  System chain : {result.get('chain', '')}\n"
+                f"  CPI steps    : {', '.join(result.get('cpi_steps', [])) or 'not visible'}\n"
+                f"  Extra targets: {', '.join(result.get('multiple_targets', [])) or 'none'}\n"
+                f"  Protocols    : {result.get('protocols', {})}\n"
+                "Use this as the primary source for adapter types and the process chain.\n"
+            )
+            break
+
+    # Step 3: read optional attachments
+    attachment_context = ""
+    extra_xsds:    dict[str, str] = {}
+    extra_mmaps:   dict[str, str] = {}
+    extra_scripts: dict[str, str] = {}
+
+    for att in attachments:
+        att_bytes = await att.read()
+        fname = att.filename or "unknown"
+        ext   = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+        content = att_bytes.decode("utf-8", errors="replace")
+        if ext in ("xsd", "wsdl"):
+            extra_xsds[fname] = content
+            attachment_context += f"\n--- Schema: {fname} ---\n{content[:1500]}\n"
+        elif ext == "mmap":
+            extra_mmaps[fname] = content
+            attachment_context += f"\n--- Mapping: {fname} ---\n{content[:1000]}\n"
+        elif ext == "groovy":
+            extra_scripts[fname] = content
+        else:
+            attachment_context += f"\n--- File: {fname} ---\n{content[:1000]}\n"
+
+    # Step 4: extract iFlow name from FD (quick call)
+    iflow_name = name
+    if not iflow_name:
+        meta_raw = generate(
+            "Return ONLY valid JSON with no markdown. Extract interface metadata from this FD.",
+            f'Extract from this FD: {{"interface_id": "...", "description": "one sentence"}}\n\n{fd_summary[:1500]}'
+        )
+        try:
+            meta_raw = meta_raw.strip()
+            if meta_raw.startswith("```"):
+                meta_raw = meta_raw.split("\n", 1)[-1].rsplit("```", 1)[0]
+            import json
+            meta = json.loads(meta_raw)
+            raw_id = meta.get("interface_id", "GeneratedIFlow")
+            iflow_name   = re.sub(r"[^A-Za-z0-9_\-]", "_", raw_id.strip()) or "GeneratedIFlow"
+        except Exception:
+            iflow_name = "GeneratedIFlow"
+
+    # Step 5: generate iflw XML
+    has_xsds  = bool(extra_xsds)
+    has_mmaps = bool(extra_mmaps)
+
+    prompt = f"""Generate the complete .iflw XML for a SAP CPI iFlow based on the FD below.
+Return ONLY the raw XML — start with <?xml and end with </bpmn2:definitions>.
+
+iFlow Name: {iflow_name}
+Version: {version}
+{image_context}
+{"Attached XSD schemas provided — reference them in the Message Mapping step." if has_xsds else ""}
+{"Attached .mmap mapping file provided — reference it in the Message Mapping step." if has_mmaps else ""}
+
+FD CONTENT:
+{fd_summary[:3500]}
+{attachment_context[:1000]}
+
+Instructions:
+1. Identify sender adapter/trigger from FD (HTTPS or Timer).
+2. Identify receiver adapter(s) from FD.
+3. Add transformation steps as described in the FD (mapping, Groovy, XSLT).
+4. Externalize all configurable values as {{PARAM_NAME}}.
+5. Reference SetProperties.groovy in a Groovy Script step near the start.
+6. Include Exception Subprocess with HandleError.groovy reference.
+7. Use exact versions and properties from the system instructions.
+8. Include complete bpmndi:BPMNDiagram section.
+"""
+
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=8192)
+    iflw = _fix_iflw_xml(raw)
+
+    # Merge: user-supplied scripts take priority over defaults
+    merged_scripts = {**_default_scripts(True), **extra_scripts}
+
+    return {
+        "result":      iflw,
+        "scripts":     merged_scripts,
+        "description": fd_summary[:200].replace("\n", " "),
+        "name":        iflow_name,
+        "xsds":        extra_xsds,
+        "mmaps":        extra_mmaps,
+        "type":        "xml",
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Explain
+# ─────────────────────────────────────────────────────────────────────────────
+class IFlowExplainRequest(BaseModel):
+    xml: str
+
+
+@router.post("/explain")
+def explain_iflow(req: IFlowExplainRequest):
+    prompt = f"""Analyze and explain this SAP CPI iFlow XML:
+
+{req.xml[:5000]}
+
+Provide:
+1. Overview of what this iFlow does
+2. Step-by-step flow description
+3. Adapters/channels used and their versions
+4. Externalized parameters ({{...}}) and what they configure
+5. Potential issues or improvements
+"""
+    result = generate("", prompt)
+    return {"result": result, "type": "markdown"}

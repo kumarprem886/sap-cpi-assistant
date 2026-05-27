@@ -1,0 +1,86 @@
+{
+  "id": "INVOIC02_to_A_SupplierInvoice",
+  "mapping_name": "MM_INVOIC_to_SupplierInvoice",
+  "source_schema": "INVOIC02.xsd",
+  "target_schema": "A_SupplierInvoice.xsd",
+  "source_root": "INVOIC02",
+  "target_root": "A_SupplierInvoice",
+  "field_mappings": [
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_SupplierInvoice/SupplierInvoice/DocumentType",
+      "note": "Matches document type"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_SupplierInvoice/SupplierInvoice/DocumentCurrency",
+      "note": "Matches document currency code"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_SupplierInvoice/SupplierInvoice/DocumentHeaderText",
+      "note": "Matches exchange rate for document currency"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_SupplierInvoice/SupplierInvoice/PaymentTerms",
+      "note": "Matches payment term"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/BELNR",
+      "target_path": "/A_SupplierInvoice/SupplierInvoice/SupplierInvoiceIDByInvcgParty",
+      "note": "Matches document number"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/MENGE",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceItem/QuantityInPurchaseOrderUnit",
+      "note": "Matches quantity in purchase order unit"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/BRGEW",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceItem/QuantityInPurchaseOrderUnit",
+      "note": "Matches net weight in purchase order unit"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK02/BELNR",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceItem/SupplierInvoiceItem",
+      "note": "Matches item number for supplier invoice"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/POSEX",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceItem/Plant",
+      "note": "Matches plant for supplier invoice item"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceItem/IsNotCashDiscountLiable",
+      "note": "Matches for cash discount liability"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceTax/DocumentCurrency",
+      "note": "Matches for document currency"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceTax/DocumentCurrency",
+      "note": "Matches for document currency"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceTax/TaxCode",
+      "note": "Matches for tax code"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/ACTION",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceItem/IsNotCashDiscountLiable",
+      "note": "Matches for cash discount liability"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/EDI_DC40/MESTYP",
+      "target_path": "/A_SupplierInvoice/SupplierInvoiceTax/FiscalYear",
+      "note": "Matches for fiscal year"
+    }
+  ],
+  "total_fields": 15
+}

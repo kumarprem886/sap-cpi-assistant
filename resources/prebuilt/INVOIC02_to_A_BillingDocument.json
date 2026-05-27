@@ -1,0 +1,81 @@
+{
+  "id": "INVOIC02_to_A_BillingDocument",
+  "mapping_name": "MM_INVOIC_to_BillingDocument",
+  "source_schema": "INVOIC02.xsd",
+  "target_schema": "A_BillingDocument.xsd",
+  "source_root": "INVOIC02",
+  "target_root": "A_BillingDocument",
+  "field_mappings": [
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_BillingDocument/BillingDocument/BillingDocumentType",
+      "note": "Matched billing document type"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_BillingDocument/BillingDocument/TransactionCurrency",
+      "note": "Matched transaction currency"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_BillingDocument/BillingDocument/CustomerPaymentTerms",
+      "note": "Matched payment terms"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/NTGEW",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/BillingQuantityUnit",
+      "note": "Matched unit of measure"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_BillingDocument/BillingDocument/TotalGrossAmount",
+      "note": "Matched total gross amount"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDKA1/PSTLZ",
+      "target_path": "/A_BillingDocument/BillingDocument/SoldToParty",
+      "note": "Matched sold-to party postal code"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDKA1/REGIO",
+      "target_path": "/A_BillingDocument/BillingDocument/SalesOrganization",
+      "note": "Matched sales organization region"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDKA1/KUNNR",
+      "target_path": "/A_BillingDocument/BillingDocument/SalesGroup",
+      "note": "Matched sales group partner"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/PSTYP",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/BillingDocumentItemText",
+      "note": "Matched item text type"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/MENEE",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/NetAmount",
+      "note": "Matched item net amount"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/PMENE",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/BillingQuantityUnit",
+      "note": "Matched item quantity unit"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/VOLUM",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/BillingQuantityUnit",
+      "note": "Matched item volume"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDP01/VOLEH",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/BillingQuantityUnit",
+      "note": "Matched item volume unit"
+    },
+    {
+      "source_path": "/INVOIC02/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_BillingDocument/BillingDocumentItem/ItemBillingRelevanceStatus",
+      "note": "ZTERM is a billing relevance status"
+    }
+  ],
+  "total_fields": 14
+}

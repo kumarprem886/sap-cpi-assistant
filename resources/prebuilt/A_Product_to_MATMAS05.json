@@ -1,0 +1,261 @@
+{
+  "id": "A_Product_to_MATMAS05",
+  "mapping_name": "MM_Product_to_MATMAS",
+  "source_schema": "A_Product.xsd",
+  "target_schema": "MATMAS05.xsd",
+  "source_root": "A_Product",
+  "target_root": "MATMAS05",
+  "field_mappings": [
+    {
+      "source_path": "/A_Product/Product/Product",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/MATNR",
+      "note": "Product ID"
+    },
+    {
+      "source_path": "/A_Product/Product/ProductType",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/MTART",
+      "note": "Product Type"
+    },
+    {
+      "source_path": "/A_Product/Product/CrossPlantStatus",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/MTPOS_MARA",
+      "note": "Cross-plant status"
+    },
+    {
+      "source_path": "/A_Product/Product/BaseUnit",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/MEINS",
+      "note": "Base Unit of Measure"
+    },
+    {
+      "source_path": "/A_Product/Product/GrossWeight",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/BRGEW",
+      "note": "Gross Weight"
+    },
+    {
+      "source_path": "/A_Product/Product/NetWeight",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/NTGEW",
+      "note": "Net Weight"
+    },
+    {
+      "source_path": "/A_Product/Product/WeightUnit",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/GEWEI",
+      "note": "Weight Unit"
+    },
+    {
+      "source_path": "/A_Product/Product/VolumeUnit",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/VOLEH",
+      "note": "Volume Unit"
+    },
+    {
+      "source_path": "/A_Product/Product/MaterialVolume",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/VOLUM",
+      "note": "Material Volume"
+    },
+    {
+      "source_path": "/A_Product/Product/Division",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/SPART",
+      "note": "Division"
+    },
+    {
+      "source_path": "/A_Product/Product/ProductGroup",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/MATKL",
+      "note": "Product Group"
+    },
+    {
+      "source_path": "/A_Product/Product/ItemCategoryGroup",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/KZDLK",
+      "note": "Item Category Group"
+    },
+    {
+      "source_path": "/A_Product/Product/ProcurementRule",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/KZDIE",
+      "note": "Procurement Rule"
+    },
+    {
+      "source_path": "/A_Product/Product/LastChangeDate",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/NORMT",
+      "note": "Last Change Date"
+    },
+    {
+      "source_path": "/A_Product/Product/IsMarkedForDeletion",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/LSTFL",
+      "note": "Is Marked for Deletion"
+    },
+    {
+      "source_path": "/A_Product/ProductDescription/Language",
+      "target_path": "/MATMAS05/IDOC/E1MAKTM/SPRAS",
+      "note": "Product Description Language"
+    },
+    {
+      "source_path": "/A_Product/ProductDescription/ProductDescription",
+      "target_path": "/MATMAS05/IDOC/E1MAKTM/MAKTX",
+      "note": "Product Description"
+    },
+    {
+      "source_path": "/A_Product/ProductPlant/Plant",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/WERKS",
+      "note": "Plant"
+    },
+    {
+      "source_path": "/A_Product/ProductPlant/PurchasingGroup",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/EKGRP",
+      "note": "Purchasing Group"
+    },
+    {
+      "source_path": "/A_Product/ProductPlant/ProductionSupervisor",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/INSMK",
+      "note": "Production Supervisor"
+    },
+    {
+      "source_path": "/A_Product/ProductPlant/ProductProductionSchedulingProfile",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/MTVFP",
+      "note": "Product Production Scheduling Profile"
+    },
+    {
+      "source_path": "/A_Product/ProductSalesDelivery/ProductSalesOrg",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/HERKR",
+      "note": "Product Sales Organization"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/AlternativeUnit",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/MEINH",
+      "note": "Alternative Unit"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/QuantityNumerator",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/MEABG",
+      "note": "Quantity Numerator"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/QuantityDenominator",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/MEAEN",
+      "note": "Quantity Denominator"
+    },
+    {
+      "source_path": "/A_Product/Product/GrossWeight",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/NTGEW",
+      "note": "Gross weight in source matches net weight in target"
+    },
+    {
+      "source_path": "/A_Product/Product/WeightUnit",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/GEWEI",
+      "note": "Weight unit in source matches weight unit in target"
+    },
+    {
+      "source_path": "/A_Product/Product/MaterialVolume",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/VOLUM",
+      "note": "Material volume in source matches volume in target"
+    },
+    {
+      "source_path": "/A_Product/Product/VolumeUnit",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/VOLEH",
+      "note": "Volume unit in source matches volume unit in target"
+    },
+    {
+      "source_path": "/A_Product/Product/BaseUnit",
+      "target_path": "/MATMAS05/IDOC/E1MVKEM/MTPOS",
+      "note": "Base unit in source matches base unit in target"
+    },
+    {
+      "source_path": "/A_Product/Product/NetWeight",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/NTGEW",
+      "note": "Net weight in source matches net weight in target"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/MaterialVolume",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/VOLUM",
+      "note": "Material volume in source matches volume in target"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/GrossWeight",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/NTGEW",
+      "note": "Gross weight in source matches net weight in target"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Length",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/EAN11",
+      "note": "Length in source could be related to EAN11 in target"
+    },
+    {
+      "source_path": "/A_Product/Product/ProcurementRule",
+      "target_path": "/MATMAS05/IDOC/E1MBEWM/VPRSV",
+      "note": "Procurement rule in source matches procurement rule in target"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Width",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/LAENG",
+      "note": "match unit of measure width"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Height",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/HOEHE",
+      "note": "match unit of measure height"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Width",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/LAENG",
+      "note": "match material width"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Height",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/HOEHE",
+      "note": "match material height"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/UnitSpecificProductLength",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/GEWEI",
+      "note": "related measure"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/UnitSpecificProductWidth",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/LAENG",
+      "note": "related measure width"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/UnitSpecificProductHeight",
+      "target_path": "/MATMAS05/IDOC/E1MARAM/HOEHE",
+      "note": "related measure height"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/MaximumStackingFactor",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/MAXLS",
+      "note": "similar concept of stacking factor"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/CapacityUsage",
+      "target_path": "/MATMAS05/IDOC/E1MARCM/KZDIE",
+      "note": "related concept of capacity"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Width",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/NTGEW",
+      "note": "Matching width in source to net weight in target"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/Height",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/NTGEW",
+      "note": "Matching height in source to net weight in target - assume as additional dimension"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/UnitSpecificProductLength",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/VOLUM",
+      "note": "Matching unit specific length in source to volume in target"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/UnitSpecificProductWidth",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/VOLUM",
+      "note": "Matching unit specific width in source to volume in target - assume as additional dimension"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/UnitSpecificProductHeight",
+      "target_path": "/MATMAS05/IDOC/E1MARMM/VOLUM",
+      "note": "Matching unit specific height in source to volume in target - assume as additional dimension"
+    },
+    {
+      "source_path": "/A_Product/ProductUnitOfMeasure/MaximumStackingFactor",
+      "target_path": "/MATMAS05/IDOC/E1MLGNM/LGPLA",
+      "note": "Matching maximum stacking factor in source to maximum loading platform in target"
+    }
+  ],
+  "total_fields": 50
+}

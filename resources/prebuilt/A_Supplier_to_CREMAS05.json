@@ -1,0 +1,86 @@
+{
+  "id": "A_Supplier_to_CREMAS05",
+  "mapping_name": "MM_Supplier_to_CREMAS",
+  "source_schema": "A_Supplier.xsd",
+  "target_schema": "CREMAS05.xsd",
+  "source_root": "A_Supplier",
+  "target_root": "CREMAS05",
+  "field_mappings": [
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/Supplier",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/LIFNR",
+      "note": "Supplier Number"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/AutomaticEvaluatedRcptSettlmt",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/XZEMP",
+      "note": "Automatic Evaluated Receipt Settlement"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrgText/Supplier",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/NAME1",
+      "note": "Supplier Name"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPartnerFunc/Supplier",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/LIFNR",
+      "note": "Supplier Number"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPartnerFunc/DefaultPartner",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/NAME1",
+      "note": "Supplier Name"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPartnerFunc/CreationDate",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/ERDAT",
+      "note": "Creation Date"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPartnerFunc/CreatedByUser",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/ERNAM",
+      "note": "Created By User"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPartnerFunc/ReferenceSupplier",
+      "target_path": "/CREMAS05/IDOC/E1LFA1M/XCPDK",
+      "note": "Reference Supplier"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/Supplier",
+      "target_path": "/CREMAS05/IDOC/E1LFB1M/EIKTO",
+      "note": "Supplier"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/PurchasingOrganization",
+      "target_path": "/CREMAS05/IDOC/E1LFB1M/BUKRS",
+      "note": "Purchasing Organization"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/SupplierRespSalesPersonNameName",
+      "target_path": "/CREMAS05/IDOC/E1ADRM1/NAME2",
+      "note": "Sales Representative Full Name"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/UpdtGrpForSupplierTransData",
+      "target_path": "/CREMAS05/IDOC/E1LFB1M/XPBDP",
+      "note": "Update Group"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrg/ValueAddedTaxRegistration",
+      "target_path": "/CREMAS05/IDOC/E1LFASM/TAXKL",
+      "note": "VAT Registration"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPurchasingOrgText/LongText",
+      "target_path": "/CREMAS05/IDOC/E1ADRM1/ROOMNUMBER",
+      "note": "Long text matches with room number functionality"
+    },
+    {
+      "source_path": "/A_Supplier/SupplierPartnerFunc/Plant",
+      "target_path": "/CREMAS05/IDOC/E1ADRM1/ROOMNUMBER",
+      "note": "Plant matches with specific room number"
+    }
+  ],
+  "total_fields": 15
+}

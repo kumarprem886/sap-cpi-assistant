@@ -1,0 +1,432 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SAP IDoc XSD – DEBMAS06 (Customer Master)
+  Basic Type : DEBMAS06
+  Message Type: DEBMAS
+  Segments covered:
+    EDI_DC40   – IDoc Control Record
+    E1KNA1M    – Customer General Data (Client level)
+    E1KNASM    – Tax Indicator per Country
+    E1KNB1M    – Customer Company Code Data
+    E1KNBKM    – Customer Bank Details
+    E1KNBWM    – Dunning Data
+    E1KNVVM    – Customer Sales Area Data
+    E1KNVKM    – Customer Contact Person
+    E1KNVPM    – Customer Partner Functions
+    E1KNVIM    – Customer Additional Data (Sales)
+    E1KNVDM    – Customer Unloading Point
+    E1KNVLM    – Customer Shipping Data
+    E1KNVHM    – Customer Pricing Hierarchy
+    E1WYT3M    – Customer Partner Functions (Sales)
+    E1ADRM1    – Address (Central)
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="unqualified">
+
+  <!-- ═══════════════════════════════════════════════
+       Root Element
+  ═══════════════════════════════════════════════ -->
+  <xs:element name="DEBMAS06">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="IDOC" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+
+              <!-- Control Record -->
+              <xs:element name="EDI_DC40" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="TABNAM"  type="xs:string" minOccurs="0"/>  <!-- Table name of the record structure -->
+                    <xs:element name="MANDT"   type="xs:string" minOccurs="0"/>  <!-- Client -->
+                    <xs:element name="DOCNUM"  type="xs:string" minOccurs="0"/>  <!-- IDoc number -->
+                    <xs:element name="DOCREL"  type="xs:string" minOccurs="0"/>  <!-- SAP Release -->
+                    <xs:element name="STATUS"  type="xs:string" minOccurs="0"/>  <!-- Status of IDoc -->
+                    <xs:element name="DIRECT"  type="xs:string" minOccurs="0"/>  <!-- Direction -->
+                    <xs:element name="OUTMOD"  type="xs:string" minOccurs="0"/>  <!-- Output mode -->
+                    <xs:element name="IDOCTYP" type="xs:string" minOccurs="0"/>  <!-- IDoc type (DEBMAS06) -->
+                    <xs:element name="MESTYP"  type="xs:string" minOccurs="0"/>  <!-- Message type (DEBMAS) -->
+                    <xs:element name="SNDPRT"  type="xs:string" minOccurs="0"/>  <!-- Partner type of sender -->
+                    <xs:element name="SNDPOR"  type="xs:string" minOccurs="0"/>  <!-- Sender port -->
+                    <xs:element name="SNDPRN"  type="xs:string" minOccurs="0"/>  <!-- Partner number of sender -->
+                    <xs:element name="RCVPRT"  type="xs:string" minOccurs="0"/>  <!-- Partner type of receiver -->
+                    <xs:element name="RCVPOR"  type="xs:string" minOccurs="0"/>  <!-- Receiver port -->
+                    <xs:element name="RCVPRN"  type="xs:string" minOccurs="0"/>  <!-- Partner number of receiver -->
+                    <xs:element name="CREDAT"  type="xs:string" minOccurs="0"/>  <!-- Date IDoc was created -->
+                    <xs:element name="CRETIM"  type="xs:string" minOccurs="0"/>  <!-- Time IDoc was created -->
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- ─────────────────────────────────────────
+                   E1KNA1M – Customer General Data
+              ───────────────────────────────────────── -->
+              <xs:element name="E1KNA1M" minOccurs="1" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>  <!-- Function -->
+                    <xs:element name="KUNNR"   type="xs:string" minOccurs="0"/>  <!-- Customer number -->
+                    <xs:element name="ANRED"   type="xs:string" minOccurs="0"/>  <!-- Title -->
+                    <xs:element name="AUFSD"   type="xs:string" minOccurs="0"/>  <!-- Order block (client) -->
+                    <xs:element name="BAHSV"   type="xs:string" minOccurs="0"/>  <!-- POBox address (city) -->
+                    <xs:element name="BBBNR"   type="xs:string" minOccurs="0"/>  <!-- BBSR number -->
+                    <xs:element name="BBSNR"   type="xs:string" minOccurs="0"/>  <!-- BBSR sub-number -->
+                    <xs:element name="BEGRU"   type="xs:string" minOccurs="0"/>  <!-- Authorization group -->
+                    <xs:element name="BRSCH"   type="xs:string" minOccurs="0"/>  <!-- Industry sector -->
+                    <xs:element name="BUBKZ"   type="xs:string" minOccurs="0"/>  <!-- POBox bank -->
+                    <xs:element name="DATLT"   type="xs:string" minOccurs="0"/>  <!-- Data transfer last changed date -->
+                    <xs:element name="DTAMS"   type="xs:string" minOccurs="0"/>  <!-- Statistical group customer -->
+                    <xs:element name="DTAWS"   type="xs:string" minOccurs="0"/>  <!-- Instruction key for data medium exchange -->
+                    <xs:element name="ERDAT"   type="xs:string" minOccurs="0"/>  <!-- Date on which the record was created -->
+                    <xs:element name="ERNAM"   type="xs:string" minOccurs="0"/>  <!-- Name of Person who Created the Object -->
+                    <xs:element name="EXABL"   type="xs:string" minOccurs="0"/>  <!-- Indicator: print conf. of debit memo? -->
+                    <xs:element name="FAKSD"   type="xs:string" minOccurs="0"/>  <!-- Billing block (client level) -->
+                    <xs:element name="FDKEY"   type="xs:string" minOccurs="0"/>  <!-- Planning group -->
+                    <xs:element name="GESCH"   type="xs:string" minOccurs="0"/>  <!-- Sex of the person in terms of address -->
+                    <xs:element name="GFORM"   type="xs:string" minOccurs="0"/>  <!-- Legal status -->
+                    <xs:element name="GPART"   type="xs:string" minOccurs="0"/>  <!-- Business partner number -->
+                    <xs:element name="KONZS"   type="xs:string" minOccurs="0"/>  <!-- Group key -->
+                    <xs:element name="KTOKD"   type="xs:string" minOccurs="0"/>  <!-- Account group – customer -->
+                    <xs:element name="KUKLA"   type="xs:string" minOccurs="0"/>  <!-- Customer classification -->
+                    <xs:element name="LAND1"   type="xs:string" minOccurs="0"/>  <!-- Country key -->
+                    <xs:element name="LIFNR"   type="xs:string" minOccurs="0"/>  <!-- Account number of vendor -->
+                    <xs:element name="LIFSD"   type="xs:string" minOccurs="0"/>  <!-- Central delivery block -->
+                    <xs:element name="LOCCO"   type="xs:string" minOccurs="0"/>  <!-- City coordinates -->
+                    <xs:element name="LOEVM"   type="xs:string" minOccurs="0"/>  <!-- Deletion flag for customer (client level) -->
+                    <xs:element name="NAME1"   type="xs:string" minOccurs="0"/>  <!-- Name 1 -->
+                    <xs:element name="NAME2"   type="xs:string" minOccurs="0"/>  <!-- Name 2 -->
+                    <xs:element name="NAME3"   type="xs:string" minOccurs="0"/>  <!-- Name 3 -->
+                    <xs:element name="NAME4"   type="xs:string" minOccurs="0"/>  <!-- Name 4 -->
+                    <xs:element name="NIELS"   type="xs:string" minOccurs="0"/>  <!-- Nielsen indicator -->
+                    <xs:element name="ORT01"   type="xs:string" minOccurs="0"/>  <!-- City name -->
+                    <xs:element name="ORT02"   type="xs:string" minOccurs="0"/>  <!-- District -->
+                    <xs:element name="PFACH"   type="xs:string" minOccurs="0"/>  <!-- PO box -->
+                    <xs:element name="PSTL2"   type="xs:string" minOccurs="0"/>  <!-- PO box postal code -->
+                    <xs:element name="PSTLZ"   type="xs:string" minOccurs="0"/>  <!-- Postal code -->
+                    <xs:element name="REGIO"   type="xs:string" minOccurs="0"/>  <!-- Region (state, province, county) -->
+                    <xs:element name="RPMKR"   type="xs:string" minOccurs="0"/>  <!-- Regional market -->
+                    <xs:element name="SORTL"   type="xs:string" minOccurs="0"/>  <!-- Character field length 10 -->
+                    <xs:element name="SPRAS"   type="xs:string" minOccurs="0"/>  <!-- Language key -->
+                    <xs:element name="STCD1"   type="xs:string" minOccurs="0"/>  <!-- Tax number 1 -->
+                    <xs:element name="STCD2"   type="xs:string" minOccurs="0"/>  <!-- Tax number 2 -->
+                    <xs:element name="STKDE"   type="xs:string" minOccurs="0"/>  <!-- Tax jurisdiction -->
+                    <xs:element name="STKZL"   type="xs:string" minOccurs="0"/>  <!-- Indicator: business partner subject to equalization tax? -->
+                    <xs:element name="STKZU"   type="xs:string" minOccurs="0"/>  <!-- Liable for VAT -->
+                    <xs:element name="STRAS"   type="xs:string" minOccurs="0"/>  <!-- Street and house number -->
+                    <xs:element name="TELBX"   type="xs:string" minOccurs="0"/>  <!-- Telebox number -->
+                    <xs:element name="TELF1"   type="xs:string" minOccurs="0"/>  <!-- First telephone number -->
+                    <xs:element name="TELF2"   type="xs:string" minOccurs="0"/>  <!-- Second telephone number -->
+                    <xs:element name="TELFX"   type="xs:string" minOccurs="0"/>  <!-- Fax number -->
+                    <xs:element name="TELEX"   type="xs:string" minOccurs="0"/>  <!-- Telex number -->
+                    <xs:element name="TELX1"   type="xs:string" minOccurs="0"/>  <!-- Teletex number -->
+                    <xs:element name="XCPDK"   type="xs:string" minOccurs="0"/>  <!-- Indicator: is the account a one-time account? -->
+                    <xs:element name="XZEMP"   type="xs:string" minOccurs="0"/>  <!-- Indicator: alternative payer in document allowed? -->
+                    <xs:element name="VBUND"   type="xs:string" minOccurs="0"/>  <!-- Company ID of trading partner -->
+                    <xs:element name="FISKN"   type="xs:string" minOccurs="0"/>  <!-- Account number of the master record with the fiscal address -->
+                    <xs:element name="STCEG"   type="xs:string" minOccurs="0"/>  <!-- VAT registration number -->
+                    <xs:element name="STKZN"   type="xs:string" minOccurs="0"/>  <!-- Natural person indicator -->
+                    <xs:element name="SMTP_ADDR" type="xs:string" minOccurs="0"/><!-- E-Mail Address -->
+                    <xs:element name="LZONE"   type="xs:string" minOccurs="0"/>  <!-- Transportation zone to or from which the goods are delivered -->
+                    <xs:element name="XBLCK"   type="xs:string" minOccurs="0"/>  <!-- Central delivery block -->
+                    <xs:element name="PFORT"   type="xs:string" minOccurs="0"/>  <!-- PO box city -->
+                    <xs:element name="TXJCD"   type="xs:string" minOccurs="0"/>  <!-- Tax jurisdiction -->
+                    <xs:element name="PROFS"   type="xs:string" minOccurs="0"/>  <!-- Occupation -->
+                    <xs:element name="STGDL"   type="xs:string" minOccurs="0"/>  <!-- Business type -->
+                    <xs:element name="ADRNR"   type="xs:string" minOccurs="0"/>  <!-- Address number -->
+                    <xs:element name="MCOD1"   type="xs:string" minOccurs="0"/>  <!-- Search term for matchcode search -->
+                    <xs:element name="MCOD2"   type="xs:string" minOccurs="0"/>  <!-- Search term for matchcode search -->
+                    <xs:element name="MCOD3"   type="xs:string" minOccurs="0"/>  <!-- Search term for matchcode search -->
+                    <xs:element name="NODEL"   type="xs:string" minOccurs="0"/>  <!-- Deletion block for master record -->
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- ─────────────────────────────────────────
+                   E1KNASM – Customer Tax Indicator
+              ───────────────────────────────────────── -->
+              <xs:element name="E1KNASM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>  <!-- Function -->
+                    <xs:element name="ALAND"   type="xs:string" minOccurs="0"/>  <!-- Departure country (country from which the goods are sent) -->
+                    <xs:element name="TATYP"   type="xs:string" minOccurs="0"/>  <!-- Tax category (sales tax, federal sales tax,...) -->
+                    <xs:element name="TAXKD"   type="xs:string" minOccurs="0"/>  <!-- Tax classification for customer -->
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- ─────────────────────────────────────────
+                   E1ADRM1 – Address Data (Central)
+              ───────────────────────────────────────── -->
+              <xs:element name="E1ADRM1" minOccurs="0" maxOccurs="1">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element name="MSGFN"      type="xs:string" minOccurs="0"/>
+                    <xs:element name="ADDRNUMBER" type="xs:string" minOccurs="0"/>  <!-- Address number -->
+                    <xs:element name="NAME1"      type="xs:string" minOccurs="0"/>  <!-- Name 1 -->
+                    <xs:element name="NAME2"      type="xs:string" minOccurs="0"/>  <!-- Name 2 -->
+                    <xs:element name="NAME3"      type="xs:string" minOccurs="0"/>  <!-- Name 3 -->
+                    <xs:element name="NAME4"      type="xs:string" minOccurs="0"/>  <!-- Name 4 -->
+                    <xs:element name="CITY1"      type="xs:string" minOccurs="0"/>  <!-- City -->
+                    <xs:element name="CITY2"      type="xs:string" minOccurs="0"/>  <!-- District -->
+                    <xs:element name="CITY_CODE"  type="xs:string" minOccurs="0"/>  <!-- City code for city/street file -->
+                    <xs:element name="CITYP_CODE" type="xs:string" minOccurs="0"/>  <!-- District code for city and street file -->
+                    <xs:element name="POST_CODE1" type="xs:string" minOccurs="0"/>  <!-- City postal code -->
+                    <xs:element name="POST_CODE2" type="xs:string" minOccurs="0"/>  <!-- PO box postal code -->
+                    <xs:element name="POST_CODE3" type="xs:string" minOccurs="0"/>  <!-- Company postal code (for large customers) -->
+                    <xs:element name="PCODE1_EXT" type="xs:string" minOccurs="0"/>  <!-- Delivery service (e.g. POBox) -->
+                    <xs:element name="STREET"     type="xs:string" minOccurs="0"/>  <!-- Street -->
+                    <xs:element name="HOUSE_NUM1" type="xs:string" minOccurs="0"/>  <!-- House number -->
+                    <xs:element name="HOUSE_NUM2" type="xs:string" minOccurs="0"/>  <!-- House number supplement -->
+                    <xs:element name="COUNTRY"    type="xs:string" minOccurs="0"/>  <!-- Country key -->
+                    <xs:element name="REGION"     type="xs:string" minOccurs="0"/>  <!-- Region (state, province, county) -->
+                    <xs:element name="LANGU"      type="xs:string" minOccurs="0"/>  <!-- Language key -->
+                    <xs:element name="TELEPHONE"  type="xs:string" minOccurs="0"/>  <!-- First telephone number -->
+                    <xs:element name="FAX_NUMBER" type="xs:string" minOccurs="0"/>  <!-- Fax number -->
+                    <xs:element name="MOBILE_NUMBER" type="xs:string" minOccurs="0"/> <!-- Mobile number -->
+                    <xs:element name="SMTP_ADDR"  type="xs:string" minOccurs="0"/>  <!-- E-mail address -->
+                    <xs:element name="TIME_ZONE"  type="xs:string" minOccurs="0"/>  <!-- Address time zone -->
+                    <xs:element name="TAXJURCODE" type="xs:string" minOccurs="0"/>  <!-- Tax jurisdiction -->
+                    <xs:element name="PO_BOX"     type="xs:string" minOccurs="0"/>  <!-- PO Box -->
+                    <xs:element name="PO_BOX_CIT" type="xs:string" minOccurs="0"/>  <!-- PO box city -->
+                    <xs:element name="COUNTY_CODE" type="xs:string" minOccurs="0"/> <!-- County code for county -->
+                    <xs:element name="COUNTY"     type="xs:string" minOccurs="0"/>  <!-- County description -->
+                    <xs:element name="TRANSPORT_ZONE" type="xs:string" minOccurs="0"/> <!-- Transportation zone to or from which the goods are delivered -->
+                    <xs:element name="BUILDING"   type="xs:string" minOccurs="0"/>  <!-- Building (number or code) -->
+                    <xs:element name="FLOOR"      type="xs:string" minOccurs="0"/>  <!-- Floor in building -->
+                    <xs:element name="ROOMNUMBER" type="xs:string" minOccurs="0"/>  <!-- Room or Apartment Number -->
+                  </xs:all>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- ─────────────────────────────────────────
+                   E1KNB1M – Company Code Data
+              ───────────────────────────────────────── -->
+              <xs:element name="E1KNB1M" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>  <!-- Function -->
+                    <xs:element name="BUKRS"   type="xs:string" minOccurs="0"/>  <!-- Company code -->
+                    <xs:element name="AKONT"   type="xs:string" minOccurs="0"/>  <!-- Reconciliation account in general ledger -->
+                    <xs:element name="ALTKN"   type="xs:string" minOccurs="0"/>  <!-- Previous account number at the customer -->
+                    <xs:element name="BUSAB"   type="xs:string" minOccurs="0"/>  <!-- Accounting clerk responsible for this customer -->
+                    <xs:element name="DATLZ"   type="xs:string" minOccurs="0"/>  <!-- Date of last interest run -->
+                    <xs:element name="DISKB"   type="xs:string" minOccurs="0"/>  <!-- Discount block -->
+                    <xs:element name="ERDAT"   type="xs:string" minOccurs="0"/>  <!-- Date on which the record was created -->
+                    <xs:element name="ERNAM"   type="xs:string" minOccurs="0"/>  <!-- Name of person who created the record -->
+                    <xs:element name="ICAUS"   type="xs:string" minOccurs="0"/>  <!-- Reason code for underpayment -->
+                    <xs:element name="KVERM"   type="xs:string" minOccurs="0"/>  <!-- Memo -->
+                    <xs:element name="LOEVM"   type="xs:string" minOccurs="0"/>  <!-- Deletion flag for customer (company code level) -->
+                    <xs:element name="MAHNA"   type="xs:string" minOccurs="0"/>  <!-- Dunning area -->
+                    <xs:element name="MANDT"   type="xs:string" minOccurs="0"/>  <!-- Client -->
+                    <xs:element name="NODEL"   type="xs:string" minOccurs="0"/>  <!-- Block for deletion -->
+                    <xs:element name="NRZAHL"  type="xs:string" minOccurs="0"/>  <!-- Number of payments -->
+                    <xs:element name="PERNR"   type="xs:string" minOccurs="0"/>  <!-- Personnel number -->
+                    <xs:element name="TLFNS"   type="xs:string" minOccurs="0"/>  <!-- Accounting clerk's telephone number at business partner -->
+                    <xs:element name="TOGRU"   type="xs:string" minOccurs="0"/>  <!-- Tolerance group for the business partner -->
+                    <xs:element name="UPDAT"   type="xs:string" minOccurs="0"/>  <!-- Date of the last update -->
+                    <xs:element name="UPTIM"   type="xs:string" minOccurs="0"/>  <!-- Time of the last update -->
+                    <xs:element name="XPBDP"   type="xs:string" minOccurs="0"/>  <!-- Indicator: Is there a payment advice by EDI? -->
+                    <xs:element name="XVERR"   type="xs:string" minOccurs="0"/>  <!-- Indicator: Customer clearing between company codes? -->
+                    <xs:element name="ZAHLS"   type="xs:string" minOccurs="0"/>  <!-- Payment block key -->
+                    <xs:element name="ZTERM"   type="xs:string" minOccurs="0"/>  <!-- Terms of payment key -->
+                    <xs:element name="ZWELS"   type="xs:string" minOccurs="0"/>  <!-- List of accepted payment methods -->
+                    <xs:element name="EIKTO"   type="xs:string" minOccurs="0"/>  <!-- Our account number at the customer -->
+                    <xs:element name="ZSABE"   type="xs:string" minOccurs="0"/>  <!-- Payment clerk at business partner -->
+                    <xs:element name="KVERM1"  type="xs:string" minOccurs="0"/>  <!-- Memo line 2 -->
+
+                    <!-- Dunning data (E1KNBWM nested) -->
+                    <xs:element name="E1KNBWM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"  type="xs:string" minOccurs="0"/>
+                          <xs:element name="BUKRS"  type="xs:string" minOccurs="0"/>  <!-- Company code -->
+                          <xs:element name="MABER"  type="xs:string" minOccurs="0"/>  <!-- Dunning area -->
+                          <xs:element name="MANSP"  type="xs:string" minOccurs="0"/>  <!-- Dunning block -->
+                          <xs:element name="MAHNA"  type="xs:string" minOccurs="0"/>  <!-- Dunning area -->
+                          <xs:element name="MAHNZ"  type="xs:string" minOccurs="0"/>  <!-- Number of dunning notices sent to customer -->
+                          <xs:element name="MANDT"  type="xs:string" minOccurs="0"/>  <!-- Client -->
+                          <xs:element name="MADAT"  type="xs:string" minOccurs="0"/>  <!-- Date of the last dunning notice -->
+                          <xs:element name="MAHDT"  type="xs:string" minOccurs="0"/>  <!-- Date of the last dunning level -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Bank data (E1KNBKM nested) -->
+                    <xs:element name="E1KNBKM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"  type="xs:string" minOccurs="0"/>
+                          <xs:element name="BANKS"  type="xs:string" minOccurs="0"/>  <!-- Bank country key -->
+                          <xs:element name="BANKL"  type="xs:string" minOccurs="0"/>  <!-- Bank key -->
+                          <xs:element name="BANKN"  type="xs:string" minOccurs="0"/>  <!-- Bank account number -->
+                          <xs:element name="BKONT"  type="xs:string" minOccurs="0"/>  <!-- Bank control key -->
+                          <xs:element name="BKREF"  type="xs:string" minOccurs="0"/>  <!-- Reference specifications for bank details -->
+                          <xs:element name="BVTYP"  type="xs:string" minOccurs="0"/>  <!-- Partner bank type -->
+                          <xs:element name="EBPP_BKACCN" type="xs:string" minOccurs="0"/> <!-- EBPP: account name -->
+                          <xs:element name="IBAN"   type="xs:string" minOccurs="0"/>  <!-- IBAN -->
+                          <xs:element name="SWIFT"  type="xs:string" minOccurs="0"/>  <!-- SWIFT/BIC code -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                  </xs:sequence>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+              <!-- ─────────────────────────────────────────
+                   E1KNVVM – Sales Area Data (Header)
+              ───────────────────────────────────────── -->
+              <xs:element name="E1KNVVM" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>  <!-- Function -->
+                    <xs:element name="VKORG"   type="xs:string" minOccurs="0"/>  <!-- Sales organization -->
+                    <xs:element name="VTWEG"   type="xs:string" minOccurs="0"/>  <!-- Distribution channel -->
+                    <xs:element name="SPART"   type="xs:string" minOccurs="0"/>  <!-- Division -->
+                    <xs:element name="VSBED"   type="xs:string" minOccurs="0"/>  <!-- Shipping conditions -->
+                    <xs:element name="FAKSD"   type="xs:string" minOccurs="0"/>  <!-- Billing block for customer (sales area) -->
+                    <xs:element name="MRNKZ"   type="xs:string" minOccurs="0"/>  <!-- Invoice list schedule (date for invoice list) -->
+                    <xs:element name="PERFK"   type="xs:string" minOccurs="0"/>  <!-- Invoice dates (calendar identification) -->
+                    <xs:element name="PERNR"   type="xs:string" minOccurs="0"/>  <!-- Personnel number of the sales representative -->
+                    <xs:element name="PKUNRE"  type="xs:string" minOccurs="0"/>  <!-- Customer No. of invoicing party -->
+                    <xs:element name="PKUNRG"  type="xs:string" minOccurs="0"/>  <!-- Payer -->
+                    <xs:element name="PKUNSH"  type="xs:string" minOccurs="0"/>  <!-- Ship-to party -->
+                    <xs:element name="PKUNWE"  type="xs:string" minOccurs="0"/>  <!-- Goods receiving party -->
+                    <xs:element name="VKBUR"   type="xs:string" minOccurs="0"/>  <!-- Sales office -->
+                    <xs:element name="VKGRP"   type="xs:string" minOccurs="0"/>  <!-- Sales group -->
+                    <xs:element name="VERSG"   type="xs:string" minOccurs="0"/>  <!-- Customer group -->
+                    <xs:element name="AUFSD"   type="xs:string" minOccurs="0"/>  <!-- Order block for customer (sales area) -->
+                    <xs:element name="LIFSD"   type="xs:string" minOccurs="0"/>  <!-- Delivery block (sales area) -->
+                    <xs:element name="LOEVM"   type="xs:string" minOccurs="0"/>  <!-- Deletion flag for customer (sales level) -->
+                    <xs:element name="BZIRK"   type="xs:string" minOccurs="0"/>  <!-- Sales district -->
+                    <xs:element name="KDGRP"   type="xs:string" minOccurs="0"/>  <!-- Customer group -->
+                    <xs:element name="LADGR"   type="xs:string" minOccurs="0"/>  <!-- Loading group -->
+                    <xs:element name="PLTYP"   type="xs:string" minOccurs="0"/>  <!-- Price list type -->
+                    <xs:element name="AWAHR"   type="xs:string" minOccurs="0"/>  <!-- Order probability of the item -->
+                    <xs:element name="INCO1"   type="xs:string" minOccurs="0"/>  <!-- Incoterms (part 1) -->
+                    <xs:element name="INCO2"   type="xs:string" minOccurs="0"/>  <!-- Incoterms (part 2) -->
+                    <xs:element name="LIFNR"   type="xs:string" minOccurs="0"/>  <!-- Account number of vendor -->
+                    <xs:element name="LPRIO"   type="xs:string" minOccurs="0"/>  <!-- Delivery priority -->
+                    <xs:element name="ANTLF"   type="xs:string" minOccurs="0"/>  <!-- Maximum number of partial deliveries allowed per order -->
+                    <xs:element name="KZTLF"   type="xs:string" minOccurs="0"/>  <!-- Partial delivery at item level -->
+                    <xs:element name="KZAZU"   type="xs:string" minOccurs="0"/>  <!-- Order combination indicator -->
+                    <xs:element name="KDKG1"   type="xs:string" minOccurs="0"/>  <!-- Condition group 1 (customer) -->
+                    <xs:element name="KDKG2"   type="xs:string" minOccurs="0"/>  <!-- Condition group 2 (customer) -->
+                    <xs:element name="KDKG3"   type="xs:string" minOccurs="0"/>  <!-- Condition group 3 (customer) -->
+                    <xs:element name="KDKG4"   type="xs:string" minOccurs="0"/>  <!-- Condition group 4 (customer) -->
+                    <xs:element name="KDKG5"   type="xs:string" minOccurs="0"/>  <!-- Condition group 5 (customer) -->
+                    <xs:element name="ZTERM"   type="xs:string" minOccurs="0"/>  <!-- Terms of payment key -->
+                    <xs:element name="VWERK"   type="xs:string" minOccurs="0"/>  <!-- Delivering plant (own or external) -->
+                    <xs:element name="STCEG"   type="xs:string" minOccurs="0"/>  <!-- VAT registration number -->
+                    <xs:element name="TAXKD"   type="xs:string" minOccurs="0"/>  <!-- Tax classification for customer -->
+                    <xs:element name="WAERS"   type="xs:string" minOccurs="0"/>  <!-- Currency -->
+                    <xs:element name="KNRZE"   type="xs:string" minOccurs="0"/>  <!-- Customer payment guarantee procedure -->
+                    <xs:element name="KNRZB"   type="xs:string" minOccurs="0"/>  <!-- Payment guarantee procedure -->
+                    <xs:element name="KVGR1"   type="xs:string" minOccurs="0"/>  <!-- Customer group 1 -->
+                    <xs:element name="KVGR2"   type="xs:string" minOccurs="0"/>  <!-- Customer group 2 -->
+                    <xs:element name="KVGR3"   type="xs:string" minOccurs="0"/>  <!-- Customer group 3 -->
+                    <xs:element name="KVGR4"   type="xs:string" minOccurs="0"/>  <!-- Customer group 4 -->
+                    <xs:element name="KVGR5"   type="xs:string" minOccurs="0"/>  <!-- Customer group 5 -->
+                    <xs:element name="PRFRE"   type="xs:string" minOccurs="0"/>  <!-- Release status of customer for pricing -->
+
+                    <!-- Contact persons -->
+                    <xs:element name="E1KNVKM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>
+                          <xs:element name="PERNR"   type="xs:string" minOccurs="0"/>  <!-- Contact person -->
+                          <xs:element name="NAMEV"   type="xs:string" minOccurs="0"/>  <!-- First name -->
+                          <xs:element name="NAME1"   type="xs:string" minOccurs="0"/>  <!-- Last name -->
+                          <xs:element name="ABTNR"   type="xs:string" minOccurs="0"/>  <!-- Department -->
+                          <xs:element name="PAFKT"   type="xs:string" minOccurs="0"/>  <!-- Function of contact person -->
+                          <xs:element name="TELF1"   type="xs:string" minOccurs="0"/>  <!-- Telephone -->
+                          <xs:element name="TELF2"   type="xs:string" minOccurs="0"/>  <!-- Telephone 2 -->
+                          <xs:element name="TELFX"   type="xs:string" minOccurs="0"/>  <!-- Fax -->
+                          <xs:element name="SMTP_ADDR" type="xs:string" minOccurs="0"/> <!-- E-mail -->
+                          <xs:element name="SPRAS"   type="xs:string" minOccurs="0"/>  <!-- Language -->
+                          <xs:element name="ANRED"   type="xs:string" minOccurs="0"/>  <!-- Title -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Partner functions (sales) -->
+                    <xs:element name="E1KNVPM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>
+                          <xs:element name="PARVW"   type="xs:string" minOccurs="0"/>  <!-- Partner function -->
+                          <xs:element name="KUNN2"   type="xs:string" minOccurs="0"/>  <!-- Customer number of partner -->
+                          <xs:element name="DEFPA"   type="xs:string" minOccurs="0"/>  <!-- Default partner -->
+                          <xs:element name="KNREF"   type="xs:string" minOccurs="0"/>  <!-- Customer's own description of partner -->
+                          <xs:element name="PARZA"   type="xs:string" minOccurs="0"/>  <!-- Item numbers -->
+                          <xs:element name="LIFNR"   type="xs:string" minOccurs="0"/>  <!-- Vendor account number of the partner -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Shipping data -->
+                    <xs:element name="E1KNVLM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>
+                          <xs:element name="ROUTE"   type="xs:string" minOccurs="0"/>  <!-- Route -->
+                          <xs:element name="ROUTPR"  type="xs:string" minOccurs="0"/>  <!-- Route determination indicator -->
+                          <xs:element name="WERKS"   type="xs:string" minOccurs="0"/>  <!-- Plant -->
+                          <xs:element name="LGORT"   type="xs:string" minOccurs="0"/>  <!-- Storage location -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Unloading point -->
+                    <xs:element name="E1KNVDM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>
+                          <xs:element name="ABLAD"   type="xs:string" minOccurs="0"/>  <!-- Unloading point -->
+                          <xs:element name="DEFAB"   type="xs:string" minOccurs="0"/>  <!-- Default unloading point -->
+                          <xs:element name="WANKT"   type="xs:string" minOccurs="0"/>  <!-- Goods receiving hours -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                    <!-- Pricing hierarchy -->
+                    <xs:element name="E1KNVHM" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element name="MSGFN"   type="xs:string" minOccurs="0"/>
+                          <xs:element name="HITYP"   type="xs:string" minOccurs="0"/>  <!-- Hierarchy type -->
+                          <xs:element name="KUNNR"   type="xs:string" minOccurs="0"/>  <!-- Customer number -->
+                          <xs:element name="DATAB"   type="xs:string" minOccurs="0"/>  <!-- Valid from date -->
+                          <xs:element name="DATBI"   type="xs:string" minOccurs="0"/>  <!-- Valid to date -->
+                          <xs:element name="KNKLI"   type="xs:string" minOccurs="0"/>  <!-- Customer's account number with credit limit -->
+                        </xs:all>
+                        <xs:attribute name="SEGMENT" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+
+                  </xs:sequence>
+                  <xs:attribute name="SEGMENT" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+
+            </xs:sequence>
+            <xs:attribute name="BEGIN" type="xs:string"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+</xs:schema>

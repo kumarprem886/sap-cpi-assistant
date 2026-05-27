@@ -1,0 +1,76 @@
+{
+  "id": "A_PurchaseOrder_to_ORDERS05",
+  "mapping_name": "MM_PurchaseOrder_to_ORDERS",
+  "source_schema": "A_PurchaseOrder.xsd",
+  "target_schema": "ORDERS05.xsd",
+  "source_root": "A_PurchaseOrder",
+  "target_root": "ORDERS05",
+  "field_mappings": [
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/CompanyCode",
+      "target_path": "/ORDERS05/IDOC/EDI_DC40/MANDT",
+      "note": "Company code equivalence"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/PurchaseOrderType",
+      "target_path": "/ORDERS05/IDOC/E1EDK01/FKART_RL",
+      "note": "Purchase order type equivalence"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/CreatedByUser",
+      "target_path": "/ORDERS05/IDOC/E1EDKA1/LIFNR",
+      "note": "User created the purchase order"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/CreationDate",
+      "target_path": "/ORDERS05/IDOC/E1EDK01/CURCY",
+      "note": "Date purchase order was created"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/Supplier",
+      "target_path": "/ORDERS05/IDOC/E1EDKA1/KUNNR",
+      "note": "Supplier of the goods/services"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/DocumentCurrency",
+      "target_path": "/ORDERS05/IDOC/E1EDK01/WKURS",
+      "note": "Currency in which the purchase order is denominated"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/SupplierRespSalesPersonName",
+      "target_path": "/ORDERS05/IDOC/E1EDKA1/NAME1",
+      "note": "Name of the sales person from the supplier"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/SupplierPhoneNumber",
+      "target_path": "/ORDERS05/IDOC/E1EDKA1/TELF1",
+      "note": "Phone number of the supplier"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrderItem/PurchaseOrder",
+      "target_path": "/ORDERS05/IDOC/E1EDP01/ACTION",
+      "note": "Type of activity for this item"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrderItem/PurchaseOrderItem",
+      "target_path": "/ORDERS05/IDOC/E1EDP01/MENGE",
+      "note": "Order quantity of this item"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/CompanyCode",
+      "target_path": "/ORDERS05/IDOC/E1EDP01/BPUMN",
+      "note": "Company Code"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/PurchaseOrderType",
+      "target_path": "/ORDERS05/IDOC/E1EDP01/BPRME",
+      "note": "Purchase Order Type"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/Supplier",
+      "target_path": "/ORDERS05/IDOC/E1EDP01/BPUMZ",
+      "note": "Supplier"
+    }
+  ],
+  "total_fields": 13
+}

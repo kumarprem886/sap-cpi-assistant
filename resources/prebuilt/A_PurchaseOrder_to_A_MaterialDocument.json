@@ -1,0 +1,31 @@
+{
+  "id": "A_PurchaseOrder_to_A_MaterialDocument",
+  "mapping_name": "MM_PO_to_MaterialDoc",
+  "source_schema": "A_PurchaseOrder.xsd",
+  "target_schema": "A_MaterialDocument.xsd",
+  "source_root": "A_PurchaseOrder",
+  "target_root": "A_MaterialDocument",
+  "field_mappings": [
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/PurchaseOrder",
+      "target_path": "/A_MaterialDocument/MaterialDocumentHeader/ReferenceDocument",
+      "note": "Purchase Order as Reference Document"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/Supplier",
+      "target_path": "/A_MaterialDocument/MaterialDocumentHeader/Supplier",
+      "note": "Supplier"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/CreatedByUser",
+      "target_path": "/A_MaterialDocument/MaterialDocumentHeader/CreatedByUser",
+      "note": "Created by User"
+    },
+    {
+      "source_path": "/A_PurchaseOrder/PurchaseOrder/CreationDate",
+      "target_path": "/A_MaterialDocument/MaterialDocumentHeader/CreationDate",
+      "note": "Creation Date"
+    }
+  ],
+  "total_fields": 4
+}

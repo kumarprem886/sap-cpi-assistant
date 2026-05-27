@@ -1,0 +1,201 @@
+{
+  "id": "SALESORD05_to_A_OutboundDelivery",
+  "mapping_name": "MM_DESADV_to_OutboundDelivery",
+  "source_schema": "SALESORD05.xsd",
+  "target_schema": "A_OutboundDelivery.xsd",
+  "source_root": "SALESORD05",
+  "target_root": "A_OutboundDelivery",
+  "field_mappings": [
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/ACTION",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/CompleteDeliveryIsDefined",
+      "note": "Delivery action mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/Batch",
+      "note": "Delivery batch mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ConfirmationTime",
+      "note": "Confirmation time mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/DeliveryBlockReason",
+      "note": "Delivery block reason mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/BELNR",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/DocumentDate",
+      "note": "Document date mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/VBELN",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ExternalIdentifyingNumber",
+      "note": "External identifying number mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/VKORG",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/FactoryCalendarByCustomer",
+      "note": "Factory calendar by customer mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/VTWEG",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/InternalFinancialDocument",
+      "note": "Internal financial document mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKA1/NAME1",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/CustomerGroup",
+      "note": "Customer group mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/IDOCTYP",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/DeliveryDocumentType",
+      "note": "Delivery document type mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/SNDPOR",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/CreatedByUser",
+      "note": "Created by user mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/CREDAT",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/CreationDate",
+      "note": "Creation date mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/MATNR",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/GoodsIssueOrReceiptSlipNumber",
+      "note": "Goods issue or receipt slip number mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/VBELP",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ExternalTransportSystem",
+      "note": "External transport system mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/BRGEW",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/HeaderNetWeight",
+      "note": "Header net weight mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/GEWEI",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/HeaderVolumeUnit",
+      "note": "Header volume unit mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/VSTEL",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/LoadingPoint",
+      "note": "Loading point mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/NTGEW",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/OvrlItmDelivIncompletionSts",
+      "note": "Overall item delivery incompletion status mapping"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/WKURS",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ShippingCondition",
+      "note": "Currency"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ShippingCondition",
+      "note": "Terms"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ShippingCondition",
+      "note": "Currency"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/PSTYP",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/PickedItemsLocation",
+      "note": "Picking Type"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/MENGE",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/ActualDeliveryQuantity",
+      "note": "Delivery Quantity"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/VSTEL",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/ActualGoodsMovementDate",
+      "note": "Goods Movement Date"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKT1/TDOBJECT",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "note": "Sold To Party"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKT1/TDNAME",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "note": "Sold To Party Name"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKA1/KUNNR",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ShipToParty",
+      "note": "Ship To Party"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKA1/NAME1",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "note": "Sold To Party Name"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDKA1/NAME2",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "note": "Sold To Party Name"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/MESTYP",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "note": "Message Type"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/SNDPRT",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/SoldToParty",
+      "note": "Sold To Party"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/EDI_DC40/RCVPRT",
+      "target_path": "/A_OutboundDelivery/OutboundDelivery/ShipToParty",
+      "note": "Ship To Party"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/ZTERM",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/SDDocumentCategory",
+      "note": "Matching document category term"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/CURCY",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/Product",
+      "note": "Currency matching product field"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/ACTION",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/RequiredQuantity",
+      "note": "Action matching required quantity field"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/VBELN",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/SalesOrderDirectShipFromPlant",
+      "note": "Sales order number matching direct ship from plant field"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDK01/VKORG",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/Warehouse",
+      "note": "Organization matching warehouse field"
+    },
+    {
+      "source_path": "/SALESORD05/IDOC/E1EDP01/POSNR",
+      "target_path": "/A_OutboundDelivery/OutboundDeliveryItem/ProofOfDeliveryStatus",
+      "note": "Position matching proof of delivery status field"
+    }
+  ],
+  "total_fields": 38
+}
