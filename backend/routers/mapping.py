@@ -1,13 +1,14 @@
 import json
 import time
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, File, UploadFile, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from io import BytesIO
 from services.claude_service import generate
 from services.mmap_builder import build_mmap_xml, build_mmap_zip
-from services.xsd_parser import auto_map
+from services.xsd_parser import auto_map, smart_extract_paths
+from services.sheet_mapper import sheet_to_field_mappings
 from services.prebuilt_mapper import (
     CATALOG_PAIRS as _CATALOG_PAIRS,
     prebuilt_status,
@@ -266,6 +267,89 @@ Rules:
         BytesIO(zip_bytes),
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── Sheet-driven .mmap ────────────────────────────────────────────────────────
+
+@router.post("/from-sheet")
+async def generate_mmap_from_sheet(
+    source_xsd:    UploadFile = File(...),
+    target_xsd:    UploadFile = File(...),
+    mapping_sheet: UploadFile = File(...),
+    mapping_name:  str        = Form("MM_Mapping"),
+):
+    """
+    Build a SAP CPI .mmap from three uploaded files:
+      - source_xsd    : source XSD schema
+      - target_xsd    : target XSD schema
+      - mapping_sheet : Excel (.xlsx) or CSV mapping table with source->target columns
+
+    The mapping sheet is parsed to extract field pairs, which are then resolved
+    to full XPath paths in the uploaded XSDs. Returns a .mmap ZIP bundle.
+    """
+    src_bytes   = await source_xsd.read()
+    tgt_bytes   = await target_xsd.read()
+    sheet_bytes = await mapping_sheet.read()
+
+    src_xsd_text = src_bytes.decode("utf-8", errors="replace")
+    tgt_xsd_text = tgt_bytes.decode("utf-8", errors="replace")
+
+    # Extract all paths from both XSDs
+    try:
+        src_root, src_paths = smart_extract_paths(src_xsd_text)
+        tgt_root, tgt_paths = smart_extract_paths(tgt_xsd_text)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse XSD: {exc}")
+
+    # Parse the mapping sheet and resolve paths
+    try:
+        matched, unmatched = sheet_to_field_mappings(
+            sheet_bytes,
+            mapping_sheet.filename or "mapping.xlsx",
+            src_paths,
+            tgt_paths,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse mapping sheet: {exc}")
+
+    if not matched:
+        detail = "No field pairs could be resolved. "
+        if unmatched:
+            detail += f"{len(unmatched)} unmatched rows: " + \
+                      "; ".join(f"{r['source']}->{r['target']} ({r['reason']})" for r in unmatched[:5])
+        raise HTTPException(status_code=422, detail=detail)
+
+    src_xsd_name = source_xsd.filename or "source.xsd"
+    tgt_xsd_name = target_xsd.filename or "target.xsd"
+    safe_name    = mapping_name.replace(" ", "_") or "MM_Mapping"
+
+    mmap_xml = build_mmap_xml(
+        mapping_name    = safe_name,
+        source_xsd_name = src_xsd_name,
+        source_root     = src_root or "Source",
+        target_xsd_name = tgt_xsd_name,
+        target_root     = tgt_root or "Target",
+        field_mappings  = matched,
+    )
+    zip_bytes = build_mmap_zip(
+        mapping_name    = safe_name,
+        mmap_xml        = mmap_xml,
+        source_xsd      = src_xsd_text,
+        target_xsd      = tgt_xsd_text,
+        source_xsd_name = src_xsd_name,
+        target_xsd_name = tgt_xsd_name,
+    )
+
+    summary = f"mapped={len(matched)},unmatched={len(unmatched)}"
+    return StreamingResponse(
+        BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}.zip"',
+            "X-Mapping-Summary": summary,
+            "Access-Control-Expose-Headers": "X-Mapping-Summary",
+        },
     )
 
 
