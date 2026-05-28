@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, GitMerge, Code2, FileCode2,
-  Shuffle, MessageSquare, Zap, FileText
+  Shuffle, MessageSquare, Zap, FileText, Cloud
 } from 'lucide-react'
 
 const nav = [
@@ -12,6 +12,7 @@ const nav = [
   { to: '/xslt', icon: FileCode2, label: 'XSLT Generator' },
   { to: '/docs', icon: FileText, label: 'Doc Generator' },
   { to: '/chat', icon: MessageSquare, label: 'AI Assistant' },
+  { to: '/cpi', icon: Cloud, label: 'CPI Connect' },
 ]
 
 export default function Sidebar() {

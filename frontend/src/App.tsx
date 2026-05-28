@@ -7,6 +7,7 @@ import GroovyGenerator from './pages/GroovyGenerator'
 import XSLTGenerator from './pages/XSLTGenerator'
 import ChatAssistant from './pages/ChatAssistant'
 import DocumentGenerator from './pages/DocumentGenerator'
+import CPIConnect from './pages/CPIConnect'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/xslt" element={<XSLTGenerator />} />
           <Route path="/chat" element={<ChatAssistant />} />
           <Route path="/docs" element={<DocumentGenerator />} />
+          <Route path="/cpi" element={<CPIConnect />} />
         </Routes>
       </Layout>
     </BrowserRouter>

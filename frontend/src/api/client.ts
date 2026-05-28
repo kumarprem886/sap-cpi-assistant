@@ -58,3 +58,14 @@ export const chatAPI = {
   ask: (question: string, context?: string) => api.post('/chat/ask', { question, context }),
   review: (data: object) => api.post('/chat/review', data),
 }
+
+export const cpiAPI = {
+  ping:        ()                            => api.get('/cpi/ping'),
+  packages:    ()                            => api.get('/cpi/packages'),
+  iflows:      (packageId: string)           => api.get(`/cpi/packages/${encodeURIComponent(packageId)}/iflows`),
+  deploy:      (packageId: string, iflowId: string) =>
+    api.post(`/cpi/packages/${encodeURIComponent(packageId)}/iflows/${encodeURIComponent(iflowId)}/deploy`),
+  messages:    (top = 20, status?: string)   => api.get('/cpi/messages', { params: { top, ...(status ? { status } : {}) } }),
+  credentials: ()                            => api.get('/cpi/security/credentials'),
+  keystores:   ()                            => api.get('/cpi/security/keystores'),
+}
