@@ -20,9 +20,12 @@ from typing import Optional
 
 
 def _safe_id(name: str) -> str:
-    """Convert a display name to a safe bundle symbolic name (alphanumeric + _ -)."""
-    s = re.sub(r"[^A-Za-z0-9_\-]", "_", name.strip())
+    """Convert a display name to a CPI-valid artifact ID (alphanumeric + _ only)."""
+    s = re.sub(r"[^A-Za-z0-9_]", "_", name.strip())
     s = re.sub(r"_+", "_", s).strip("_")
+    # Must not start with a digit
+    if s and s[0].isdigit():
+        s = "_" + s
     return s or "MyIFlow"
 
 

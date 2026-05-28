@@ -1,9 +1,15 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from services.claude_service import stream_generate, generate
+from services.claude_service import stream_generate, generate, AI_PROVIDER, MODEL
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+@router.get("/status")
+def ai_status():
+    """Return the active AI provider and model."""
+    return {"provider": AI_PROVIDER, "model": MODEL}
 
 
 class ChatMessage(BaseModel):

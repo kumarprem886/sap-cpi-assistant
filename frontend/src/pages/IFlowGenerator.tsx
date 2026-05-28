@@ -43,8 +43,11 @@ export default function IFlowGenerator() {
   const [downloading, setDownloading] = useState(false)
   const [bundle, setBundle]           = useState<IFlowBundle | null>(null)
   const [error, setError]             = useState('')
-  const [explainXml, setExplainXml]   = useState('')
+  const [explainXml, setExplainXml]       = useState('')
   const [explainResult, setExplainResult] = useState('')
+  const [extractingZip, setExtractingZip] = useState(false)
+  const [zipLoadedName, setZipLoadedName] = useState('')
+  const explainZipRef = useRef<HTMLInputElement>(null)
 
   // ── Upload to CPI modal state ──────────────────────────────────────────────
   const [uploadModal, setUploadModal]         = useState(false)
@@ -71,7 +74,10 @@ export default function IFlowGenerator() {
   const fdInputRef     = useRef<HTMLInputElement>(null)
   const attachInputRef = useRef<HTMLInputElement>(null)
 
-  const switchTab = (t: Tab) => { setTab(t); setBundle(null); setError(''); setExplainResult('') }
+  const switchTab = (t: Tab) => {
+    setTab(t); setBundle(null); setError(''); setExplainResult('')
+    setZipLoadedName(''); setExplainXml('')
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   const toBundle = (data: { result: string; scripts?: Record<string, string>; description?: string; name?: string; xsds?: Record<string, string>; mmaps?: Record<string, string> }, fallbackName: string): IFlowBundle => ({
@@ -177,6 +183,22 @@ export default function IFlowGenerator() {
       const res = await iflowAPI.explain(explainXml)
       setExplainResult(res.data.result)
     } finally { setLoading(false) }
+  }
+
+  const extractFromZip = async (file: File) => {
+    setExtractingZip(true)
+    setZipLoadedName('')
+    try {
+      const res = await iflowAPI.extractXml(file)
+      setExplainXml(res.data.xml)
+      setZipLoadedName(res.data.name)
+      setExplainResult('')
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.message || 'Failed to extract ZIP'
+      setError(String(msg))
+    } finally {
+      setExtractingZip(false)
+    }
   }
 
   return (
@@ -372,10 +394,60 @@ export default function IFlowGenerator() {
       {/* ── Explain tab ───────────────────────────────────────────────────── */}
       {tab === 'explain' && (
         <div className="card space-y-4">
+
+          {/* ZIP upload drop zone */}
           <div>
-            <label className="label">Paste iFlow XML (.iflw)</label>
-            <textarea className="textarea-field" rows={12} placeholder="Paste your .iflw XML here..." value={explainXml} onChange={e => setExplainXml(e.target.value)} />
+            <label className="label">Upload iFlow ZIP (optional)</label>
+            <div
+              onClick={() => explainZipRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                zipLoadedName
+                  ? 'border-green-500/50 bg-green-500/5'
+                  : 'border-gray-700 hover:border-sap-blue'
+              }`}
+            >
+              {extractingZip ? (
+                <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
+                  <Loader2 size={16} className="animate-spin" /> Extracting .iflw from ZIP…
+                </div>
+              ) : zipLoadedName ? (
+                <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
+                  <CheckCircle size={16} />
+                  <span className="font-medium">{zipLoadedName}.iflw</span>
+                  <span className="text-green-600 text-xs">— XML loaded below</span>
+                </div>
+              ) : (
+                <div className="text-gray-500 text-sm">
+                  <Upload size={20} className="mx-auto mb-1" />
+                  <p>Click to upload an iFlow ZIP to auto-extract the XML</p>
+                  <p className="text-xs mt-0.5 text-gray-600">Or paste the XML directly below</p>
+                </div>
+              )}
+            </div>
+            <input
+              ref={explainZipRef}
+              type="file"
+              accept=".zip"
+              className="hidden"
+              onChange={e => { if (e.target.files?.[0]) extractFromZip(e.target.files[0]); e.target.value = '' }}
+            />
           </div>
+
+          <div>
+            <label className="label">iFlow XML (.iflw)</label>
+            <textarea
+              className="textarea-field"
+              rows={12}
+              placeholder="Paste your .iflw XML here, or upload a ZIP above…"
+              value={explainXml}
+              onChange={e => { setExplainXml(e.target.value); setZipLoadedName('') }}
+            />
+          </div>
+          {error && (
+            <div className="rounded-lg bg-red-950/50 border border-red-800 px-4 py-3 text-sm text-red-300">
+              <span className="font-semibold">Error: </span>{error}
+            </div>
+          )}
           <button className="btn-primary flex items-center gap-2" onClick={explain} disabled={loading || !explainXml}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
             {loading ? 'Analyzing...' : 'Explain iFlow'}

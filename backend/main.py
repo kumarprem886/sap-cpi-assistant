@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import iflow, mapping, groovy, xslt, chat, documents, cpi_connect
+from routers import iflow, mapping, groovy, xslt, chat, documents, cpi_connect, settings
 
 app = FastAPI(
     title="SAP CPI Assistant API",
@@ -23,6 +23,7 @@ app.include_router(xslt.router)
 app.include_router(chat.router)
 app.include_router(documents.router)
 app.include_router(cpi_connect.router)
+app.include_router(settings.router)
 
 
 @app.get("/")

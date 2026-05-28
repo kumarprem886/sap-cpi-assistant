@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
-import { FileText, Loader2, Download, Upload, Wand2, ArrowRight, FileCode2 } from 'lucide-react'
+import { FileText, Loader2, Download, Upload, Wand2, ArrowRight, FileCode2, CheckCircle } from 'lucide-react'
 import axios from 'axios'
+import { iflowAPI } from '../api/client'
 
 type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td'
 
@@ -18,7 +19,10 @@ export default function DocumentGenerator() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const [downloadName, setDownloadName] = useState('')
   const [error, setError] = useState('')
-  const fileRef = useRef<HTMLInputElement>(null)
+  const fileRef       = useRef<HTMLInputElement>(null)
+  const iflowZipRef  = useRef<HTMLInputElement>(null)
+  const [extractingZip, setExtractingZip] = useState(false)
+  const [iflowZipName, setIflowZipName]   = useState('')
 
   // FD form
   const [fdForm, setFdForm] = useState({
@@ -36,6 +40,21 @@ export default function DocumentGenerator() {
   const [iflowForm, setIflowForm] = useState({
     iflow_xml: '', author: '', project_team: '', developer: '', extra_context: ''
   })
+
+  const extractFromZip = async (file: File) => {
+    setExtractingZip(true)
+    setIflowZipName('')
+    setError('')
+    try {
+      const res = await iflowAPI.extractXml(file)
+      setIflowForm(f => ({ ...f, iflow_xml: res.data.xml }))
+      setIflowZipName(res.data.name)
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to extract ZIP')
+    } finally {
+      setExtractingZip(false)
+    }
+  }
 
   const triggerDownload = (blob: Blob, name: string) => {
     const url = URL.createObjectURL(blob)
@@ -243,12 +262,56 @@ export default function DocumentGenerator() {
       {tab === 'iflow-to-td' && (
         <div className="card space-y-4">
           <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 text-sm text-orange-300">
-            Paste your iFlow XML — the AI will analyse all adapters, steps, mappings and generate a complete TD document.
+            Upload an iFlow ZIP or paste the XML — the AI will analyse all adapters, steps, mappings and generate a complete TD document.
+          </div>
+
+          {/* ZIP upload */}
+          <div>
+            <label className="label">Upload iFlow ZIP (optional)</label>
+            <div
+              onClick={() => iflowZipRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                iflowZipName
+                  ? 'border-green-500/50 bg-green-500/5'
+                  : 'border-gray-700 hover:border-sap-blue'
+              }`}
+            >
+              {extractingZip ? (
+                <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
+                  <Loader2 size={16} className="animate-spin" /> Extracting .iflw from ZIP…
+                </div>
+              ) : iflowZipName ? (
+                <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
+                  <CheckCircle size={16} />
+                  <span className="font-medium">{iflowZipName}.iflw</span>
+                  <span className="text-green-600 text-xs">— XML loaded below</span>
+                </div>
+              ) : (
+                <div className="text-gray-500 text-sm">
+                  <Upload size={20} className="mx-auto mb-1" />
+                  <p>Click to upload an iFlow ZIP to auto-extract the XML</p>
+                  <p className="text-xs mt-0.5 text-gray-600">Or paste the XML directly below</p>
+                </div>
+              )}
+            </div>
+            <input
+              ref={iflowZipRef}
+              type="file"
+              accept=".zip"
+              className="hidden"
+              onChange={e => { if (e.target.files?.[0]) extractFromZip(e.target.files[0]); e.target.value = '' }}
+            />
           </div>
 
           <div>
             <label className="label">iFlow XML *</label>
-            <textarea className="textarea-field" rows={12} placeholder="Paste your SAP CPI iFlow XML here..." value={iflowForm.iflow_xml} onChange={e => setIflowForm(f => ({ ...f, iflow_xml: e.target.value }))} />
+            <textarea
+              className="textarea-field"
+              rows={10}
+              placeholder="Paste your SAP CPI iFlow XML here, or upload a ZIP above…"
+              value={iflowForm.iflow_xml}
+              onChange={e => { setIflowForm(f => ({ ...f, iflow_xml: e.target.value })); setIflowZipName('') }}
+            />
           </div>
 
           <div>

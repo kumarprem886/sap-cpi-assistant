@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from io import BytesIO
 from typing import Optional, List
-from services.claude_service import generate, analyze_flow_image
+from services.claude_service import generate, analyze_flow_image, MAX_GENERATION_TOKENS
 from services.iflow_packager import build_iflow_zip
 from services.doc_parser import parse_docx_to_text, sections_to_summary, extract_images_from_docx
 
@@ -749,7 +749,7 @@ Requirements:
 - Include complete bpmndi:BPMNDiagram section with all shapes and edges
 """
 
-    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=6000)
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=MAX_GENERATION_TOKENS)
     iflw = _fix_iflw_xml(raw)
     scripts = _default_scripts(req.include_error_handling)
 
@@ -895,7 +895,7 @@ Instructions:
 8. Include complete bpmndi:BPMNDiagram section.
 """
 
-    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=6000)
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=MAX_GENERATION_TOKENS)
     iflw = _fix_iflw_xml(raw)
 
     # Merge: user-supplied scripts take priority over defaults
@@ -934,3 +934,33 @@ Provide:
 """
     result = generate("", prompt)
     return {"result": result, "type": "markdown"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Extract .iflw XML from a SAP CPI iFlow ZIP
+# ─────────────────────────────────────────────────────────────────────────────
+@router.post("/extract-xml")
+async def extract_iflow_xml(file: UploadFile = File(...)):
+    """Extract the .iflw XML from a SAP CPI iFlow ZIP file."""
+    import zipfile
+    from fastapi import HTTPException as _HTTPException
+
+    zip_bytes = await file.read()
+    try:
+        with zipfile.ZipFile(BytesIO(zip_bytes)) as zf:
+            iflw_files = [n for n in zf.namelist() if n.endswith(".iflw")]
+            if not iflw_files:
+                raise _HTTPException(
+                    status_code=400,
+                    detail="No .iflw file found in the ZIP. "
+                           "Make sure this is a valid SAP CPI iFlow export.",
+                )
+            xml_content = zf.read(iflw_files[0]).decode("utf-8")
+            name = iflw_files[0].split("/")[-1].replace(".iflw", "")
+    except zipfile.BadZipFile:
+        from fastapi import HTTPException as _HTTPException2
+        raise _HTTPException2(
+            status_code=400,
+            detail="Invalid ZIP file. Please upload a valid SAP CPI iFlow ZIP.",
+        )
+    return {"xml": xml_content, "name": name}
