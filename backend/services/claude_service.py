@@ -1,6 +1,7 @@
-from groq import Groq
+from groq import Groq, APIStatusError
 import os, base64, json
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 load_dotenv()
 
@@ -35,15 +36,27 @@ def generate(system_extra: str, user_prompt: str, cache: bool = True, max_tokens
     system = SAP_SYSTEM_PROMPT + "\n\n" + system_extra if system_extra else SAP_SYSTEM_PROMPT
     chosen_model = model or MODEL
 
-    response = client.chat.completions.create(
-        model=chosen_model,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user_prompt},
-        ],
-        max_tokens=max_tokens,
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model=chosen_model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].message.content
+    except APIStatusError as e:
+        status = e.status_code
+        msg    = str(e)
+        # Rate limit / request too large → friendly 429
+        if status in (413, 429):
+            raise HTTPException(
+                429,
+                f"Groq API limit reached: {msg[:300]}. "
+                "Tip: shorten your description or try again in a few seconds.",
+            )
+        raise HTTPException(502, f"AI service error ({status}): {msg[:300]}")
 
 
 def analyze_flow_image(image_bytes: bytes, content_type: str = "image/png") -> dict:

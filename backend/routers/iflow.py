@@ -529,7 +529,7 @@ Requirements:
 - Include complete bpmndi:BPMNDiagram section with all shapes and edges
 """
 
-    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=8192)
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=7000)
     iflw = _fix_iflw_xml(raw)
     scripts = _default_scripts(req.include_error_handling)
 
@@ -675,7 +675,7 @@ Instructions:
 8. Include complete bpmndi:BPMNDiagram section.
 """
 
-    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=8192)
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=7000)
     iflw = _fix_iflw_xml(raw)
 
     # Merge: user-supplied scripts take priority over defaults
