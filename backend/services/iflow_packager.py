@@ -74,19 +74,25 @@ def build_iflow_zip(
     params = _extract_params(iflow_xml)
 
     # ── MANIFEST.MF ──────────────────────────────────────────────────────────
-    # IMPORTANT: LF line endings (not CRLF). Trailing blank line required.
+    # IMPORTANT: CRLF line endings (\r\n) — confirmed from real CPI iFlow exports.
+    # Field order must match CPI's export format. Import-Package is required for
+    # the OSGi bundle loader to resolve the Groovy runtime and CPI message API.
     manifest = (
-        "Manifest-Version: 1.0\n"
-        "SAP-RuntimeProfile: iflmap\n"
-        f"Bundle-SymbolicName: {iflow_id}\n"
-        f"Bundle-Name: {iflow_id}\n"
-        f"Bundle-Version: {version}\n"
-        "Bundle-ManifestVersion: 2\n"
-        f"Origin-Bundle-SymbolicName: {iflow_id}\n"
-        "SAP-NodeType: IFLMAP\n"
-        f"Origin-Bundle-Name: {iflow_id}\n"
-        "SAP-BundleType: IntegrationFlow\n"
-        "\n"   # trailing blank line is required
+        "Manifest-Version: 1.0\r\n"
+        "Bundle-ManifestVersion: 2\r\n"
+        f"Bundle-Name: {iflow_id}\r\n"
+        f"Bundle-SymbolicName: {iflow_id}\r\n"
+        f"Bundle-Version: {version}\r\n"
+        "SAP-BundleType: IntegrationFlow\r\n"
+        "SAP-NodeType: IFLMAP\r\n"
+        "SAP-RuntimeProfile: iflmap\r\n"
+        "Import-Package: com.sap.gateway.ip.core.customdev.util,java.io,java.text,\r\n"
+        " java.util,org.apache.camel;version=\"2.8\",org.apache.camel.builder;versio\r\n"
+        " n=\"2.8\",org.apache.camel.model;version=\"2.8\",org.apache.camel.processor\r\n"
+        " ;version=\"2.8\",org.osgi.framework;version=\"1.6.0\"\r\n"
+        f"Origin-Bundle-Name: {iflow_id}\r\n"
+        f"Origin-Bundle-SymbolicName: {iflow_id}\r\n"
+        "\r\n"   # trailing blank CRLF line is required by JAR spec
     )
 
     # ── metainfo.prop ─────────────────────────────────────────────────────────

@@ -115,10 +115,21 @@ Use ONLY the exact versions below — confirmed working on a live SAP Integratio
 
 7. ADAPTER CONFIGS go on <bpmn2:messageFlow>, NOT on <bpmn2:participant>
 
-8. Message-triggered startEvent: <bpmn2:messageEventDefinition/>
-   Message endEvent: <bpmn2:messageEventDefinition/>
+8. StartEvent / EndEvent MUST have extensionElements with cmdVariantUri:
+   MessageStartEvent extensionElements → single property:
+     <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::MessageStartEvent</value></ifl:property>
+   MessageEndEvent extensionElements → two properties:
+     <ifl:property><key>componentVersion</key><value>1.1</value></ifl:property>
+     <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::MessageEndEvent/version::1.1.0</value></ifl:property>
+   Both include <bpmn2:messageEventDefinition/> as the LAST child element.
 
-9. Request Reply = bpmn2:serviceTask  |  All other steps = bpmn2:callActivity
+9. ELEMENT TYPES — CRITICAL (SAP CPI strict):
+   bpmn2:serviceTask  → ONLY activityType=ExternalCall (outbound adapter call, 3 properties only)
+   bpmn2:callActivity → ALL other steps: Script, Enricher, Mapping, Router, Splitter, etc.
+   Groovy Script callActivity MUST include these two extra properties right after activityType:
+     <ifl:property><key>subActivityType</key><value>GroovyScript</value></ifl:property>
+     <ifl:property><key>scriptBundleId</key><value/></ifl:property>
+   The receiver messageFlow sourceRef MUST point to the ExternalCall serviceTask ID, NOT EndEvent.
 
 10. 4-space indent, multi-line XML. Externalize all URLs/creds as {{PARAM_NAME}}
 
@@ -135,7 +146,7 @@ Router (CBR)           ExclusiveGateway              ExclusiveGateway/version::1
 General Splitter       Splitter                      GeneralSplitter/version::1.6.0
 DataStore Write        DBstorage                     put/version::1.7.1
 Timer startEvent       StartTimerEvent               intermediatetimer/version::1.3.0
-Error SubProcess       ErrorEventSubProcessTemplate  ErrorEventSubProcessTemplate/version::1.0.2
+Error SubProcess       ErrorEventSubProcessTemplate  ErrorEventSubProcessTemplate/version::1.1.0
 Message End Event      (none)                        MessageEndEvent/version::1.1.0
 Message Start Event    (none)                        MessageStartEvent  (no version suffix)
 Error End Event        EndErrorEvent                 ErrorEndEvent  (no version suffix)
@@ -143,11 +154,11 @@ Error Start Event      StartErrorEvent               ErrorStartEvent  (no versio
 Process Call           ProcessCallElement            NonLoopingProcess/version::1.0.3
 
 Flow elements:
-  IntegrationProcess:  ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.0
-  IFlowConfig:         ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.3
+  IntegrationProcess:  ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.1
+  IFlowConfig:         ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.4
 
 Adapters:
-  HTTPS Sender:   ctype::AdapterVariant/cname::sap:HTTPS/tp::HTTPS/mp::None/direction::Sender/version::1.5.2
+  HTTPS Sender:   ctype::AdapterVariant/cname::sap:HTTPS/tp::HTTPS/mp::None/direction::Sender/version::1.5.0
   HTTP Receiver:  ctype::AdapterVariant/cname::sap:HTTP/tp::HTTP/mp::None/direction::Receiver/version::1.17.1
   OData Receiver: ctype::AdapterVariant/cname::sap:HCIOData/tp::HTTP/mp::OData V2/direction::Receiver/version::1.27.0
   SOAP Receiver:  ctype::AdapterVariant/cname::sap:SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.12.3
@@ -170,7 +181,7 @@ Adapters:
     <ifl:property><key>accessControlAllowCredentials</key><value>false</value></ifl:property>
     <ifl:property><key>allowedHeaders</key><value/></ifl:property>
     <ifl:property><key>allowedMethods</key><value/></ifl:property>
-    <ifl:property><key>cmdVariantUri</key><value>ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.3</value></ifl:property>
+    <ifl:property><key>cmdVariantUri</key><value>ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.4</value></ifl:property>
 </bpmn2:extensionElements>
 
 ── Timer startEvent:
@@ -190,7 +201,7 @@ Adapters:
     <bpmn2:extensionElements>
         <ifl:property><key>componentVersion</key><value>1.1</value></ifl:property>
         <ifl:property><key>activityType</key><value>ErrorEventSubProcessTemplate</value></ifl:property>
-        <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorEventSubProcessTemplate/version::1.0.2</value></ifl:property>
+        <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorEventSubProcessTemplate/version::1.1.0</value></ifl:property>
     </bpmn2:extensionElements>
     <bpmn2:startEvent id="ErrorStartEvent_1" name="Error Start">
         <bpmn2:outgoing>ErrorFlow_1</bpmn2:outgoing>
@@ -212,6 +223,91 @@ Adapters:
     </bpmn2:endEvent>
     <bpmn2:sequenceFlow id="ErrorFlow_1" sourceRef="ErrorStartEvent_1" targetRef="ErrorEndEvent_1"/>
 </bpmn2:subProcess>
+
+── Groovy Script step — use bpmn2:callActivity (NEVER serviceTask):
+<bpmn2:callActivity id="Script_SetProperties" name="Set Properties">
+    <bpmn2:extensionElements>
+        <ifl:property>
+            <key>scriptFunction</key>
+            <value>processData</value>
+        </ifl:property>
+        <ifl:property>
+            <key>scriptBundleId</key>
+            <value/>
+        </ifl:property>
+        <ifl:property>
+            <key>componentVersion</key>
+            <value>1.1</value>
+        </ifl:property>
+        <ifl:property>
+            <key>activityType</key>
+            <value>Script</value>
+        </ifl:property>
+        <ifl:property>
+            <key>cmdVariantUri</key>
+            <value>ctype::FlowstepVariant/cname::GroovyScript/version::1.1.2</value>
+        </ifl:property>
+        <ifl:property>
+            <key>subActivityType</key>
+            <value>GroovyScript</value>
+        </ifl:property>
+        <ifl:property>
+            <key>script</key>
+            <value>SetProperties.groovy</value>
+        </ifl:property>
+    </bpmn2:extensionElements>
+    <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+    <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+</bpmn2:callActivity>
+
+── ExternalCall serviceTask — the ONLY valid use of serviceTask (3 properties only):
+<bpmn2:serviceTask id="ServiceTask_Receiver" name="Send to Receiver">
+    <bpmn2:extensionElements>
+        <ifl:property>
+            <key>componentVersion</key>
+            <value>1.0</value>
+        </ifl:property>
+        <ifl:property>
+            <key>activityType</key>
+            <value>ExternalCall</value>
+        </ifl:property>
+        <ifl:property>
+            <key>cmdVariantUri</key>
+            <value>ctype::FlowstepVariant/cname::ExternalCall/version::1.0.4</value>
+        </ifl:property>
+    </bpmn2:extensionElements>
+    <bpmn2:incoming>SequenceFlow_n</bpmn2:incoming>
+    <bpmn2:outgoing>SequenceFlow_end</bpmn2:outgoing>
+</bpmn2:serviceTask>
+The receiver messageFlow MUST reference this serviceTask: sourceRef="ServiceTask_Receiver"
+
+── MessageStartEvent (extensionElements REQUIRED):
+<bpmn2:startEvent id="StartEvent_1" name="Start">
+    <bpmn2:extensionElements>
+        <ifl:property>
+            <key>cmdVariantUri</key>
+            <value>ctype::FlowstepVariant/cname::MessageStartEvent</value>
+        </ifl:property>
+    </bpmn2:extensionElements>
+    <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    <bpmn2:messageEventDefinition/>
+</bpmn2:startEvent>
+
+── MessageEndEvent (extensionElements REQUIRED):
+<bpmn2:endEvent id="EndEvent_1" name="End">
+    <bpmn2:extensionElements>
+        <ifl:property>
+            <key>componentVersion</key>
+            <value>1.1</value>
+        </ifl:property>
+        <ifl:property>
+            <key>cmdVariantUri</key>
+            <value>ctype::FlowstepVariant/cname::MessageEndEvent/version::1.1.0</value>
+        </ifl:property>
+    </bpmn2:extensionElements>
+    <bpmn2:incoming>SequenceFlow_n</bpmn2:incoming>
+    <bpmn2:messageEventDefinition/>
+</bpmn2:endEvent>
 
 ── HTTPS Sender messageFlow properties:
 ComponentType=HTTPS, ComponentNS=sap, componentVersion=1.5, urlPath={{Sender_Endpoint_Path}},
@@ -252,8 +348,8 @@ httpAddressWithoutQuery={{Receiver_Endpoint_URL}}
        <bpmn2:messageFlow id="MF_Sender"   sourceRef="Participant_Sender"   targetRef="StartEvent_1">
            ← HTTPS sender adapter properties
        </bpmn2:messageFlow>
-       <bpmn2:messageFlow id="MF_Receiver" sourceRef="EndEvent_1" targetRef="Participant_Receiver">
-           ← HTTP receiver adapter properties
+       <bpmn2:messageFlow id="MF_Receiver" sourceRef="ServiceTask_Receiver" targetRef="Participant_Receiver">
+           ← HTTP/SOAP/OData receiver adapter properties (sourceRef = ExternalCall serviceTask ID!)
        </bpmn2:messageFlow>
   </bpmn2:collaboration>
 
@@ -261,10 +357,15 @@ httpAddressWithoutQuery={{Receiver_Endpoint_URL}}
        <bpmn2:extensionElements>
            <ifl:property><key>transactionTimeout</key><value>30</value></ifl:property>
            <ifl:property><key>componentVersion</key><value>1.2</value></ifl:property>
-           <ifl:property><key>cmdVariantUri</key><value>ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.0</value></ifl:property>
+           <ifl:property><key>cmdVariantUri</key><value>ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.1</value></ifl:property>
            <ifl:property><key>transactionalHandling</key><value>Not Required</value></ifl:property>
        </bpmn2:extensionElements>
-       ← Exception Subprocess (if needed), then startEvent, steps, endEvent, sequenceFlows
+       ← [Optional] subProcess exception handler
+       ← bpmn2:startEvent  (with extensionElements cmdVariantUri=MessageStartEvent + messageEventDefinition)
+       ← bpmn2:callActivity steps (SetProperties.groovy, Content Modifiers, Mappings, etc.)
+       ← bpmn2:serviceTask id="ServiceTask_Receiver" (ExternalCall ONLY — outbound adapter step)
+       ← bpmn2:endEvent    (with extensionElements componentVersion=1.1 + cmdVariantUri=MessageEndEvent + messageEventDefinition)
+       ← bpmn2:sequenceFlow elements
   </bpmn2:process>
 
   3. <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Default Collaboration Diagram">
@@ -364,6 +465,9 @@ def _fix_iflw_xml(xml: str) -> str:
      10  Enforce element order: collaboration → process → BPMNDiagram
      11  Add missing sourceElement / targetElement to BPMNEdge elements
     """
+    # ── 0. Fix namespace prefix typos (e.g. bpm2: → bpmn2:) ──────────────────────
+    xml = _fix_namespace_typos(xml)
+
     # ── 1. Strip markdown fences / leading whitespace ──────────────────────────
     xml = xml.strip()
     if xml.startswith("```"):
@@ -478,6 +582,122 @@ def _fix_iflw_xml(xml: str) -> str:
     # ── 11. Add missing sourceElement / targetElement to BPMNEdge elements ─────
     xml = _fix_bpmn_edges(xml)
 
+    # ── 12. Convert serviceTask → callActivity for non-ExternalCall steps ────────
+    #  (Script, Enricher, Mapping, Router, etc. must all be callActivity in CPI)
+    xml = _fix_element_types(xml)
+
+    # ── 13. Fix outdated cmdVariantUri version strings ────────────────────────────
+    xml = _fix_version_strings(xml)
+
+    # ── 14. Add cmdVariantUri extensionElements to MessageStartEvent/EndEvent ─────
+    xml = _fix_event_extensions(xml)
+
+    return xml
+
+
+def _fix_namespace_typos(xml: str) -> str:
+    """Fix common namespace prefix typos (e.g. bpm2: → bpmn2:)."""
+    return xml.replace('<bpm2:', '<bpmn2:').replace('</bpm2:', '</bpmn2:')
+
+
+def _fix_element_types(xml: str) -> str:
+    """
+    Convert bpmn2:serviceTask → bpmn2:callActivity for all non-ExternalCall steps.
+    SAP CPI rule: serviceTask = ONLY activityType=ExternalCall (outbound adapter step).
+                  callActivity = Groovy Script, Enricher, Mapping, Router, Splitter, etc.
+    Also injects subActivityType=GroovyScript + scriptBundleId into Script callActivities.
+    """
+    def _swap(m: re.Match) -> str:
+        block = m.group(0)
+        if 'ExternalCall' in block:
+            return block  # Keep ExternalCall as serviceTask
+        block = re.sub(r'<bpmn2:serviceTask(\b|\s)', r'<bpmn2:callActivity\1', block, count=1)
+        block = block.replace('</bpmn2:serviceTask>', '</bpmn2:callActivity>')
+        return block
+
+    xml = re.sub(
+        r'<bpmn2:serviceTask\b.*?</bpmn2:serviceTask>',
+        _swap, xml, flags=re.DOTALL,
+    )
+
+    def _add_groovy_props(m: re.Match) -> str:
+        block = m.group(0)
+        if 'subActivityType' in block or '<value>Script</value>' not in block:
+            return block
+        return re.sub(
+            r'(<key>activityType</key>\s*<value>Script</value>\s*</ifl:property>)',
+            (r'\1\n        <ifl:property><key>subActivityType</key>'
+             r'<value>GroovyScript</value></ifl:property>'
+             r'\n        <ifl:property><key>scriptBundleId</key><value/></ifl:property>'),
+            block,
+        )
+
+    xml = re.sub(
+        r'<bpmn2:callActivity\b.*?</bpmn2:callActivity>',
+        _add_groovy_props, xml, flags=re.DOTALL,
+    )
+    return xml
+
+
+def _fix_version_strings(xml: str) -> str:
+    """Fix outdated cmdVariantUri version strings to match the live SAP Integration Suite tenant."""
+    for old, new in (
+        ('cname::IFlowConfiguration/version::1.2.3',          'cname::IFlowConfiguration/version::1.2.4'),
+        ('cname::IntegrationProcess/version::1.2.0',           'cname::IntegrationProcess/version::1.2.1'),
+        ('cname::ErrorEventSubProcessTemplate/version::1.0.2', 'cname::ErrorEventSubProcessTemplate/version::1.1.0'),
+    ):
+        xml = xml.replace(old, new)
+    return xml
+
+
+def _fix_event_extensions(xml: str) -> str:
+    """
+    Add missing cmdVariantUri extensionElements to MessageStartEvent and MessageEndEvent.
+    Real CPI iFlows require these on every start/end event.
+    """
+    def _patch_start(m: re.Match) -> str:
+        block = m.group(0)
+        # Skip if already has cmdVariantUri, or is a Timer/Error start
+        if ('cmdVariantUri' in block
+                or 'timerEventDefinition' in block
+                or 'errorEventDefinition' in block):
+            return block
+        if '<bpmn2:extensionElements>' not in block:
+            block = re.sub(
+                r'(<bpmn2:startEvent\b[^>]*>)',
+                (r'\1\n    <bpmn2:extensionElements>\n'
+                 r'        <ifl:property><key>cmdVariantUri</key>'
+                 r'<value>ctype::FlowstepVariant/cname::MessageStartEvent</value></ifl:property>\n'
+                 r'    </bpmn2:extensionElements>'),
+                block, count=1,
+            )
+        return block
+
+    xml = re.sub(
+        r'<bpmn2:startEvent\b.*?</bpmn2:startEvent>',
+        _patch_start, xml, flags=re.DOTALL,
+    )
+
+    def _patch_end(m: re.Match) -> str:
+        block = m.group(0)
+        if 'cmdVariantUri' in block or 'errorEventDefinition' in block:
+            return block
+        if '<bpmn2:extensionElements>' not in block:
+            block = re.sub(
+                r'(<bpmn2:endEvent\b[^>]*>)',
+                (r'\1\n    <bpmn2:extensionElements>\n'
+                 r'        <ifl:property><key>componentVersion</key><value>1.1</value></ifl:property>\n'
+                 r'        <ifl:property><key>cmdVariantUri</key>'
+                 r'<value>ctype::FlowstepVariant/cname::MessageEndEvent/version::1.1.0</value></ifl:property>\n'
+                 r'    </bpmn2:extensionElements>'),
+                block, count=1,
+            )
+        return block
+
+    xml = re.sub(
+        r'<bpmn2:endEvent\b.*?</bpmn2:endEvent>',
+        _patch_end, xml, flags=re.DOTALL,
+    )
     return xml
 
 
@@ -529,7 +749,7 @@ Requirements:
 - Include complete bpmndi:BPMNDiagram section with all shapes and edges
 """
 
-    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=7000)
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=6000)
     iflw = _fix_iflw_xml(raw)
     scripts = _default_scripts(req.include_error_handling)
 
@@ -675,7 +895,7 @@ Instructions:
 8. Include complete bpmndi:BPMNDiagram section.
 """
 
-    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=7000)
+    raw  = generate(IFLOW_SYSTEM, prompt, max_tokens=6000)
     iflw = _fix_iflw_xml(raw)
 
     # Merge: user-supplied scripts take priority over defaults
