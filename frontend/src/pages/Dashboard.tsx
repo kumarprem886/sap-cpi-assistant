@@ -55,20 +55,6 @@ export default function Dashboard() {
         <p className="text-gray-400 text-lg">AI-powered toolkit for SAP Cloud Platform Integration developers</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        {[
-          { label: 'iFlow Generation', value: 'Full XML' },
-          { label: 'AI Model', value: 'Claude Sonnet' },
-          { label: 'Supported Adapters', value: '12+' },
-        ].map(({ label, value }) => (
-          <div key={label} className="card text-center">
-            <p className="text-2xl font-bold text-sap-blue">{value}</p>
-            <p className="text-sm text-gray-400 mt-1">{label}</p>
-          </div>
-        ))}
-      </div>
-
       {/* Feature cards */}
       <h2 className="text-lg font-semibold text-white mb-4">Tools</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
