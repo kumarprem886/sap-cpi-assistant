@@ -12,7 +12,9 @@ Reads credentials from backend/.env:
 from __future__ import annotations
 
 import os
+import re
 import time
+import base64 as _b64
 import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
@@ -185,3 +187,102 @@ def list_keystores():
     data = _get("/KeystoreEntries?$format=json")
     results = data.get("d", {}).get("results", [])
     return [{"alias": k.get("Alias"), "type": k.get("Type")} for k in results]
+
+
+# ── iFlow import ──────────────────────────────────────────────────────────────
+
+class ImportIFlowRequest(BaseModel):
+    package_id: str
+    name: str
+    version: str = "1.0.0"
+    description: str = ""
+    xml: str
+    scripts: dict = {}
+    xsds: dict = {}
+    mmaps: dict = {}
+
+
+@router.post("/import-iflow")
+def import_iflow(req: ImportIFlowRequest):
+    """
+    Build a CPI-importable ZIP from the generated iFlow and push it to a
+    design-time package via the CPI OData API.
+    Creates the artifact if it doesn't exist; updates (PUT) if it does (409).
+    """
+    from services.iflow_packager import build_iflow_zip
+
+    base = _api_base()
+    if not base:
+        raise HTTPException(503, "CPI_API_BASE_URL not set in backend/.env")
+
+    # 1. Build the ZIP bundle
+    zip_bytes = build_iflow_zip(
+        iflow_xml=req.xml,
+        name=req.name,
+        description=req.description,
+        version=req.version,
+        scripts=req.scripts or {},
+        xsds=req.xsds or {},
+        mmaps=req.mmaps or {},
+    )
+    artifact_content = _b64.b64encode(zip_bytes).decode()
+
+    # 2. Derive a safe artifact ID (matches what build_iflow_zip uses internally)
+    iflow_id = re.sub(r"[^A-Za-z0-9_\-]", "_", req.name.strip())
+    iflow_id = re.sub(r"_+", "_", iflow_id).strip("_") or "MyIFlow"
+
+    # 3. Fetch CSRF token (CPI requires it for all write operations)
+    csrf_resp = httpx.get(
+        f"{base}/IntegrationDesigntimeArtifacts?$top=1&$format=json",
+        headers={**_headers(), "X-CSRF-Token": "Fetch"},
+        auth=_auth(),
+        timeout=15,
+    )
+    csrf_token = csrf_resp.headers.get("x-csrf-token", "")
+
+    write_headers = {
+        **_headers(),
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrf_token,
+        "Accept": "application/json",
+    }
+
+    body = {
+        "PackageId": req.package_id,
+        "Name": req.name,
+        "Id": iflow_id,
+        "Version": req.version,
+        "ArtifactContent": artifact_content,
+        "Description": req.description,
+    }
+
+    # 4a. Try POST (create new artifact)
+    resp = httpx.post(
+        f"{base}/IntegrationDesigntimeArtifacts",
+        headers=write_headers,
+        auth=_auth(),
+        json=body,
+        timeout=30,
+    )
+
+    if resp.status_code in (200, 201):
+        return {"status": "imported", "id": iflow_id, "package": req.package_id}
+
+    # 4b. 409 Conflict → artifact already exists, update it
+    if resp.status_code == 409:
+        put_resp = httpx.put(
+            f"{base}/IntegrationDesigntimeArtifacts(Id='{iflow_id}',Version='active')",
+            headers=write_headers,
+            auth=_auth(),
+            json={
+                "ArtifactContent": artifact_content,
+                "Name": req.name,
+                "Version": req.version,
+            },
+            timeout=30,
+        )
+        if put_resp.status_code in (200, 201, 202, 204):
+            return {"status": "updated", "id": iflow_id, "package": req.package_id}
+        raise HTTPException(put_resp.status_code, f"Update failed: {put_resp.text[:500]}")
+
+    raise HTTPException(resp.status_code, f"Import failed: {resp.text[:500]}")

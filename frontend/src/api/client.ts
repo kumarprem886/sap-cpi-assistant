@@ -68,4 +68,5 @@ export const cpiAPI = {
   messages:    (top = 20, status?: string)   => api.get('/cpi/messages', { params: { top, ...(status ? { status } : {}) } }),
   credentials: ()                            => api.get('/cpi/security/credentials'),
   keystores:   ()                            => api.get('/cpi/security/keystores'),
+  importIflow: (data: object)                => api.post('/cpi/import-iflow', data),
 }

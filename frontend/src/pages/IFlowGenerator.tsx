@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
-import { GitMerge, Loader2, Wand2, Eye, Download, FileCode, Upload, X, FileText, Paperclip } from 'lucide-react'
-import { iflowAPI } from '../api/client'
+import { GitMerge, Loader2, Wand2, Eye, Download, FileCode, Upload, X, FileText, Paperclip, Cloud, CheckCircle, AlertCircle } from 'lucide-react'
+import { iflowAPI, cpiAPI } from '../api/client'
 import ResultPanel from '../components/ResultPanel'
 import MarkdownResult from '../components/MarkdownResult'
 
@@ -46,6 +46,14 @@ export default function IFlowGenerator() {
   const [explainXml, setExplainXml]   = useState('')
   const [explainResult, setExplainResult] = useState('')
 
+  // ── Upload to CPI modal state ──────────────────────────────────────────────
+  const [uploadModal, setUploadModal]         = useState(false)
+  const [packages, setPackages]               = useState<{ id: string; name: string }[]>([])
+  const [selectedPackage, setSelectedPackage] = useState('')
+  const [loadingPkgs, setLoadingPkgs]         = useState(false)
+  const [uploading, setUploading]             = useState(false)
+  const [uploadResult, setUploadResult]       = useState<{ ok: boolean; msg: string } | null>(null)
+
   // ── Generate form ──────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     name: '', description: '',
@@ -88,6 +96,49 @@ export default function IFlowGenerator() {
       a.href = url; a.download = `${b.name}.zip`; a.click()
       URL.revokeObjectURL(url)
     } finally { setDownloading(false) }
+  }
+
+  // ── Upload to CPI ─────────────────────────────────────────────────────────
+  const openUploadModal = async () => {
+    setUploadModal(true)
+    setUploadResult(null)
+    setLoadingPkgs(true)
+    try {
+      const res = await cpiAPI.packages()
+      const pkgs = res.data as { id: string; name: string }[]
+      setPackages(pkgs)
+      if (pkgs.length > 0) setSelectedPackage(pkgs[0].id)
+    } catch {
+      setPackages([])
+    } finally {
+      setLoadingPkgs(false)
+    }
+  }
+
+  const uploadToCPI = async () => {
+    if (!bundle || !selectedPackage) return
+    setUploading(true)
+    setUploadResult(null)
+    const version = tab === 'generate' ? form.version : fdVersion
+    try {
+      const res = await cpiAPI.importIflow({
+        package_id:  selectedPackage,
+        name:        bundle.name,
+        version:     version || '1.0.0',
+        description: bundle.description,
+        xml:         bundle.iflw,
+        scripts:     bundle.scripts,
+        xsds:        bundle.xsds   ?? {},
+        mmaps:       bundle.mmaps  ?? {},
+      })
+      const verb = res.data.status === 'updated' ? 'updated' : 'imported'
+      setUploadResult({ ok: true, msg: `✓ iFlow "${bundle.name}" ${verb} successfully in package "${selectedPackage}". You can now deploy it from CPI Connect.` })
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.message || 'Upload failed'
+      setUploadResult({ ok: false, msg: String(msg) })
+    } finally {
+      setUploading(false)
+    }
   }
 
   // ── Generate from form ─────────────────────────────────────────────────────
@@ -199,16 +250,21 @@ export default function IFlowGenerator() {
             <input type="checkbox" id="eh" className="w-4 h-4 accent-sap-blue" checked={form.include_error_handling} onChange={e => setF('include_error_handling', e.target.checked)} />
             <label htmlFor="eh" className="text-sm text-gray-300">Include Exception Subprocess</label>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <button className="btn-primary flex items-center gap-2" onClick={generate} disabled={loading || !form.name || !form.description}>
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
               {loading ? 'Generating...' : 'Generate iFlow'}
             </button>
             {bundle && (
-              <button className="btn-secondary flex items-center gap-2" onClick={() => downloadZip(bundle, form.version)} disabled={downloading}>
-                {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                {downloading ? 'Packaging...' : 'Download ZIP'}
-              </button>
+              <>
+                <button className="btn-secondary flex items-center gap-2" onClick={() => downloadZip(bundle, form.version)} disabled={downloading}>
+                  {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  {downloading ? 'Packaging...' : 'Download ZIP'}
+                </button>
+                <button className="btn-secondary flex items-center gap-2 !border-blue-700 !text-blue-300 hover:!bg-blue-900/30" onClick={openUploadModal}>
+                  <Cloud size={16} /> Upload to CPI
+                </button>
+              </>
             )}
           </div>
           {error && (
@@ -286,16 +342,21 @@ export default function IFlowGenerator() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <button className="btn-primary flex items-center gap-2" onClick={generateFromFD} disabled={loading || !fdFile}>
               {loading ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
               {loading ? 'Analysing FD...' : 'Analyse FD & Generate iFlow'}
             </button>
             {bundle && (
-              <button className="btn-secondary flex items-center gap-2" onClick={() => downloadZip(bundle, fdVersion)} disabled={downloading}>
-                {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                {downloading ? 'Packaging...' : 'Download ZIP'}
-              </button>
+              <>
+                <button className="btn-secondary flex items-center gap-2" onClick={() => downloadZip(bundle, fdVersion)} disabled={downloading}>
+                  {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                  {downloading ? 'Packaging...' : 'Download ZIP'}
+                </button>
+                <button className="btn-secondary flex items-center gap-2 !border-blue-700 !text-blue-300 hover:!bg-blue-900/30" onClick={openUploadModal}>
+                  <Cloud size={16} /> Upload to CPI
+                </button>
+              </>
             )}
           </div>
 
@@ -343,6 +404,93 @@ export default function IFlowGenerator() {
       )}
 
       {explainResult && tab === 'explain' && <MarkdownResult content={explainResult} title="iFlow Analysis" />}
+
+      {/* ── Upload to CPI Modal ──────────────────────────────────────────── */}
+      {uploadModal && bundle && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md shadow-2xl">
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-white font-semibold text-lg flex items-center gap-2">
+                <Cloud size={18} className="text-blue-400" /> Upload to CPI
+              </h3>
+              <button onClick={() => setUploadModal(false)} className="text-gray-500 hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+
+              {/* iFlow name (read-only) */}
+              <div>
+                <label className="label">iFlow Name</label>
+                <div className="input-field bg-gray-800/60 text-gray-300 cursor-default select-text">{bundle.name}</div>
+              </div>
+
+              {/* Package picker */}
+              <div>
+                <label className="label">Target Package *</label>
+                {loadingPkgs ? (
+                  <div className="flex items-center gap-2 text-gray-400 text-sm py-2">
+                    <Loader2 size={14} className="animate-spin" /> Loading packages from CPI…
+                  </div>
+                ) : packages.length === 0 ? (
+                  <div className="text-sm text-yellow-300 bg-yellow-950/30 border border-yellow-800 rounded-lg px-4 py-3">
+                    No packages found on your CPI tenant. Create an integration package in SAP Integration Suite first, then try again.
+                  </div>
+                ) : (
+                  <select className="select-field" value={selectedPackage} onChange={e => setSelectedPackage(e.target.value)}>
+                    {packages.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Info note */}
+              {packages.length > 0 && !uploadResult && (
+                <p className="text-xs text-gray-500">
+                  The iFlow will be created in design-time. Go to <span className="text-gray-300">CPI Connect → Packages</span> to deploy it to runtime.
+                  If an artifact with the same ID already exists it will be updated automatically.
+                </p>
+              )}
+
+              {/* Result banner */}
+              {uploadResult && (
+                <div className={`flex items-start gap-3 rounded-lg px-4 py-3 text-sm ${
+                  uploadResult.ok
+                    ? 'bg-green-950/50 border border-green-700 text-green-300'
+                    : 'bg-red-950/50 border border-red-800 text-red-300'
+                }`}>
+                  {uploadResult.ok
+                    ? <CheckCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    : <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />}
+                  <span>{uploadResult.msg}</span>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-3 justify-end pt-1">
+                <button className="btn-secondary" onClick={() => setUploadModal(false)}>
+                  {uploadResult?.ok ? 'Close' : 'Cancel'}
+                </button>
+                {!uploadResult?.ok && (
+                  <button
+                    className="btn-primary flex items-center gap-2"
+                    onClick={uploadToCPI}
+                    disabled={uploading || !selectedPackage || packages.length === 0}
+                  >
+                    {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {uploading ? 'Uploading…' : 'Import to CPI'}
+                  </button>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
