@@ -389,71 +389,124 @@ async def preview_sheet(
 
 # ── AI Rule Derivation ────────────────────────────────────────────────────────
 
-_DERIVE_SYSTEM = """You are an SAP CPI integration expert. Convert a plain-English functional description
-into an exact SAP CPI Graphical Message Mapping function expression.
+_DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
 
-EXACT SAP CPI standard function syntax (use these names exactly):
-- Direct copy: leave blank — return ""
-- toUpperCase((/field))          — convert text to uppercase
-- toLowerCase((/field))          — convert text to lowercase
-- trim((/field))                 — remove leading/trailing whitespace
-- length((/field))               — string length as number
-- substring((/field), start, len) — extract substring (0-based start index)
-- concat: (/field1)+SEPARATOR+(/field2)  — join fields with separator between them
-- formatDate((/field), inputFmt, outputFmt) — reformat date string  e.g. formatDate((/date), yyyyMMdd, yyyy-MM-dd)
-- replaceAll((/field), searchStr, replacement) — replace text
-- SplitByValue((/field), delimiter)    — split field by delimiter (capital S)
-- useOneAsMany((/field))               — repeat value for each occurrence
-- mapWithDefault((/field), defaultVal) — pass value through, use defaultVal if empty
-- exists((/field))                     — boolean: field exists
-- if((/condition), (/then), (/else))   — conditional
-- equals((/field), VALUE)              — equality check
-- add((/field1), (/field2))            — numeric add
-- subtract((/field1), (/field2))       — numeric subtract
+Your job: read a functional description (written in plain English by a business analyst) and
+produce the correct SAP CPI Graphical Mapping expression. The user may write anything from a
+single word to a full sentence — understand their INTENT and produce the right expression.
 
-RULES:
-1. Use ACTUAL field names from the source fields list, not generic placeholders
-2. Format: (/FieldName) — short field name, NOT full XPath
-3. Constants (separators, formats) go WITHOUT parentheses: T, -, yyyyMMdd, EUR
-4. For direct copy return exactly: ""
-5. Return ONLY the expression — no explanation, no markdown
+━━ AVAILABLE SAP CPI STANDARD FUNCTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STRING:
+  toUpperCase((/field))                         → uppercase text
+  toLowerCase((/field))                         → lowercase text
+  trim((/field))                                → remove leading/trailing spaces
+  length((/field))                              → character count
+  substring((/field), startIndex, length)       → extract part of string (0-based)
+  (/field1)+SEPARATOR+(/field2)                 → join two fields with a separator
+  replaceAll((/field), searchText, replacement) → replace text in field
+  SplitByValue((/field), delimiter)             → split into multiple values
+
+DATE:
+  formatDate((/field), inputFormat, outputFormat)
+    — reformats date/time strings. Common formats: yyyyMMdd, yyyy-MM-dd, HHmmss, HH:mm:ss
+    — e.g. formatDate((/date), yyyyMMdd, yyyy-MM-dd)
+
+NUMERIC:
+  add((/field1), (/field2))       → add two field values
+  subtract((/field1), (/field2))  → subtract
+  multiply((/field1), (/field2))  → multiply
+  divide((/field1), (/field2))    → divide
+
+CONDITIONAL:
+  if((/boolField), valueIfTrue, valueIfFalse)
+  equals((/field), CONSTANT)      → returns true/false
+  exists((/field))                → true if field has a value
+  mapWithDefault((/field), defaultValue) → value or default if empty
+
+NODE FUNCTIONS:
+  useOneAsMany((/field))          → repeat single value for each occurrence of target
+  removeContexts((/field))        → flatten multi-value into single context
+  collapseContexts((/field))      → merge multiple values into one
+
+━━ INTENT RECOGNITION EXAMPLES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Description → Expression (source field: "date", available fields: date, time, plant, qty)
+
+"direct copy"                        → ""
+"copy as-is"                         → ""
+"same value"                         → ""
+"uppercase"                          → toUpperCase((/date))
+"make upper case"                    → toUpperCase((/date))
+"convert to uppercase"               → toUpperCase((/date))
+"lowercase"                          → toLowerCase((/date))
+"trim spaces"                        → trim((/date))
+"remove whitespace"                  → trim((/date))
+"format date yyyyMMdd to yyyy-MM-dd" → formatDate((/date), yyyyMMdd, yyyy-MM-dd)
+"reformat date from YYYYMMDD to ISO" → formatDate((/date), yyyyMMdd, yyyy-MM-dd)
+"combine date and time with T"       → (/date)+T+(/time)
+"join date and time using T between" → (/date)+T+(/time)
+"concatenate plant and date with -"  → (/plant)+- +(/date)
+"first 6 characters"                 → substring((/date), 0, 6)
+"extract first 4 chars"              → substring((/date), 0, 4)
+"remove dashes"                      → replaceAll((/date), -, )
+"replace space with underscore"      → replaceAll((/date), , _)
+"repeat for each line"               → useOneAsMany((/date))
+"use one value for all"              → useOneAsMany((/date))
+"default to N/A if empty"            → mapWithDefault((/date), N/A)
+"split by comma"                     → SplitByValue((/date), ,)
+"add qty to itself"                  → add((/qty), (/qty))
+
+━━ RULES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ALWAYS use the actual source field names provided — never write (/field) as a literal
+2. Field names go in parentheses: (/fieldName) — use short name, not full XPath
+3. Separators and constants go WITHOUT parentheses: T, -, _, EUR, yyyyMMdd
+4. For direct copy (no transformation), return exactly: ""
+5. If description mentions multiple fields, look them up in the available source fields list
+6. If the operation genuinely cannot be done with standard functions (e.g. complex arithmetic
+   with hardcoded numbers like "divide by 2"), use the closest standard function and note it
+   OR return GROOVY: followed by a one-liner Groovy expression
+7. Return ONLY the expression string on one line — no explanation, no markdown, no quotes
 """
 
 
 class DeriveRuleRequest(BaseModel):
-    rows: list[dict]   # list of {source, target, functional_rule, technical_rule}
+    rows: list[dict]
 
 
 @router.post("/derive-rules")
 def derive_rules(req: DeriveRuleRequest):
     """
     For each row with a functional_rule but no technical_rule,
-    use AI to derive the CPI node-function expression.
-    Returns the same rows list with technical_rule filled in.
+    use AI to understand the user's intent and derive the correct
+    SAP CPI Graphical Mapping expression. Works with any free-form
+    English description — not just formal syntax.
     """
     results = []
     for row in req.rows:
         src       = (row.get("source") or "").strip()
+        tgt       = (row.get("target") or "").strip()
         func_rule = (row.get("functional_rule") or "").strip()
         tech_rule = (row.get("technical_rule") or "").strip()
 
-        # Only derive if functional rule exists but technical is empty
         if func_rule and not tech_rule:
-            # All source fields available in the sheet (for context when rule
-            # references multiple fields, e.g. "concat date and time with T")
             all_src = (row.get("available_source_fields") or "").strip()
-            ctx_line = f"All source fields in this mapping: {all_src}" if all_src else ""
-            prompt = f"""Source field for this row: {src or "(see description)"}
-{ctx_line}
-Functional description: {func_rule}
 
-Derive the SAP CPI Graphical Mapping expression.
-When the description references multiple fields (e.g. "date and time"), look them up from
-the available source fields list and use their actual names in the expression.
-Return ONLY the expression string — no explanation."""
+            prompt = f"""MAPPING ROW:
+Source field: {src or "(not specified — infer from description)"}
+Target field: {tgt or "(not specified)"}
+All available source fields: {all_src or "(unknown)"}
+
+WHAT THE USER WROTE (functional description):
+"{func_rule}"
+
+Understand what the user wants to do and produce the correct SAP CPI Graphical Mapping expression.
+Use the actual source field name(s) — not generic placeholders.
+Return ONLY the expression on one line."""
+
             try:
-                derived = generate(_DERIVE_SYSTEM, prompt, max_tokens=200).strip()
-                # Strip any accidental markdown fences
+                derived = generate(_DERIVE_SYSTEM, prompt, max_tokens=300).strip()
                 if derived.startswith("```"):
                     derived = derived.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
                 results.append({**row, "technical_rule": derived, "ai_derived": True})
