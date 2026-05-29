@@ -46,3 +46,5 @@ desktop.ini
 backend/.env
 *.pem
 *.key
+
+backend/data/

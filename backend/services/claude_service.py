@@ -1,27 +1,36 @@
 """
-AI service — three providers, auto-detected from backend/.env
+AI service — five providers, auto-detected from backend/.env
 
 Priority (first match wins):
-  1. AI_PROVIDER=anthropic  OR  ANTHROPIC_API_KEY set  → Claude claude-opus-4-5  (best quality)
-  2. AI_PROVIDER=groq       OR  GROQ_API_KEY set       → Groq / Llama            (free cloud, 12K token limit)
-  3. AI_PROVIDER=ollama     OR  neither key set        → Ollama local LLM        (free, no key, runs on your machine)
+  1. AI_PROVIDER=anthropic  OR  ANTHROPIC_API_KEY set  → Claude       (best quality)
+  2. AI_PROVIDER=groq       OR  GROQ_API_KEY set       → Groq/Llama   (free cloud)
+  3. AI_PROVIDER=openai     OR  OPENAI_API_KEY set     → OpenAI GPT   (strong quality)
+  4. AI_PROVIDER=gemini     OR  GOOGLE_API_KEY set     → Google Gemini (strong quality)
+  5. AI_PROVIDER=ollama     OR  no key set             → Ollama local  (free, no key)
 
 backend/.env quick-start (pick one block):
 
-  # ── Option A: Claude (best quality) ──────────────────────────────────────
+  # ── Option A: Anthropic Claude ────────────────────────────────────────────
   ANTHROPIC_API_KEY=sk-ant-...
-  # ANTHROPIC_MODEL=claude-opus-4-5        # default
-  # ANTHROPIC_VISION_MODEL=claude-opus-4-5
+  # ANTHROPIC_MODEL=claude-opus-4-5
 
-  # ── Option B: Groq (free cloud, weaker quality) ───────────────────────────
+  # ── Option B: Groq (free cloud) ──────────────────────────────────────────
   GROQ_API_KEY=gsk_...
   # GROQ_MODEL=llama-3.3-70b-versatile
 
-  # ── Option C: Ollama local (no key needed) ────────────────────────────────
+  # ── Option C: OpenAI GPT ─────────────────────────────────────────────────
+  OPENAI_API_KEY=sk-...
+  # OPENAI_MODEL=gpt-4o
+
+  # ── Option D: Google Gemini ───────────────────────────────────────────────
+  GOOGLE_API_KEY=AIza...
+  # GEMINI_MODEL=gemini-2.0-flash
+
+  # ── Option E: Ollama local (no key needed) ────────────────────────────────
   AI_PROVIDER=ollama
-  # OLLAMA_BASE_URL=http://localhost:11434  # default
-  # OLLAMA_MODEL=qwen2.5-coder:14b         # default for 16 GB RAM
-  # OLLAMA_VISION_MODEL=llava:7b           # for FD image analysis (optional)
+  # OLLAMA_BASE_URL=http://localhost:11434
+  # OLLAMA_MODEL=qwen2.5-coder:14b
+  # OLLAMA_VISION_MODEL=llava:7b
 """
 
 import os, base64, json
@@ -31,20 +40,33 @@ from fastapi import HTTPException
 
 load_dotenv()
 
-# ── Detect provider ───────────────────────────────────────────────────────────
+
+# ── Provider detection helper ─────────────────────────────────────────────────
+
+def _detect_provider(forced: str, anthropic_key: str, groq_key: str,
+                     openai_key: str, google_key: str) -> str:
+    f = forced.lower()
+    if f == "anthropic" or (anthropic_key and f not in ("groq", "openai", "gemini", "ollama")):
+        return "anthropic"
+    if f == "groq"      or (groq_key      and f not in ("openai", "gemini", "ollama")):
+        return "groq"
+    if f == "openai"    or (openai_key    and f not in ("gemini", "ollama")):
+        return "openai"
+    if f == "gemini"    or (google_key    and f != "ollama"):
+        return "gemini"
+    return "ollama"
+
+
+# ── Read env vars ─────────────────────────────────────────────────────────────
 _ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 _GROQ_KEY      = os.getenv("GROQ_API_KEY",      "").strip()
-_FORCED        = os.getenv("AI_PROVIDER",        "").strip().lower()
+_OPENAI_KEY    = os.getenv("OPENAI_API_KEY",     "").strip()
+_GOOGLE_KEY    = os.getenv("GOOGLE_API_KEY",     "").strip()
+_FORCED        = os.getenv("AI_PROVIDER",        "").strip()
 
-if   _FORCED == "anthropic" or (_ANTHROPIC_KEY and _FORCED != "groq" and _FORCED != "ollama"):
-    AI_PROVIDER = "anthropic"
-elif _FORCED == "groq"      or (_GROQ_KEY and _FORCED != "ollama"):
-    AI_PROVIDER = "groq"
-else:
-    AI_PROVIDER = "ollama"
+AI_PROVIDER = _detect_provider(_FORCED, _ANTHROPIC_KEY, _GROQ_KEY, _OPENAI_KEY, _GOOGLE_KEY)
 
-# Max output tokens exposed to callers (e.g. iflow.py)
-# Anthropic / Ollama: generous; Groq free: 12K TPM → 6K leaves room for system prompt
+# Max output tokens (Groq free tier is tighter)
 MAX_GENERATION_TOKENS = 6000 if AI_PROVIDER == "groq" else 8000
 
 # ── Shared system prompt ──────────────────────────────────────────────────────
@@ -76,35 +98,43 @@ elif AI_PROVIDER == "groq":
     MODEL        = os.getenv("GROQ_MODEL",        "llama-3.3-70b-versatile")
     VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 
+elif AI_PROVIDER == "openai":
+    from openai import OpenAI
+    _client      = OpenAI(api_key=_OPENAI_KEY)
+    MODEL        = os.getenv("OPENAI_MODEL",        "gpt-4o")
+    VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
+
+elif AI_PROVIDER == "gemini":
+    import google.generativeai as _genai
+    _genai.configure(api_key=_GOOGLE_KEY)
+    _client      = _genai   # module used as namespace
+    MODEL        = os.getenv("GEMINI_MODEL",        "gemini-2.0-flash")
+    VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")
+
 else:  # ollama
-    _client      = None   # we call Ollama via httpx directly
+    _client      = None
     OLLAMA_BASE  = os.getenv("OLLAMA_BASE_URL",    "http://localhost:11434").rstrip("/")
     MODEL        = os.getenv("OLLAMA_MODEL",        "qwen2.5-coder:14b")
     VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "llava:7b")
 
 
+# ── Hot-reload ────────────────────────────────────────────────────────────────
+
 def reload_from_env() -> None:
-    """
-    Re-read all AI-related env vars and re-initialize globals in-place.
-    Called by the settings router after writing new values to .env.
-    """
+    """Re-read all AI env vars and re-initialize globals. Called by settings router."""
     from dotenv import load_dotenv as _load
-    _load(override=True)   # re-read .env file into os.environ
+    _load(override=True)
 
     global AI_PROVIDER, _client, MODEL, VISION_MODEL, MAX_GENERATION_TOKENS
-    global _ANTHROPIC_KEY, _GROQ_KEY, _FORCED
+    global _ANTHROPIC_KEY, _GROQ_KEY, _OPENAI_KEY, _GOOGLE_KEY, _FORCED
 
     _ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
     _GROQ_KEY      = os.getenv("GROQ_API_KEY",      "").strip()
-    _FORCED        = os.getenv("AI_PROVIDER",        "").strip().lower()
+    _OPENAI_KEY    = os.getenv("OPENAI_API_KEY",     "").strip()
+    _GOOGLE_KEY    = os.getenv("GOOGLE_API_KEY",     "").strip()
+    _FORCED        = os.getenv("AI_PROVIDER",        "").strip()
 
-    if   _FORCED == "anthropic" or (_ANTHROPIC_KEY and _FORCED not in ("groq", "ollama")):
-        AI_PROVIDER = "anthropic"
-    elif _FORCED == "groq"      or (_GROQ_KEY      and _FORCED != "ollama"):
-        AI_PROVIDER = "groq"
-    else:
-        AI_PROVIDER = "ollama"
-
+    AI_PROVIDER = _detect_provider(_FORCED, _ANTHROPIC_KEY, _GROQ_KEY, _OPENAI_KEY, _GOOGLE_KEY)
     MAX_GENERATION_TOKENS = 6000 if AI_PROVIDER == "groq" else 8000
 
     if AI_PROVIDER == "anthropic":
@@ -119,7 +149,20 @@ def reload_from_env() -> None:
         MODEL        = os.getenv("GROQ_MODEL",        "llama-3.3-70b-versatile")
         VISION_MODEL = os.getenv("GROQ_VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 
-    else:  # ollama — update OLLAMA_BASE global used by _ollama_chat / stream_generate
+    elif AI_PROVIDER == "openai":
+        from openai import OpenAI
+        _client      = OpenAI(api_key=_OPENAI_KEY)
+        MODEL        = os.getenv("OPENAI_MODEL",        "gpt-4o")
+        VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4o")
+
+    elif AI_PROVIDER == "gemini":
+        import google.generativeai as _genai
+        _genai.configure(api_key=_GOOGLE_KEY)
+        _client      = _genai
+        MODEL        = os.getenv("GEMINI_MODEL",        "gemini-2.0-flash")
+        VISION_MODEL = os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")
+
+    else:  # ollama
         global OLLAMA_BASE
         _client      = None
         OLLAMA_BASE  = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
@@ -131,50 +174,34 @@ def _build_system(extra: str) -> str:
     return SAP_SYSTEM_PROMPT + "\n\n" + extra if extra else SAP_SYSTEM_PROMPT
 
 
-# ── Ollama helper (OpenAI-compatible endpoint, uses httpx already in deps) ───
+# ── Ollama helper ─────────────────────────────────────────────────────────────
 
 def _ollama_chat(system: str, user_prompt: str, max_tokens: int,
                  model: str, image_b64: str = "", content_type: str = "") -> str:
-    """Call Ollama's OpenAI-compatible /v1/chat/completions endpoint."""
     messages: list = [{"role": "system", "content": system}]
-
     if image_b64:
-        # Multimodal message for vision models
-        messages.append({
-            "role": "user",
-            "content": [
-                {"type": "image_url",
-                 "image_url": {"url": f"data:{content_type};base64,{image_b64}"}},
-                {"type": "text", "text": user_prompt},
-            ],
-        })
+        messages.append({"role": "user", "content": [
+            {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{image_b64}"}},
+            {"type": "text", "text": user_prompt},
+        ]})
     else:
         messages.append({"role": "user", "content": user_prompt})
 
     try:
         resp = _httpx.post(
             f"{OLLAMA_BASE}/v1/chat/completions",
-            headers={"Authorization": "Bearer ollama"},   # value ignored, header required
-            json={
-                "model":      model,
-                "messages":   messages,
-                "max_tokens": max_tokens,
-                "stream":     False,
-            },
-            timeout=600,   # local inference can take a while for large outputs
+            headers={"Authorization": "Bearer ollama"},
+            json={"model": model, "messages": messages, "max_tokens": max_tokens, "stream": False},
+            timeout=600,
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
     except _httpx.ConnectError:
-        raise HTTPException(503,
-            "Ollama is not running. Start it with: ollama serve  "
-            "(install from https://ollama.ai)")
+        raise HTTPException(503, "Ollama is not running. Start it with: ollama serve")
     except _httpx.HTTPStatusError as e:
         body = e.response.text[:300]
         if "model" in body and ("not found" in body or "pull" in body):
-            raise HTTPException(503,
-                f"Ollama model '{model}' not downloaded yet. "
-                f"Run:  ollama pull {model}")
+            raise HTTPException(503, f"Ollama model '{model}' not downloaded. Run: ollama pull {model}")
         raise HTTPException(502, f"Ollama error: {body}")
 
 
@@ -190,17 +217,15 @@ def generate(system_extra: str, user_prompt: str, cache: bool = True,
     if AI_PROVIDER == "anthropic":
         try:
             resp = _client.messages.create(
-                model=chosen,
-                max_tokens=max_tokens,
-                system=system,
+                model=chosen, max_tokens=max_tokens, system=system,
                 messages=[{"role": "user", "content": user_prompt}],
             )
             return resp.content[0].text
         except Exception as e:
             status = getattr(e, "status_code", None)
-            msg    = str(e)
+            msg = str(e)
             if status in (429, 529):
-                raise HTTPException(429, f"Claude rate limit: {msg[:300]}. Try again shortly.")
+                raise HTTPException(429, f"Claude rate limit: {msg[:300]}.")
             raise HTTPException(502, f"Claude error ({status}): {msg[:300]}")
 
     # ── Groq ──────────────────────────────────────────────────────────────────
@@ -209,21 +234,46 @@ def generate(system_extra: str, user_prompt: str, cache: bool = True,
         try:
             resp = _client.chat.completions.create(
                 model=chosen,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user",   "content": user_prompt},
-                ],
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
                 max_tokens=max_tokens,
             )
             return resp.choices[0].message.content
         except APIStatusError as e:
             status = e.status_code
-            msg    = str(e)
+            msg = str(e)
             if status in (413, 429):
-                raise HTTPException(429,
-                    f"Groq limit reached: {msg[:300]}. "
-                    "Shorten your description or try again in a few seconds.")
+                raise HTTPException(429, f"Groq limit reached: {msg[:300]}.")
             raise HTTPException(502, f"Groq error ({status}): {msg[:300]}")
+
+    # ── OpenAI ────────────────────────────────────────────────────────────────
+    elif AI_PROVIDER == "openai":
+        try:
+            resp = _client.chat.completions.create(
+                model=chosen,
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
+                max_tokens=max_tokens,
+            )
+            return resp.choices[0].message.content
+        except Exception as e:
+            status = getattr(e, "status_code", None)
+            msg = str(e)
+            if status == 429:
+                raise HTTPException(429, f"OpenAI rate limit: {msg[:300]}.")
+            raise HTTPException(502, f"OpenAI error ({status}): {msg[:300]}")
+
+    # ── Gemini ────────────────────────────────────────────────────────────────
+    elif AI_PROVIDER == "gemini":
+        try:
+            import google.generativeai as _genai
+            gmodel = _genai.GenerativeModel(model_name=chosen, system_instruction=system)
+            resp   = gmodel.generate_content(user_prompt,
+                         generation_config={"max_output_tokens": max_tokens})
+            return resp.text
+        except Exception as e:
+            msg = str(e)
+            if "quota" in msg.lower() or "429" in msg:
+                raise HTTPException(429, f"Gemini rate limit: {msg[:300]}.")
+            raise HTTPException(502, f"Gemini error: {msg[:300]}")
 
     # ── Ollama ────────────────────────────────────────────────────────────────
     else:
@@ -261,43 +311,45 @@ def analyze_flow_image(image_bytes: bytes, content_type: str = "image/png") -> d
     try:
         if AI_PROVIDER == "anthropic":
             resp = _client.messages.create(
-                model=VISION_MODEL,
-                max_tokens=1024,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "image",
-                         "source": {"type": "base64", "media_type": content_type, "data": b64}},
-                        {"type": "text", "text": _VISION_PROMPT},
-                    ],
-                }],
+                model=VISION_MODEL, max_tokens=1024,
+                messages=[{"role": "user", "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": content_type, "data": b64}},
+                    {"type": "text",  "text": _VISION_PROMPT},
+                ]}],
             )
             raw = resp.content[0].text.strip()
 
         elif AI_PROVIDER == "groq":
             resp = _client.chat.completions.create(
-                model=VISION_MODEL,
-                messages=[{
-                    "role": "user",
-                    "content": [
-                        {"type": "image_url",
-                         "image_url": {"url": f"data:{content_type};base64,{b64}"}},
-                        {"type": "text", "text": _VISION_PROMPT},
-                    ],
-                }],
-                max_tokens=1024,
+                model=VISION_MODEL, max_tokens=1024,
+                messages=[{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{b64}"}},
+                    {"type": "text", "text": _VISION_PROMPT},
+                ]}],
             )
             raw = resp.choices[0].message.content.strip()
 
-        else:  # ollama — needs a vision model (llava:7b etc.)
-            raw = _ollama_chat(
-                system="",
-                user_prompt=_VISION_PROMPT,
-                max_tokens=1024,
-                model=VISION_MODEL,
-                image_b64=b64,
-                content_type=content_type,
+        elif AI_PROVIDER == "openai":
+            resp = _client.chat.completions.create(
+                model=VISION_MODEL, max_tokens=1024,
+                messages=[{"role": "user", "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:{content_type};base64,{b64}"}},
+                    {"type": "text", "text": _VISION_PROMPT},
+                ]}],
             )
+            raw = resp.choices[0].message.content.strip()
+
+        elif AI_PROVIDER == "gemini":
+            import google.generativeai as _genai
+            import PIL.Image, io
+            img    = PIL.Image.open(io.BytesIO(image_bytes))
+            gmodel = _genai.GenerativeModel(model_name=VISION_MODEL)
+            resp   = gmodel.generate_content([_VISION_PROMPT, img])
+            raw    = resp.text.strip()
+
+        else:  # ollama
+            raw = _ollama_chat("", _VISION_PROMPT, 1024, VISION_MODEL,
+                               image_b64=b64, content_type=content_type)
             raw = raw.strip()
 
         if raw.startswith("```"):
@@ -325,26 +377,44 @@ def stream_generate(system_extra: str, user_prompt: str):
     elif AI_PROVIDER == "groq":
         stream = _client.chat.completions.create(
             model=MODEL,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user",   "content": user_prompt},
-            ],
-            max_tokens=4096,
-            stream=True,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
+            max_tokens=4096, stream=True,
         )
         for chunk in stream:
             content = chunk.choices[0].delta.content
             if content:
                 yield content
 
-    else:  # ollama — streaming via httpx
+    elif AI_PROVIDER == "openai":
+        stream = _client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user_prompt}],
+            max_tokens=4096, stream=True,
+        )
+        for chunk in stream:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
+
+    elif AI_PROVIDER == "gemini":
+        import google.generativeai as _genai
+        gmodel = _genai.GenerativeModel(model_name=MODEL, system_instruction=system)
+        resp   = gmodel.generate_content(user_prompt,
+                     generation_config={"max_output_tokens": 4096}, stream=True)
+        for chunk in resp:
+            try:
+                if chunk.text:
+                    yield chunk.text
+            except Exception:
+                pass
+
+    else:  # ollama
         try:
             with _httpx.stream(
-                "POST",
-                f"{OLLAMA_BASE}/v1/chat/completions",
+                "POST", f"{OLLAMA_BASE}/v1/chat/completions",
                 headers={"Authorization": "Bearer ollama"},
                 json={
-                    "model":    MODEL,
+                    "model": MODEL,
                     "messages": [
                         {"role": "system", "content": system},
                         {"role": "user",   "content": user_prompt},

@@ -1,6 +1,7 @@
 """
 AI Settings router — read and update AI provider configuration at runtime.
 Saves changes to backend/.env and hot-reloads the AI service immediately.
+Supports: anthropic, groq, openai, gemini, ollama
 """
 from __future__ import annotations
 
@@ -36,7 +37,6 @@ def _env_file_path() -> str:
 
 
 def _set_env(key: str, value: str) -> None:
-    """Write key=value to os.environ and persist to .env file."""
     os.environ[key] = value
     if _DOTENV_AVAILABLE:
         _dotenv_set_key(_env_file_path(), key, value, quote_mode="never")
@@ -55,6 +55,12 @@ def get_ai_settings():
         # Groq
         "groqKey":           _MASKED if _cfg("GROQ_API_KEY") else "",
         "groqModel":         _cfg("GROQ_MODEL",             "llama-3.3-70b-versatile"),
+        # OpenAI
+        "openaiKey":         _MASKED if _cfg("OPENAI_API_KEY") else "",
+        "openaiModel":       _cfg("OPENAI_MODEL",           "gpt-4o"),
+        # Gemini
+        "geminiKey":         _MASKED if _cfg("GOOGLE_API_KEY") else "",
+        "geminiModel":       _cfg("GEMINI_MODEL",           "gemini-2.0-flash"),
         # Ollama
         "ollamaBaseUrl":     _cfg("OLLAMA_BASE_URL",        "http://localhost:11434"),
         "ollamaModel":       _cfg("OLLAMA_MODEL",           "qwen2.5-coder:14b"),
@@ -72,6 +78,12 @@ class AISettingsRequest(BaseModel):
     # Groq
     groqKey:           str = ""
     groqModel:         str = "llama-3.3-70b-versatile"
+    # OpenAI
+    openaiKey:         str = ""
+    openaiModel:       str = "gpt-4o"
+    # Gemini
+    geminiKey:         str = ""
+    geminiModel:       str = "gemini-2.0-flash"
     # Ollama
     ollamaBaseUrl:     str = "http://localhost:11434"
     ollamaModel:       str = "qwen2.5-coder:14b"
@@ -80,11 +92,7 @@ class AISettingsRequest(BaseModel):
 
 @router.put("/ai")
 def update_ai_settings(req: AISettingsRequest):
-    """
-    Persist AI settings to backend/.env and hot-reload the AI service so
-    changes take effect immediately — no backend restart needed.
-    Secrets left as '••••••••' are kept unchanged.
-    """
+    """Persist AI settings and hot-reload — no backend restart needed."""
     _set_env("AI_PROVIDER", req.provider.strip() or "groq")
 
     if req.provider == "anthropic":
@@ -97,12 +105,21 @@ def update_ai_settings(req: AISettingsRequest):
             _set_env("GROQ_API_KEY", req.groqKey.strip())
         _set_env("GROQ_MODEL", req.groqModel.strip() or "llama-3.3-70b-versatile")
 
+    elif req.provider == "openai":
+        if req.openaiKey and req.openaiKey != _MASKED:
+            _set_env("OPENAI_API_KEY", req.openaiKey.strip())
+        _set_env("OPENAI_MODEL", req.openaiModel.strip() or "gpt-4o")
+
+    elif req.provider == "gemini":
+        if req.geminiKey and req.geminiKey != _MASKED:
+            _set_env("GOOGLE_API_KEY", req.geminiKey.strip())
+        _set_env("GEMINI_MODEL", req.geminiModel.strip() or "gemini-2.0-flash")
+
     else:  # ollama
         _set_env("OLLAMA_BASE_URL",     req.ollamaBaseUrl.strip()     or "http://localhost:11434")
         _set_env("OLLAMA_MODEL",        req.ollamaModel.strip()        or "qwen2.5-coder:14b")
         _set_env("OLLAMA_VISION_MODEL", req.ollamaVisionModel.strip() or "llava:7b")
 
-    # Hot-reload the AI service (re-initializes provider/client/model globals)
     try:
         from services import claude_service
         claude_service.reload_from_env()

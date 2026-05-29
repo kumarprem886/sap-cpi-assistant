@@ -4,9 +4,10 @@ import {
   LayoutDashboard, GitMerge, Code2, FileCode2,
   Shuffle, MessageSquare, Zap, FileText, Cloud, Cpu,
   Settings, X, Loader2, Check, CheckCircle, XCircle,
-  ChevronDown,
+  ChevronDown, Users, LogOut,
 } from 'lucide-react'
 import { settingsAPI } from '../api/client'
+import { useAuth } from '../contexts/AuthContext'
 
 const nav = [
   { to: '/',       icon: LayoutDashboard, label: 'Dashboard'       },
@@ -22,44 +23,53 @@ const nav = [
 const providerStyle: Record<string, { label: string; color: string; badge: string }> = {
   anthropic: { label: 'Claude',  color: 'text-orange-400', badge: 'bg-orange-900/40 text-orange-300 border-orange-700' },
   groq:      { label: 'Groq',    color: 'text-green-400',  badge: 'bg-green-900/40 text-green-300 border-green-700'   },
+  openai:    { label: 'GPT',     color: 'text-teal-400',   badge: 'bg-teal-900/40 text-teal-300 border-teal-700'      },
+  gemini:    { label: 'Gemini',  color: 'text-purple-400', badge: 'bg-purple-900/40 text-purple-300 border-purple-700'},
   ollama:    { label: 'Ollama',  color: 'text-blue-400',   badge: 'bg-blue-900/40 text-blue-300 border-blue-700'      },
 }
 
 const MASKED = '••••••••'
 
-// ── Groq model options ─────────────────────────────────────────────────────────
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-70b-versatile',
-  'llama-3.1-8b-instant',
-  'llama3-8b-8192',
-  'llama3-70b-8192',
-  'mixtral-8x7b-32768',
-  'gemma2-9b-it',
+  'llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant',
+  'llama3-8b-8192', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it',
 ]
-
 const ANTHROPIC_MODELS = [
-  'claude-opus-4-5',
-  'claude-sonnet-4-5',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-20241022',
-  'claude-3-opus-20240229',
+  'claude-opus-4-5', 'claude-sonnet-4-5', 'claude-3-5-sonnet-20241022',
+  'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
+]
+const OPENAI_MODELS = [
+  'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo',
+]
+const GEMINI_MODELS = [
+  'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash',
 ]
 
 // ── AI Settings Modal ──────────────────────────────────────────────────────────
 
 interface AISettings {
-  provider: 'anthropic' | 'groq' | 'ollama'
-  anthropicKey: string;   anthropicModel: string
-  groqKey: string;        groqModel: string
-  ollamaBaseUrl: string;  ollamaModel: string;  ollamaVisionModel: string
+  provider: 'anthropic' | 'groq' | 'openai' | 'gemini' | 'ollama'
+  anthropicKey: string;  anthropicModel: string
+  groqKey: string;       groqModel: string
+  openaiKey: string;     openaiModel: string
+  geminiKey: string;     geminiModel: string
+  ollamaBaseUrl: string; ollamaModel: string; ollamaVisionModel: string
+}
+
+const DEFAULT_FORM: AISettings = {
+  provider: 'groq',
+  anthropicKey: '', anthropicModel: 'claude-opus-4-5',
+  groqKey: '',      groqModel: 'llama-3.3-70b-versatile',
+  openaiKey: '',    openaiModel: 'gpt-4o',
+  geminiKey: '',    geminiModel: 'gemini-2.0-flash',
+  ollamaBaseUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5-coder:14b', ollamaVisionModel: 'llava:7b',
 }
 
 function AISettingsModal({ onClose, onSaved }: {
   onClose: () => void
   onSaved: (provider: string, model: string) => void
 }) {
-  const [form, setForm]       = useState<AISettings>({ provider: 'groq', anthropicKey: '', anthropicModel: 'claude-opus-4-5', groqKey: '', groqModel: 'llama-3.3-70b-versatile', ollamaBaseUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5-coder:14b', ollamaVisionModel: 'llava:7b' })
+  const [form, setForm]       = useState<AISettings>(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [result, setResult]   = useState<{ ok: boolean; msg: string } | null>(null)
@@ -67,7 +77,7 @@ function AISettingsModal({ onClose, onSaved }: {
 
   useEffect(() => {
     settingsAPI.getAI().then(r => {
-      setForm(r.data)
+      setForm({ ...DEFAULT_FORM, ...r.data })
       setCustomGroq(r.data.groqModel && !GROQ_MODELS.includes(r.data.groqModel))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
@@ -80,10 +90,7 @@ function AISettingsModal({ onClose, onSaved }: {
     try {
       const r = await settingsAPI.saveAI(form)
       const ok = !r.data.warning
-      const msg = ok
-        ? `Active: ${r.data.provider} · ${r.data.model}`
-        : `Saved — but reload warning: ${r.data.warning}`
-      setResult({ ok, msg })
+      setResult({ ok, msg: ok ? `Active: ${r.data.provider} · ${r.data.model}` : `Saved — warning: ${r.data.warning}` })
       onSaved(r.data.provider, r.data.model)
     } catch (e: any) {
       setResult({ ok: false, msg: e?.response?.data?.detail ?? 'Save failed' })
@@ -92,8 +99,7 @@ function AISettingsModal({ onClose, onSaved }: {
 
   const maskField = (val: string, setter: (v: string) => void, placeholder: string) => (
     <input
-      className="input-field w-full text-sm"
-      type="password"
+      className="input-field w-full text-sm" type="password"
       placeholder={val === MASKED ? 'unchanged' : placeholder}
       value={val === MASKED ? '' : val}
       onFocus={() => { if (val === MASKED) setter('') }}
@@ -101,6 +107,8 @@ function AISettingsModal({ onClose, onSaved }: {
       onChange={e => setter(e.target.value)}
     />
   )
+
+  const ALL_PROVIDERS = ['anthropic', 'groq', 'openai', 'gemini', 'ollama'] as const
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
@@ -127,11 +135,11 @@ function AISettingsModal({ onClose, onSaved }: {
         ) : (
           <div className="space-y-4">
 
-            {/* Provider tabs */}
+            {/* Provider tabs — 5 across */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-2">Provider</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['anthropic', 'groq', 'ollama'] as const).map(p => {
+              <div className="grid grid-cols-5 gap-1">
+                {ALL_PROVIDERS.map(p => {
                   const ps = providerStyle[p]
                   return (
                     <button key={p} onClick={() => set('provider', p)}
@@ -147,7 +155,7 @@ function AISettingsModal({ onClose, onSaved }: {
               </div>
             </div>
 
-            {/* ── Anthropic fields ── */}
+            {/* ── Anthropic ── */}
             {form.provider === 'anthropic' && (
               <div className="space-y-3 p-4 rounded-xl bg-orange-950/20 border border-orange-800/40">
                 <p className="text-xs font-medium text-orange-400">Anthropic — Claude</p>
@@ -165,7 +173,7 @@ function AISettingsModal({ onClose, onSaved }: {
               </div>
             )}
 
-            {/* ── Groq fields ── */}
+            {/* ── Groq ── */}
             {form.provider === 'groq' && (
               <div className="space-y-3 p-4 rounded-xl bg-green-950/20 border border-green-800/40">
                 <p className="text-xs font-medium text-green-400">Groq — Free Cloud Inference</p>
@@ -195,7 +203,43 @@ function AISettingsModal({ onClose, onSaved }: {
               </div>
             )}
 
-            {/* ── Ollama fields ── */}
+            {/* ── OpenAI ── */}
+            {form.provider === 'openai' && (
+              <div className="space-y-3 p-4 rounded-xl bg-teal-950/20 border border-teal-800/40">
+                <p className="text-xs font-medium text-teal-400">OpenAI — GPT Models</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.openaiKey, v => set('openaiKey', v), 'sk-...')}
+                  <p className="text-xs text-gray-600 mt-1">Get your key at <span className="text-teal-400">platform.openai.com</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.openaiModel} onChange={e => set('openaiModel', e.target.value)}>
+                    {OPENAI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── Gemini ── */}
+            {form.provider === 'gemini' && (
+              <div className="space-y-3 p-4 rounded-xl bg-purple-950/20 border border-purple-800/40">
+                <p className="text-xs font-medium text-purple-400">Google — Gemini Models</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.geminiKey, v => set('geminiKey', v), 'AIza...')}
+                  <p className="text-xs text-gray-600 mt-1">Get your key at <span className="text-purple-400">aistudio.google.com</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.geminiModel} onChange={e => set('geminiModel', e.target.value)}>
+                    {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── Ollama ── */}
             {form.provider === 'ollama' && (
               <div className="space-y-3 p-4 rounded-xl bg-blue-950/20 border border-blue-800/40">
                 <p className="text-xs font-medium text-blue-400">Ollama — Local Models (no key needed)</p>
@@ -247,9 +291,20 @@ function AISettingsModal({ onClose, onSaved }: {
   )
 }
 
+// ── User Avatar Helper ─────────────────────────────────────────────────────────
+
+function userInitials(fullName: string, username: string) {
+  if (fullName?.trim()) {
+    const parts = fullName.trim().split(' ')
+    return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+  }
+  return username.slice(0, 2).toUpperCase()
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
+  const { user, logout } = useAuth()
   const [aiInfo, setAiInfo]       = useState<{ provider: string; model: string } | null>(null)
   const [showAISettings, setShowAISettings] = useState(false)
 
@@ -262,6 +317,14 @@ export default function Sidebar() {
   useEffect(() => { fetchStatus() }, [])
 
   const ps = aiInfo ? (providerStyle[aiInfo.provider] ?? { label: aiInfo.provider, color: 'text-gray-400', badge: '' }) : null
+
+  const avatarColors = [
+    'bg-blue-700', 'bg-purple-700', 'bg-green-700',
+    'bg-orange-700', 'bg-pink-700', 'bg-teal-700',
+  ]
+  const avatarColor = user
+    ? avatarColors[user.username.charCodeAt(0) % avatarColors.length]
+    : 'bg-gray-700'
 
   return (
     <>
@@ -280,7 +343,7 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -298,10 +361,32 @@ export default function Sidebar() {
               {label}
             </NavLink>
           ))}
+
+          {/* Admin-only: User Management */}
+          {user?.role === 'admin' && (
+            <>
+              <div className="pt-2 pb-1 px-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Admin</p>
+              </div>
+              <NavLink
+                to="/users"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-sap-blue text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`
+                }
+              >
+                <Users size={17} />
+                Users
+              </NavLink>
+            </>
+          )}
         </nav>
 
-        {/* AI provider footer */}
-        <div className="px-4 py-4 border-t border-gray-800">
+        {/* AI provider */}
+        <div className="px-4 py-3 border-t border-gray-800">
           <button
             onClick={() => setShowAISettings(true)}
             className="w-full flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-gray-800 transition-colors group"
@@ -324,6 +409,38 @@ export default function Sidebar() {
             <Settings size={13} className="text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
           </button>
         </div>
+
+        {/* User section */}
+        {user && (
+          <div className="px-4 py-3 border-t border-gray-800">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-xs font-bold text-white shrink-0`}>
+                {userInitials(user.full_name, user.username)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-white truncate leading-tight">
+                  {user.full_name || user.username}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium leading-none ${
+                    user.role === 'admin'
+                      ? 'bg-purple-900/40 text-purple-300 border-purple-700'
+                      : 'bg-blue-900/40 text-blue-300 border-blue-800'
+                  }`}>
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                title="Sign out"
+                className="p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-gray-800 transition-colors shrink-0"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* AI Settings modal — rendered outside aside so it overlays everything */}
