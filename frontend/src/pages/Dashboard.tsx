@@ -14,6 +14,9 @@ interface AISettings {
   groqKey: string;      groqModel: string
   openaiKey: string;    openaiModel: string
   geminiKey: string;    geminiModel: string
+  openrouterKey: string; openrouterModel: string
+  mistralKey: string;   mistralModel: string
+  nvidiaKey: string;    nvidiaModel: string
   ollamaBaseUrl: string; ollamaModel: string
 }
 
@@ -100,6 +103,30 @@ const PROVIDERS = [
     model:        (s: AISettings) => s.geminiModel,
   },
   {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    sub: 'Free Models',
+    color: { ring: 'ring-cyan-600/60', bg: 'bg-cyan-900/20', dot: 'bg-cyan-400', text: 'text-cyan-300', badge: 'bg-cyan-900/40 text-cyan-300 border-cyan-700' },
+    isConfigured: (s: AISettings) => !!s.openrouterKey,
+    model:        (s: AISettings) => s.openrouterModel,
+  },
+  {
+    id: 'mistral',
+    label: 'Mistral',
+    sub: 'Coding',
+    color: { ring: 'ring-pink-600/60', bg: 'bg-pink-900/20', dot: 'bg-pink-400', text: 'text-pink-300', badge: 'bg-pink-900/40 text-pink-300 border-pink-700' },
+    isConfigured: (s: AISettings) => !!s.mistralKey,
+    model:        (s: AISettings) => s.mistralModel,
+  },
+  {
+    id: 'nvidia',
+    label: 'NVIDIA',
+    sub: 'NIM',
+    color: { ring: 'ring-lime-600/60', bg: 'bg-lime-900/20', dot: 'bg-lime-400', text: 'text-lime-300', badge: 'bg-lime-900/40 text-lime-300 border-lime-700' },
+    isConfigured: (s: AISettings) => !!s.nvidiaKey,
+    model:        (s: AISettings) => s.nvidiaModel,
+  },
+  {
     id: 'ollama',
     label: 'Ollama',
     sub: 'Local',
@@ -138,7 +165,7 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold text-white mb-3">Connections</h2>
 
         {/* AI providers */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
           {PROVIDERS.map(p => {
             const isActive    = aiSettings?.provider === p.id
             const configured  = aiSettings ? p.isConfigured(aiSettings) : false

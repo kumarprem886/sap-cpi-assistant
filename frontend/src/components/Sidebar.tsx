@@ -25,6 +25,9 @@ const providerStyle: Record<string, { label: string; color: string; badge: strin
   groq:      { label: 'Groq',    color: 'text-green-400',  badge: 'bg-green-900/40 text-green-300 border-green-700'   },
   openai:    { label: 'GPT',     color: 'text-teal-400',   badge: 'bg-teal-900/40 text-teal-300 border-teal-700'      },
   gemini:    { label: 'Gemini',  color: 'text-purple-400', badge: 'bg-purple-900/40 text-purple-300 border-purple-700'},
+  openrouter: { label: 'OpenRouter', color: 'text-cyan-400',  badge: 'bg-cyan-900/40 text-cyan-300 border-cyan-700'   },
+  mistral:    { label: 'Mistral',    color: 'text-pink-400',  badge: 'bg-pink-900/40 text-pink-300 border-pink-700'   },
+  nvidia:     { label: 'NVIDIA',     color: 'text-lime-400',  badge: 'bg-lime-900/40 text-lime-300 border-lime-700'   },
   ollama:    { label: 'Ollama',  color: 'text-blue-400',   badge: 'bg-blue-900/40 text-blue-300 border-blue-700'      },
 }
 
@@ -44,15 +47,37 @@ const OPENAI_MODELS = [
 const GEMINI_MODELS = [
   'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash',
 ]
+const OPENROUTER_MODELS = [
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'meta-llama/llama-3.1-8b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
+  'google/gemma-2-9b-it:free',
+  'qwen/qwen-2.5-72b-instruct:free',
+]
+const MISTRAL_MODELS = [
+  'mistral-small-latest',
+  'codestral-latest',
+  'mistral-medium-latest',
+  'open-mistral-7b',
+]
+const NVIDIA_MODELS = [
+  'meta/llama-3.3-70b-instruct',
+  'nvidia/llama-3.1-nemotron-70b-instruct',
+  'meta/llama-3.1-8b-instruct',
+  'mistralai/mistral-7b-instruct-v0.3',
+]
 
 // ── AI Settings Modal ──────────────────────────────────────────────────────────
 
 interface AISettings {
-  provider: 'anthropic' | 'groq' | 'openai' | 'gemini' | 'ollama'
+  provider: 'anthropic' | 'groq' | 'openai' | 'gemini' | 'openrouter' | 'mistral' | 'nvidia' | 'ollama'
   anthropicKey: string;  anthropicModel: string
   groqKey: string;       groqModel: string
   openaiKey: string;     openaiModel: string
   geminiKey: string;     geminiModel: string
+  openrouterKey: string; openrouterModel: string
+  mistralKey: string;    mistralModel: string
+  nvidiaKey: string;     nvidiaModel: string
   ollamaBaseUrl: string; ollamaModel: string; ollamaVisionModel: string
 }
 
@@ -62,6 +87,9 @@ const DEFAULT_FORM: AISettings = {
   groqKey: '',      groqModel: 'llama-3.3-70b-versatile',
   openaiKey: '',    openaiModel: 'gpt-4o',
   geminiKey: '',    geminiModel: 'gemini-2.0-flash',
+  openrouterKey: '', openrouterModel: 'meta-llama/llama-3.3-70b-instruct:free',
+  mistralKey: '',    mistralModel: 'mistral-small-latest',
+  nvidiaKey: '',     nvidiaModel: 'meta/llama-3.3-70b-instruct',
   ollamaBaseUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5-coder:14b', ollamaVisionModel: 'llava:7b',
 }
 
@@ -108,7 +136,7 @@ function AISettingsModal({ onClose, onSaved }: {
     />
   )
 
-  const ALL_PROVIDERS = ['anthropic', 'groq', 'openai', 'gemini', 'ollama'] as const
+  const ALL_PROVIDERS = ['anthropic', 'groq', 'openai', 'gemini', 'openrouter', 'mistral', 'nvidia', 'ollama'] as const
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
@@ -135,10 +163,10 @@ function AISettingsModal({ onClose, onSaved }: {
         ) : (
           <div className="space-y-4">
 
-            {/* Provider tabs — 5 across */}
+            {/* Provider tabs — 4 across (2 rows) */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-2">Provider</label>
-              <div className="grid grid-cols-5 gap-1">
+              <div className="grid grid-cols-4 gap-1">
                 {ALL_PROVIDERS.map(p => {
                   const ps = providerStyle[p]
                   return (
@@ -234,6 +262,60 @@ function AISettingsModal({ onClose, onSaved }: {
                   <label className="block text-xs text-gray-400 mb-1">Model</label>
                   <select className="input-field w-full text-sm" value={form.geminiModel} onChange={e => set('geminiModel', e.target.value)}>
                     {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── OpenRouter ── */}
+            {form.provider === 'openrouter' && (
+              <div className="space-y-3 p-4 rounded-xl bg-cyan-950/20 border border-cyan-800/40">
+                <p className="text-xs font-medium text-cyan-400">OpenRouter — Many Free Models</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.openrouterKey, v => set('openrouterKey', v), 'sk-or-...')}
+                  <p className="text-xs text-gray-600 mt-1">Free key at <span className="text-cyan-400">openrouter.ai</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.openrouterModel} onChange={e => set('openrouterModel', e.target.value)}>
+                    {OPENROUTER_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── Mistral ── */}
+            {form.provider === 'mistral' && (
+              <div className="space-y-3 p-4 rounded-xl bg-pink-950/20 border border-pink-800/40">
+                <p className="text-xs font-medium text-pink-400">Mistral AI — Coding + Reasoning</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.mistralKey, v => set('mistralKey', v), 'your-mistral-key...')}
+                  <p className="text-xs text-gray-600 mt-1">Free key at <span className="text-pink-400">console.mistral.ai</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.mistralModel} onChange={e => set('mistralModel', e.target.value)}>
+                    {MISTRAL_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── NVIDIA ── */}
+            {form.provider === 'nvidia' && (
+              <div className="space-y-3 p-4 rounded-xl bg-lime-950/20 border border-lime-800/40">
+                <p className="text-xs font-medium text-lime-400">NVIDIA NIM — Strong Open Models</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.nvidiaKey, v => set('nvidiaKey', v), 'nvapi-...')}
+                  <p className="text-xs text-gray-600 mt-1">Free key at <span className="text-lime-400">build.nvidia.com</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.nvidiaModel} onChange={e => set('nvidiaModel', e.target.value)}>
+                    {NVIDIA_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
