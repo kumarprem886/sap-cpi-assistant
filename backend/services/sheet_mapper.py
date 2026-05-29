@@ -140,28 +140,78 @@ def _last_seg(path: str) -> str:
     return path.rsplit("/", 1)[-1].lower()
 
 
+def _segs(path: str) -> list[str]:
+    """Return non-empty lowercased path segments."""
+    return [s.lower() for s in path.split("/") if s]
+
+
 def _match_field(field_name: str, paths: list[str]) -> str | None:
-    """First (shallowest) path whose last segment equals field_name."""
+    """
+    Match a field name OR XPath expression to a full XSD path.
+
+    Supports three input formats (auto-detected):
+      1. Full XPath     /Root/Parent/FieldName  → exact or suffix match
+      2. Partial path   Parent/FieldName        → suffix match on multiple segments
+      3. Short name     FieldName               → last-segment match (original behaviour)
+    """
     if not field_name:
         return None
-    fn = field_name.strip().lower()
+    fn = field_name.strip()
+
+    # ── 1 & 2: XPath / partial path (contains a slash) ───────────────────────
+    if "/" in fn:
+        fn_segs = _segs(fn)
+        if not fn_segs:
+            return None
+        # Exact full-path match first (fastest)
+        fn_lower = fn.lower().rstrip("/")
+        for p in paths:
+            if p.lower() == fn_lower:
+                return p
+        # Suffix match — path ends with the given segments
+        for p in paths:
+            p_segs = _segs(p)
+            if len(p_segs) >= len(fn_segs) and p_segs[-len(fn_segs):] == fn_segs:
+                return p
+        # If nothing matched by suffix, fall through to short-name logic on last seg
+        fn = fn_segs[-1]   # try last segment as short name
+
+    # ── 3: Short field name ───────────────────────────────────────────────────
+    fn_lower = fn.lower()
     for p in paths:
-        if _last_seg(p) == fn:
+        if _last_seg(p) == fn_lower:
             return p
-    # Fallback: match any segment (structural nodes)
+    # Fallback: match any segment (structural/container nodes)
     for p in paths:
         for i, seg in enumerate(p.split("/")):
-            if seg.lower() == fn:
+            if seg.lower() == fn_lower:
                 return "/".join(p.split("/")[: i + 1]) or p
     return None
 
 
 def _match_all_fields(field_name: str, paths: list[str]) -> list[str]:
-    """ALL paths whose last segment equals field_name (in order of depth)."""
+    """
+    ALL paths matching field_name (XPath, partial path, or short name), ordered by depth.
+    Used for target fields that appear multiple times in the XSD.
+    """
     if not field_name:
         return []
-    fn = field_name.strip().lower()
-    return [p for p in paths if _last_seg(p) == fn]
+    fn = field_name.strip()
+
+    if "/" in fn:
+        fn_segs = _segs(fn)
+        if not fn_segs:
+            return []
+        # Suffix match across all paths
+        results = [p for p in paths if len(_segs(p)) >= len(fn_segs)
+                   and _segs(p)[-len(fn_segs):] == fn_segs]
+        if results:
+            return results
+        # Fall back to last segment
+        fn = fn_segs[-1]
+
+    fn_lower = fn.lower()
+    return [p for p in paths if _last_seg(p) == fn_lower]
 
 
 # ── Rule parser (concat shorthand + generic function calls) ───────────────────
