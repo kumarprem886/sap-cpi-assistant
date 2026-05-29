@@ -392,7 +392,7 @@ export default function MessageMapping() {
         .map(fm => ({
           source:          lastSeg(fm.source_path!),
           target:          lastSeg(fm.target_path!),
-          functional_rule: fm.note?.startsWith('auto parent') ? '' : (fm.note ?? ''),
+          functional_rule: '',   // leave blank — note is AI's internal reasoning, not a user rule
           technical_rule:  '',
           status:          'matched' as const,
           source_path:     fm.source_path ?? '',
