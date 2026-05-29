@@ -504,7 +504,6 @@ export default function MessageMapping() {
     setSheetPreview(prev => {
       if (!prev) return prev
       const rows = [...prev.rows]
-      // source_matched / target_matched come in as string 'true' — convert to bool
       const coerced = (field === 'source_matched' || field === 'target_matched')
         ? value === 'true' || value === true
         : value
@@ -1098,21 +1097,23 @@ export default function MessageMapping() {
                           <tr key={i} className={`hover:bg-gray-800/30 ${row.status === 'unmatched' ? 'bg-red-950/10' : ''}`}>
                             <td className="px-2 py-1 text-gray-600 text-[10px] align-top pt-2">{i + 1}</td>
 
-                            {/* Source field + full XPath + picker if unmatched */}
+                            {/* Source field — always shows full XPath picker */}
                             <td className="px-1 py-1">
                               <div className="flex items-center gap-0.5">
                                 <input value={row.source} onChange={e => updatePreviewRow(i, 'source', e.target.value)}
                                   className={`flex-1 min-w-0 bg-transparent rounded px-1.5 py-0.5 font-mono text-white outline-none transition-colors text-[10px]
                                     ${srcOk ? 'border border-transparent hover:border-blue-700/50 focus:border-blue-600'
                                             : 'border border-red-600/60 bg-red-950/20 focus:border-red-500'}`} />
-                                {!srcOk && (
-                                  <select onChange={e => { if (e.target.value) { updatePreviewRow(i, 'source', e.target.value); updatePreviewRow(i, 'source_matched', 'true') } e.target.value = '' }}
-                                    className="text-[9px] bg-gray-800 border border-red-700/50 text-orange-300 rounded px-0.5 py-0.5 cursor-pointer max-w-[90px]" title="Pick from XSD">
-                                    <option value="">↓ XSD</option>
-                                    {sheetPreview.src_paths.map(p => {
-                                      const seg = p.split('/').filter(Boolean).pop() ?? p
-                                      return <option key={p} value={seg} title={p}>{seg}</option>
-                                    })}
+                                {sheetPreview.src_paths.length > 0 && (
+                                  <select
+                                    value=""
+                                    onChange={e => { if (e.target.value) { updatePreviewRow(i, 'source', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'source_path', e.target.value); updatePreviewRow(i, 'source_matched', 'true') } }}
+                                    className={`text-[9px] rounded px-0.5 py-0.5 cursor-pointer bg-gray-800 border ${srcOk ? 'border-gray-700 text-gray-400 hover:border-blue-700/50' : 'border-red-700/50 text-orange-300'}`}
+                                    title="Pick from XSD paths">
+                                    <option value="">↓</option>
+                                    {sheetPreview.src_paths.map(p => (
+                                      <option key={p} value={p}>{p}</option>
+                                    ))}
                                   </select>
                                 )}
                               </div>
@@ -1122,21 +1123,23 @@ export default function MessageMapping() {
                               }
                             </td>
 
-                            {/* Target field + full XPath + picker if unmatched */}
+                            {/* Target field — always shows full XPath picker */}
                             <td className="px-1 py-1">
                               <div className="flex items-center gap-0.5">
                                 <input value={row.target} onChange={e => updatePreviewRow(i, 'target', e.target.value)}
                                   className={`flex-1 min-w-0 bg-transparent rounded px-1.5 py-0.5 font-mono text-white outline-none transition-colors text-[10px]
                                     ${tgtOk ? 'border border-transparent hover:border-green-700/50 focus:border-green-600'
                                             : 'border border-red-600/60 bg-red-950/20 focus:border-red-500'}`} />
-                                {!tgtOk && (
-                                  <select onChange={e => { if (e.target.value) { updatePreviewRow(i, 'target', e.target.value); updatePreviewRow(i, 'target_matched', 'true') } e.target.value = '' }}
-                                    className="text-[9px] bg-gray-800 border border-red-700/50 text-orange-300 rounded px-0.5 py-0.5 cursor-pointer max-w-[90px]" title="Pick from XSD">
-                                    <option value="">↓ XSD</option>
-                                    {sheetPreview.tgt_paths.map(p => {
-                                      const seg = p.split('/').filter(Boolean).pop() ?? p
-                                      return <option key={p} value={seg} title={p}>{seg}</option>
-                                    })}
+                                {sheetPreview.tgt_paths.length > 0 && (
+                                  <select
+                                    value=""
+                                    onChange={e => { if (e.target.value) { updatePreviewRow(i, 'target', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'target_path', e.target.value); updatePreviewRow(i, 'target_matched', 'true') } }}
+                                    className={`text-[9px] rounded px-0.5 py-0.5 cursor-pointer bg-gray-800 border ${tgtOk ? 'border-gray-700 text-gray-400 hover:border-green-700/50' : 'border-red-700/50 text-orange-300'}`}
+                                    title="Pick from XSD paths">
+                                    <option value="">↓</option>
+                                    {sheetPreview.tgt_paths.map(p => (
+                                      <option key={p} value={p}>{p}</option>
+                                    ))}
                                   </select>
                                 )}
                               </div>
