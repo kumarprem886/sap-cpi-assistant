@@ -60,19 +60,19 @@ FUNCTION_REFERENCE = [
      "Return the number of characters in a text value",
      "length((/Header/MaterialNo)) → '18' (the length)"),
 
-    ("String", "replaceAll",
-     "replaceAll((/path/to/SourceField), REGEX_PATTERN, REPLACEMENT)",
-     "Replace all occurrences matching a regex pattern with a replacement text",
-     "replaceAll((/Header/Phone), [^0-9], ) → removes non-digit chars"),
+    ("String", "replaceAll  [→ replaceString]",
+     "replaceAll((/path/to/SourceField), SEARCH_TEXT, REPLACEMENT)",
+     "Replace all occurrences of a search text with replacement (SAP internal: replaceString)",
+     "replaceAll((/Header/Phone), +, ) → removes + signs from phone number"),
 
-    ("String", "splitByValue",
-     "splitByValue((/path/to/SourceField), DELIMITER)",
+    ("String", "SplitByValue",
+     "SplitByValue((/path/to/SourceField), DELIMITER)",
      "Split a field value by a delimiter into multiple output occurrences",
-     "splitByValue((/Header/Tags), ,) → splits comma-separated list"),
+     "SplitByValue((/Header/Tags), ,) → splits comma-separated list"),
 
-    ("Date", "formatDate",
+    ("Date", "formatDate  [→ TransformDate]",
      "formatDate((/path/to/DateField), INPUT_FORMAT, OUTPUT_FORMAT)",
-     "Reformat a date/time string from one pattern to another",
+     "Reformat a date/time string — SAP internal name: TransformDate. Uses yyyyMMdd, HHmmss etc.",
      "formatDate((/Header/DocDate), yyyyMMdd, yyyy-MM-dd) → '20240101' becomes '2024-01-01'"),
 
     ("Logic", "if + equals",
