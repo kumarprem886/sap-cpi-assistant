@@ -50,6 +50,123 @@ const GROUP_COLORS: Record<string, { card: string; badge: string }> = {
 
 type PrebuiltInfo = { id: string; status: string; fields: number }
 
+// ── Reusable XSD slot: catalog picker OR file upload ──────────────────────────
+
+const ACCENT: Record<string, { border: string; bg: string; text: string; tab: string; tabActive: string }> = {
+  blue:  { border: 'border-blue-600/60',   bg: 'bg-blue-900/10',   text: 'text-blue-400',   tab: 'hover:text-blue-300',   tabActive: 'bg-blue-700 text-white' },
+  green: { border: 'border-green-600/60',  bg: 'bg-green-900/10',  text: 'text-green-400',  tab: 'hover:text-green-300',  tabActive: 'bg-green-700 text-white' },
+}
+
+function XsdSlot({
+  label, accentClass, mode, onModeChange,
+  selectedSchema, onSchemaChange,
+  uploadedFile, onFileChange, fileRef,
+  schemas,
+}: {
+  label: string
+  accentClass: 'blue' | 'green'
+  mode: 'catalog' | 'upload'
+  onModeChange: (m: 'catalog' | 'upload') => void
+  selectedSchema: string
+  onSchemaChange: (v: string) => void
+  uploadedFile: File | null
+  onFileChange: (f: File | null) => void
+  fileRef: React.RefObject<HTMLInputElement>
+  schemas: Array<{filename: string; stem: string; kind: string}>
+}) {
+  const a = ACCENT[accentClass]
+  const odataSchemas = schemas.filter(s => s.kind === 'odata')
+  const idocSchemas  = schemas.filter(s => s.kind === 'idoc')
+
+  return (
+    <div className="space-y-2">
+      {/* Label + mode toggle */}
+      <div className="flex items-center justify-between">
+        <label className="label mb-0">{label}</label>
+        <div className="flex rounded-md overflow-hidden border border-gray-700 text-[10px] font-semibold">
+          <button onClick={() => onModeChange('catalog')}
+            className={`px-2 py-0.5 transition-colors ${mode === 'catalog' ? a.tabActive : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
+            Catalog
+          </button>
+          <button onClick={() => onModeChange('upload')}
+            className={`px-2 py-0.5 transition-colors ${mode === 'upload' ? a.tabActive : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
+            Upload
+          </button>
+        </div>
+      </div>
+
+      {mode === 'catalog' ? (
+        <div className={`rounded-lg border-2 ${selectedSchema ? a.border + ' ' + a.bg : 'border-gray-700 bg-gray-800/30'} p-2 space-y-1.5`}>
+          {/* OData group */}
+          {odataSchemas.length > 0 && (
+            <div>
+              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1">OData APIs</p>
+              <div className="grid grid-cols-1 gap-0.5 max-h-28 overflow-y-auto">
+                {odataSchemas.map(s => (
+                  <button key={s.filename} onClick={() => onSchemaChange(s.filename)}
+                    className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${
+                      selectedSchema === s.filename
+                        ? `${a.tabActive} font-semibold`
+                        : `text-gray-400 hover:text-white hover:bg-gray-700`
+                    }`}>
+                    {s.stem}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* IDoc group */}
+          {idocSchemas.length > 0 && (
+            <div>
+              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1 mt-1">IDoc Types</p>
+              <div className="grid grid-cols-1 gap-0.5 max-h-28 overflow-y-auto">
+                {idocSchemas.map(s => (
+                  <button key={s.filename} onClick={() => onSchemaChange(s.filename)}
+                    className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${
+                      selectedSchema === s.filename
+                        ? `${a.tabActive} font-semibold`
+                        : `text-gray-400 hover:text-white hover:bg-gray-700`
+                    }`}>
+                    {s.stem}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {schemas.length === 0 && (
+            <p className="text-xs text-gray-600 text-center py-3">Loading schemas…</p>
+          )}
+          {selectedSchema && (
+            <div className={`flex items-center gap-1 mt-1 pt-1 border-t border-gray-700/50 ${a.text} text-[10px]`}>
+              <CheckCircle2 size={10} className="shrink-0" />
+              <span className="truncate font-medium">{selectedSchema}</span>
+              <button onClick={() => onSchemaChange('')} className="ml-auto text-gray-600 hover:text-red-400 shrink-0"><X size={9} /></button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <button type="button" onClick={() => fileRef.current?.click()}
+            className={`w-full flex flex-col items-center justify-center gap-2 h-28 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+              ${uploadedFile ? a.border + ' ' + a.bg : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
+            {uploadedFile
+              ? <><FileCode size={20} className={a.text} /><span className={`text-xs font-medium truncate max-w-full px-2 ${a.text}`}>{uploadedFile.name}</span></>
+              : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
+            }
+          </button>
+          <input ref={fileRef} type="file" accept=".xsd,.xml" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) { onFileChange(f); e.target.value = '' } }} />
+          {uploadedFile && (
+            <button onClick={() => onFileChange(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1">
+              <X size={10} />Remove
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function MessageMapping() {
   const [tab, setTab] = useState<'schema' | 'sheet' | 'automap'>('schema')
   const [loading, setLoading] = useState(false)
@@ -217,6 +334,38 @@ export default function MessageMapping() {
   const sheetTgtRef  = useRef<HTMLInputElement>(null)
   const sheetFileRef = useRef<HTMLInputElement>(null)
 
+  // XSD catalog selection for sheet mapping
+  const [catalogSchemas, setCatalogSchemas] = useState<Array<{filename: string; stem: string; kind: string}>>([])
+  const [sheetSrcMode,   setSheetSrcMode]   = useState<'catalog' | 'upload'>('catalog')
+  const [sheetTgtMode,   setSheetTgtMode]   = useState<'catalog' | 'upload'>('catalog')
+  const [sheetSrcSchema, setSheetSrcSchema] = useState('')
+  const [sheetTgtSchema, setSheetTgtSchema] = useState('')
+
+  // Load catalog schemas once on mount
+  useEffect(() => {
+    mappingAPI.catalog().then(r => {
+      setCatalogSchemas(r.data.schemas || [])
+    }).catch(() => {})
+  }, [])
+
+  // Resolve XSD: return uploaded File or fetch from catalog and wrap as File
+  const resolveXsdFile = async (
+    mode: 'catalog' | 'upload',
+    catalogFilename: string,
+    uploadedFile: File | null
+  ): Promise<File | null> => {
+    if (mode === 'upload') return uploadedFile
+    if (!catalogFilename) return null
+    const r = await mappingAPI.schema(catalogFilename)
+    const blob = new Blob([r.data.content], { type: 'text/xml' })
+    return new File([blob], catalogFilename, { type: 'text/xml' })
+  }
+
+  const sheetSrcReady  = sheetSrcMode === 'catalog' ? !!sheetSrcSchema : !!sheetSrcFile
+  const sheetTgtReady  = sheetTgtMode === 'catalog' ? !!sheetTgtSchema : !!sheetTgtFile
+  const sheetSrcLabel  = sheetSrcMode === 'catalog' ? (sheetSrcSchema || '') : (sheetSrcFile?.name || '')
+  const sheetTgtLabel  = sheetTgtMode === 'catalog' ? (sheetTgtSchema || '') : (sheetTgtFile?.name || '')
+
   // Enhanced sheet mapping state
   const [sheetStep, setSheetStep] = useState<'upload' | 'preview' | 'generate'>('upload')
   const [sheetPreview, setSheetPreview] = useState<{
@@ -230,10 +379,13 @@ export default function MessageMapping() {
   const [derivingRow, setDerivingRow] = useState<number | null>(null)
 
   const generateFromSheet = async () => {
-    if (!sheetSrcFile || !sheetTgtFile || !sheetFile) return
+    if (!sheetFile) return
     setSheetLoading(true); setSheetError(''); setSheetSummary('')
     try {
-      const res = await mappingAPI.fromSheet(sheetSrcFile, sheetTgtFile, sheetFile, sheetMmapName)
+      const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
+      const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
+      if (!srcFile || !tgtFile) { setSheetError('Please select or upload both XSD files.'); return }
+      const res = await mappingAPI.fromSheet(srcFile, tgtFile, sheetFile, sheetMmapName)
       const summary = res.headers?.['x-mapping-summary'] ?? ''
       const parts   = Object.fromEntries(summary.split(',').map((s: string) => s.split('=')))
       if (parts.mapped) setSheetSummary(`Mapped ${parts.mapped} field(s)${parts.unmatched !== '0' ? `, ${parts.unmatched} unmatched` : ''}`)
@@ -247,10 +399,13 @@ export default function MessageMapping() {
   }
 
   const loadPreview = async () => {
-    if (!sheetSrcFile || !sheetTgtFile || !sheetFile) return
+    if (!sheetFile) return
     setPreviewLoading(true); setSheetError('')
     try {
-      const r = await mappingAPI.previewSheet(sheetSrcFile, sheetTgtFile, sheetFile)
+      const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
+      const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
+      if (!srcFile || !tgtFile) { setSheetError('Please select or upload both XSD files.'); setPreviewLoading(false); return }
+      const r = await mappingAPI.previewSheet(srcFile, tgtFile, sheetFile)
       setSheetPreview(r.data)
       setSheetStep('preview')
     } catch (e: any) {
@@ -630,49 +785,46 @@ export default function MessageMapping() {
                 </button>
               </div>
 
-              {/* File upload grid */}
+              {/* File / Catalog grid */}
               <div className="grid grid-cols-3 gap-3">
-                {/* Source XSD */}
-                <div className="space-y-2">
-                  <label className="label mb-0">Source XSD</label>
-                  <button type="button" onClick={() => sheetSrcRef.current?.click()}
-                    className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
-                      ${sheetSrcFile ? 'border-blue-600/60 bg-blue-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
-                    {sheetSrcFile
-                      ? <><FileCode size={20} className="text-blue-400" /><span className="text-xs text-blue-400 font-medium truncate max-w-full px-2">{sheetSrcFile.name}</span></>
-                      : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
-                    }
-                  </button>
-                  <input ref={sheetSrcRef} type="file" accept=".xsd,.xml" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetSrcFile(f); setSheetPreview(null); setSheetStep('upload'); e.target.value = '' } }} />
-                  {sheetSrcFile && <button onClick={() => { setSheetSrcFile(null); setSheetPreview(null) }} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
-                </div>
 
-                {/* Target XSD */}
-                <div className="space-y-2">
-                  <label className="label mb-0">Target XSD</label>
-                  <button type="button" onClick={() => sheetTgtRef.current?.click()}
-                    className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
-                      ${sheetTgtFile ? 'border-green-600/60 bg-green-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
-                    {sheetTgtFile
-                      ? <><FileCode size={20} className="text-green-400" /><span className="text-xs text-green-400 font-medium truncate max-w-full px-2">{sheetTgtFile.name}</span></>
-                      : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
-                    }
-                  </button>
-                  <input ref={sheetTgtRef} type="file" accept=".xsd,.xml" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetTgtFile(f); setSheetPreview(null); setSheetStep('upload'); e.target.value = '' } }} />
-                  {sheetTgtFile && <button onClick={() => { setSheetTgtFile(null); setSheetPreview(null) }} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
-                </div>
+                {/* ── Source XSD ── */}
+                <XsdSlot
+                  label="Source XSD"
+                  accentClass="blue"
+                  mode={sheetSrcMode}
+                  onModeChange={m => { setSheetSrcMode(m); setSheetPreview(null); setSheetStep('upload') }}
+                  selectedSchema={sheetSrcSchema}
+                  onSchemaChange={v => { setSheetSrcSchema(v); setSheetPreview(null); setSheetStep('upload') }}
+                  uploadedFile={sheetSrcFile}
+                  onFileChange={f => { setSheetSrcFile(f); setSheetPreview(null); setSheetStep('upload') }}
+                  fileRef={sheetSrcRef}
+                  schemas={catalogSchemas}
+                />
 
-                {/* Mapping Sheet */}
+                {/* ── Target XSD ── */}
+                <XsdSlot
+                  label="Target XSD"
+                  accentClass="green"
+                  mode={sheetTgtMode}
+                  onModeChange={m => { setSheetTgtMode(m); setSheetPreview(null); setSheetStep('upload') }}
+                  selectedSchema={sheetTgtSchema}
+                  onSchemaChange={v => { setSheetTgtSchema(v); setSheetPreview(null); setSheetStep('upload') }}
+                  uploadedFile={sheetTgtFile}
+                  onFileChange={f => { setSheetTgtFile(f); setSheetPreview(null); setSheetStep('upload') }}
+                  fileRef={sheetTgtRef}
+                  schemas={catalogSchemas}
+                />
+
+                {/* ── Mapping Sheet ── */}
                 <div className="space-y-2">
                   <label className="label mb-0">Mapping Sheet</label>
                   <button type="button" onClick={() => sheetFileRef.current?.click()}
-                    className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+                    className={`w-full flex flex-col items-center justify-center gap-2 h-28 rounded-lg border-2 border-dashed transition-colors cursor-pointer
                       ${sheetFile ? 'border-purple-600/60 bg-purple-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
                     {sheetFile
                       ? <><FileSpreadsheet size={20} className="text-purple-400" /><span className="text-xs text-purple-400 font-medium truncate max-w-full px-2">{sheetFile.name}</span></>
-                      : <><FileSpreadsheet size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xlsx / .csv</span></>
+                      : <><FileSpreadsheet size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload</span><span className="text-xs text-gray-600">.xlsx / .csv</span></>
                     }
                   </button>
                   <input ref={sheetFileRef} type="file" accept=".xlsx,.xlsm,.csv" className="hidden"
@@ -691,7 +843,7 @@ export default function MessageMapping() {
               <div className="flex gap-3">
                 <button
                   onClick={loadPreview}
-                  disabled={previewLoading || !sheetSrcFile || !sheetTgtFile || !sheetFile}
+                  disabled={previewLoading || !sheetSrcReady || !sheetTgtReady || !sheetFile}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
                   {previewLoading ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
                   {previewLoading ? 'Parsing…' : 'Preview Sheet'}
