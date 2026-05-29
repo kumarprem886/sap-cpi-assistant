@@ -17,6 +17,7 @@ import xlsxwriter
 
 # ── Node-function reference rows ──────────────────────────────────────────────
 
+# fmt: off
 FUNCTION_REFERENCE = [
     # (Category, Function, CPI Expression Syntax, Functional Description, Example)
     ("String", "Direct copy",

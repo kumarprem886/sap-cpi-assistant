@@ -1,15 +1,28 @@
 """
 SAP CPI Graphical Message Mapping (.mmap) file builder.
 
-Format reverse-engineered from a real CPI export:
-  - Namespace : urn:sap-com:xi
-  - Mappings  : <brick type="Dst"> containing <arg><brick type="Src"/></arg>
-  - Paths     : /RootElement/ParentElement/ChildElement  (bare names, no NS prefix)
+Format reverse-engineered from real CPI mmap exports:
+  - Namespace   : urn:sap-com:xi
+  - Dst bricks  : <brick gid="0" path="..." type="Dst">
+  - Src bricks  : <brick gid="0" path="..." type="Src">
+  - Func bricks : <brick fname="..." fns="dflt" type="Func">
+                    <arg>…first arg…</arg>
+                    <arg pin="1">…second arg…</arg>
+                    <bindings><param name="…"><value>…</value></param></bindings>
+                  </brick>
 
-ZIP bundle structure (matches real CPI exports exactly):
-  wsdl/<source_xsd_name>          — source XSD schema
-  wsdl/<target_xsd_name>          — target XSD (omitted when same name as source)
-  mapping/<MappingName>.mmap      — mapping XML (urn:sap-com:xi format)
+Confirmed fname values (from real CPI exports):
+  String  : toUpperCase, toLowerCase, trim, length, substring, concat, replaceString, equalsS, indexOf
+  Date    : TransformDate   (user writes formatDate — translated here)
+  Numeric : add, subtract, multiply, divide, abs, round, ceil, floor
+  Boolean : if, Equals, notEquals, Not, And, Or
+  Node    : useOneAsMany, SplitByValue, removeContexts, collapseContexts,
+            createIf, exists, mapWithDefault, sort, sortByKey, replaceValue
+
+ZIP bundle structure matches real CPI exports:
+  xsd/<source_xsd_name>       — source XSD
+  xsd/<target_xsd_name>       — target XSD
+  mapping/<MappingName>.mmap  — the mapping XML
 """
 
 import io
@@ -19,133 +32,380 @@ import zipfile
 from xml.sax.saxutils import escape
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Low-level XML helpers
-# ─────────────────────────────────────────────────────────────────────────────
+# ── User-facing → real SAP fname mapping ──────────────────────────────────────
+
+_FNAME_MAP: dict[str, str] = {
+    # String
+    "toUpperCase":   "toUpperCase",
+    "toLowerCase":   "toLowerCase",
+    "trim":          "trim",
+    "length":        "length",
+    "substring":     "substring",
+    "concat":        "concat",
+    "replaceAll":    "replaceString",   # user alias → real name
+    "replaceString": "replaceString",
+    "indexOf":       "indexOf",
+    "indexOf3":      "indexOf",
+    "endsWith":      "endsWith",
+    "startsWith":    "startsWith",
+    "compare":       "compare",
+    # Date
+    "formatDate":    "TransformDate",   # user alias → real name
+    "TransformDate": "TransformDate",
+    "DateTrans":     "TransformDate",
+    "currentDate":   "currentDate",
+    "DateBefore":    "DateBefore",
+    "DateAfter":     "DateAfter",
+    "CompareDates":  "CompareDates",
+    # Numeric
+    "add":           "add",
+    "subtract":      "subtract",
+    "multiply":      "multiply",
+    "divide":        "divide",
+    "abs":           "abs",
+    "round":         "round",
+    "ceil":          "ceil",
+    "floor":         "floor",
+    "FormatNum":     "FormatNum",
+    # Boolean
+    "if":            "if",
+    "ifWithoutElse": "ifWithoutElse",
+    "equals":        "Equals",          # user alias → real name (capital E)
+    "Equals":        "Equals",
+    "equalsS":       "equalsS",
+    "notEquals":     "notEquals",
+    "Not":           "Not",
+    "not":           "Not",
+    "And":           "And",
+    "and":           "And",
+    "Or":            "Or",
+    "or":            "Or",
+    # Node
+    "useOneAsMany":    "useOneAsMany",
+    "splitByValue":    "SplitByValue",  # user alias → real name (capital S)
+    "SplitByValue":    "SplitByValue",
+    "removeContexts":  "removeContexts",
+    "collapseContexts":"collapseContexts",
+    "createIf":        "createIf",
+    "exists":          "exists",
+    "mapWithDefault":  "mapWithDefault",
+    "sort":            "sort",
+    "sortByKey":       "sortByKey",
+    "replaceValue":    "replaceValue",
+    "formatByExample": "formatByExample",
+    "UseOneAsMany":    "useOneAsMany",  # alternate capitalisation
+}
+
+
+def _resolve_fname(user_func: str) -> str:
+    """Map user-facing function name to real SAP fname attribute value."""
+    return _FNAME_MAP.get(user_func, user_func)
+
+
+# ── Low-level XML helpers ─────────────────────────────────────────────────────
 
 def _uid() -> str:
-    """Random UUID without hyphens (used for textObj ids)."""
     return uuid.uuid4().hex
 
 
-def _brick(src_path: str, dst_path: str) -> str:
-    """One direct (1-to-1) field mapping: Dst brick wrapping a Src brick."""
+def _src(path: str, x: int = 50, y: int = 40, context: str = "") -> str:
+    ctx_attr = f' context="{escape(context)}"' if context else ""
+    return (
+        f'<brick{ctx_attr} gid="0" path="{escape(path)}" type="Src">'
+        f'<viewData x="{x}" y="{y}"/>'
+        f'</brick>'
+    )
+
+
+def _const_as_binding_value(value: str) -> str:
+    """An empty <value/> for empty strings, otherwise <value>text</value>."""
+    return f'<value>{escape(value)}</value>' if value else '<value/>'
+
+
+def _brick_direct(src_path: str, dst_path: str) -> str:
+    """Direct 1-to-1 field mapping."""
     return (
         f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
         f'<viewData x="200" y="40"/>'
-        f'<arg>'
-        f'<brick gid="0" path="{escape(src_path)}" type="Src">'
-        f'<viewData x="50" y="40"/>'
-        f'</brick>'
-        f'</arg>'
+        f'<arg>{_src(src_path)}</arg>'
         f'<group/>'
         f'</brick>'
     )
 
 
-def _inner_src(path: str, y: int = 40) -> str:
-    """Source field brick for use as a function argument."""
-    return (
-        f'<brick gid="0" path="{escape(path)}" type="Src">'
-        f'<viewData x="50" y="{y}"/>'
-        f'</brick>'
-    )
+def _arg(content: str, pin: int | None = None) -> str:
+    pin_attr = f' pin="{pin}"' if pin is not None else ""
+    return f'<arg{pin_attr}>{content}</arg>'
 
 
-def _inner_const(value: str, y: int = 40) -> str:
-    """Constant value brick for use as a function argument."""
-    return (
-        f'<brick gid="0" constValue="{escape(value)}" type="Const">'
-        f'<viewData x="50" y="{y}"/>'
-        f'</brick>'
-    )
+def _binding(name: str, value: str) -> str:
+    return f'<param name="{escape(name)}">{_const_as_binding_value(value)}</param>'
 
 
-def _leaf_brick(p: dict, y: int = 40) -> str:
-    """Render a single argument part as a src or const brick."""
-    if p["type"] == "src":
-        return _inner_src(p["path"], y)
-    return _inner_const(p["value"], y)
-
-
-def _build_func_node(func_name: str, parts: list, y: int = 30) -> str:
-    """
-    Build a function node brick for any SAP CPI standard node function.
-
-    ``concat`` with more than 2 arguments is chained left-associatively
-    (CPI's concat takes exactly 2 inputs).  All other functions receive
-    all arguments as parallel <arg> elements.
-
-    parts: list of {"type": "src"/"const", "path"/"value": "..."}
-    """
-    if not parts:
+def _bindings(*params: tuple[str, str]) -> str:
+    if not params:
         return ""
+    inner = "".join(_binding(n, v) for n, v in params)
+    return f'<bindings>{inner}</bindings>'
 
-    # ── Special case: concat needs chaining for N > 2 ──────────────────
-    if func_name.lower() == "concat":
-        if len(parts) == 1:
-            return _leaf_brick(parts[0], y)
-        if len(parts) == 2:
-            a = _leaf_brick(parts[0], y)
-            b = _leaf_brick(parts[1], y + 30)
+
+def _func_open(fname: str, x: int = 125, y: int = 30) -> str:
+    return f'<brick fname="{escape(fname)}" fns="dflt" type="Func"><viewData x="{x}" y="{y}"/>'
+
+
+# ── Function brick builders ───────────────────────────────────────────────────
+
+def _build_brick_for_part(p: dict, y: int = 40) -> str:
+    """Render one argument part as a Src brick (or nested Func brick when needed)."""
+    if p["type"] == "src":
+        return _src(p["path"], y=y)
+    # Constant — wrap as a no-arg concat with empty second arg as a workaround,
+    # because SAP's graphical mapping has no standalone "Const" brick.
+    # In practice, constants appear as <bindings> values, not separate bricks.
+    # Return empty so callers can move the value to a binding.
+    return ""
+
+
+def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
+    """
+    Build the complete Dst brick for a mapped function field.
+    Handles each function's specific parameter structure based on real SAP mmap format.
+    """
+    fname = _resolve_fname(func_name)
+    src_parts   = [p for p in parts if p["type"] == "src"]
+    const_parts = [p for p in parts if p["type"] == "const"]
+
+    # ── concat ────────────────────────────────────────────────────────────────
+    # SAP concat takes exactly 2 inputs and a separator in bindings.
+    # User syntax: (/src1)+SEP+(/src2) → parts=[src1, const:SEP, src2]
+    if fname == "concat":
+        sources   = src_parts
+        separator = const_parts[0]["value"] if const_parts else ""
+        if not sources:
+            return ""
+        if len(sources) == 1:
+            # Only one source → direct mapping with separator irrelevant
+            inner = _build_func_brick(dst_path, "toUpperCase", sources)  # fallback
+            return _brick_direct(sources[0]["path"], dst_path)
+        # Build left-associative chain for more than 2 sources
+        def _chain(srcs: list) -> str:
+            if len(srcs) == 2:
+                return (
+                    _func_open("concat")
+                    + _arg(_src(srcs[0]["path"]))
+                    + _arg(_src(srcs[1]["path"]), pin=1)
+                    + _bindings(("delimeter", separator))
+                    + "</brick>"
+                )
+            # 3+: concat(chain(first N-1), last)
+            inner_chain = _chain(srcs[:-1])
             return (
-                f'<brick gid="0" funcName="concat" type="Function">'
-                f'<viewData x="125" y="{y}"/>'
-                f'<arg>{a}</arg>'
-                f'<arg>{b}</arg>'
-                f'</brick>'
+                _func_open("concat", x=150)
+                + _arg(inner_chain)
+                + _arg(_src(srcs[-1]["path"]), pin=1)
+                + _bindings(("delimeter", separator))
+                + "</brick>"
             )
-        # N > 2: concat(chain(first N-1), last)
-        inner = _build_func_node("concat", parts[:-1], y)
-        last  = _leaf_brick(parts[-1], y + 30)
+        func_xml = _chain(sources)
         return (
-            f'<brick gid="0" funcName="concat" type="Function">'
-            f'<viewData x="150" y="{y}"/>'
-            f'<arg>{inner}</arg>'
-            f'<arg>{last}</arg>'
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
             f'</brick>'
         )
 
-    # ── General case: function with N parallel arguments ────────────────
-    args_xml = "".join(
-        f"<arg>{_leaf_brick(p, y + i * 30)}</arg>"
-        for i, p in enumerate(parts)
-    )
-    return (
-        f'<brick gid="0" funcName="{escape(func_name)}" type="Function">'
-        f'<viewData x="125" y="{y}"/>'
-        f'{args_xml}'
-        f'</brick>'
-    )
+    # ── TransformDate (formatDate) ────────────────────────────────────────────
+    # Parts: [src, const:iform, const:oform]
+    if fname == "TransformDate":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        iform    = const_parts[0]["value"] if len(const_parts) > 0 else "yyyyMMdd"
+        oform    = const_parts[1]["value"] if len(const_parts) > 1 else "yyyy-MM-dd"
+        func_xml = (
+            _func_open("TransformDate")
+            + _arg(_src(src_path))
+            + _bindings(
+                ("iform",  iform),
+                ("oform",  oform),
+                ("calend", "<calend_props><fd>1</fd><md>1</md><le>true</le></calend_props>"),
+            )
+            + "</brick>"
+        )
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
 
+    # ── mapWithDefault ────────────────────────────────────────────────────────
+    # Parts: [src, const:default]  (key-value pairs not supported in XML — use Value Mapping)
+    if fname == "mapWithDefault":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        default  = const_parts[-1]["value"] if const_parts else ""
+        func_xml = (
+            _func_open("mapWithDefault")
+            + _arg(_src(src_path))
+            + _bindings(("default_value", default))
+            + "</brick>"
+        )
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
 
-def _func_brick(dst_path: str, func_name: str, parts: list) -> str:
-    """
-    Complete Dst brick whose source is a node function (any funcName).
-    Falls back to a direct source brick when only one part and no function needed.
-    """
-    if len(parts) == 1 and not func_name:
-        # No function — plain source mapping
-        p = parts[0]
-        if p["type"] == "src":
-            return _brick(p["path"], dst_path)
-    inner = _build_func_node(func_name, parts)
+    # ── SplitByValue ─────────────────────────────────────────────────────────
+    # Parts: [src, const:delimiter]
+    if fname == "SplitByValue":
+        src_path  = src_parts[0]["path"] if src_parts else ""
+        delimiter = const_parts[0]["value"] if const_parts else ","
+        func_xml = (
+            _func_open("SplitByValue")
+            + _arg(_src(src_path))
+            + _bindings(("delimeter", delimiter))
+            + "</brick>"
+        )
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── replaceString (replaceAll) ────────────────────────────────────────────
+    # Parts: [src, const:search, const:replacement]
+    if fname == "replaceString":
+        src_path    = src_parts[0]["path"] if src_parts else ""
+        search      = const_parts[0]["value"] if len(const_parts) > 0 else ""
+        replacement = const_parts[1]["value"] if len(const_parts) > 1 else ""
+        func_xml = (
+            _func_open("replaceString")
+            + _arg(_src(src_path))
+            + _bindings(("search", search), ("replace", replacement))
+            + "</brick>"
+        )
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── substring ─────────────────────────────────────────────────────────────
+    # Parts: [src, const:start, const:length]
+    if fname == "substring":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        start    = const_parts[0]["value"] if len(const_parts) > 0 else "0"
+        length   = const_parts[1]["value"] if len(const_parts) > 1 else "10"
+        func_xml = (
+            _func_open("substring")
+            + _arg(_src(src_path))
+            + _bindings(("from", start), ("to", str(int(start) + int(length))
+                         if start.isdigit() and length.isdigit() else length))
+            + "</brick>"
+        )
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── useOneAsMany ──────────────────────────────────────────────────────────
+    # Parts: [src]  (context args added automatically)
+    if fname == "useOneAsMany":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        func_xml = _func_open("useOneAsMany") + _arg(_src(src_path)) + "</brick>"
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── Simple single-arg functions ───────────────────────────────────────────
+    # toUpperCase, toLowerCase, trim, length, abs, round, ceil, floor,
+    # exists, removeContexts, collapseContexts, replaceValue, not, etc.
+    _SIMPLE_ONE_ARG = {
+        "toUpperCase", "toLowerCase", "trim", "length", "abs", "round",
+        "ceil", "floor", "exists", "removeContexts", "collapseContexts",
+        "replaceValue", "Not", "createIf",
+    }
+    if fname in _SIMPLE_ONE_ARG:
+        src_path = src_parts[0]["path"] if src_parts else dst_path
+        func_xml = _func_open(fname) + _arg(_src(src_path)) + "</brick>"
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── Two-arg functions with optional bindings ──────────────────────────────
+    # Equals, notEquals, equalsS, And, Or, compare, endsWith, startsWith, indexOf
+    _TWO_ARG = {"Equals", "notEquals", "equalsS", "And", "Or", "compare",
+                "endsWith", "startsWith", "indexOf", "add", "subtract",
+                "multiply", "divide", "DateBefore", "DateAfter", "CompareDates"}
+    if fname in _TWO_ARG:
+        args_xml = ""
+        for pin_idx, p in enumerate(src_parts[:2]):
+            args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
+        # any const parts become bindings
+        bindings_xml = ""
+        if const_parts:
+            bindings_xml = _bindings(*[(f"value{i}", cp["value"]) for i, cp in enumerate(const_parts)])
+        func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── if / ifWithoutElse ────────────────────────────────────────────────────
+    if fname in ("if", "ifWithoutElse"):
+        args_xml = ""
+        for pin_idx, p in enumerate(src_parts[:3]):
+            args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
+        func_xml = _func_open(fname) + args_xml + "</brick>"
+        return (
+            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<viewData x="200" y="40"/>'
+            f'<arg>{func_xml}</arg>'
+            f'<group/>'
+            f'</brick>'
+        )
+
+    # ── Fallback: generic function with all src args ──────────────────────────
+    args_xml = ""
+    for pin_idx, p in enumerate(src_parts):
+        args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
+    bindings_xml = ""
+    if const_parts:
+        bindings_xml = _bindings(*[(f"param{i}", cp["value"]) for i, cp in enumerate(const_parts)])
+    func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
     return (
         f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
         f'<viewData x="200" y="40"/>'
-        f'<arg>{inner}</arg>'
+        f'<arg>{func_xml}</arg>'
         f'<group/>'
         f'</brick>'
     )
 
 
-# Keep the old name as an alias so existing callers don't break
-def _concat_brick(dst_path: str, parts: list) -> str:
-    return _func_brick(dst_path, "concat", parts)
-
+# ── lnkRole helper ────────────────────────────────────────────────────────────
 
 def _lnk(role: str, xsd_filename: str, root_element: str) -> str:
-    """<lnkRole> block for SOURCE_IFR_MESS or TARGET_IFR_MESS."""
     return (
         f'<lnkRole kpos="1" role="{role}">'
         f'<lnk rMode="R">'
@@ -159,9 +419,12 @@ def _lnk(role: str, xsd_filename: str, root_element: str) -> str:
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Public: build .mmap XML string
-# ─────────────────────────────────────────────────────────────────────────────
+# Keep old alias for callers that still use _concat_brick
+def _concat_brick(dst_path: str, parts: list) -> str:
+    return _build_func_brick(dst_path, "concat", parts)
+
+
+# ── Public: build .mmap XML string ───────────────────────────────────────────
 
 def build_mmap_xml(
     mapping_name: str,
@@ -169,35 +432,31 @@ def build_mmap_xml(
     source_root: str,
     target_xsd_name: str,
     target_root: str,
-    field_mappings: list,   # list of {"source_path": "...", "target_path": "..."}
-    **_,                    # ignore unknown kwargs from old callers
+    field_mappings: list,
+    **_,
 ) -> str:
-    """
-    Return the .mmap XML string exactly matching SAP CPI's urn:sap-com:xi format.
-    Self-closing empty elements, no extra whitespace inside the XML (CPI stores it compact).
-    """
-    ts_ms  = int(time.time() * 1000)
-    uid1   = _uid()
-    uid2   = _uid()
+    ts_ms = int(time.time() * 1000)
+    uid1  = _uid()
+    uid2  = _uid()
 
-    bricks_parts = []
+    bricks_parts: list[str] = []
     for fm in field_mappings:
         tgt   = fm.get("target_path", "").strip()
         if not tgt:
             continue
-        parts = fm.get("parts")                       # function mapping
-        func  = fm.get("func", "concat")              # function name
+        parts = fm.get("parts")
+        func  = fm.get("func", "")
         src   = fm.get("source_path", "").strip()
-        if parts:
-            bricks_parts.append(_func_brick(tgt, func, parts))
+
+        if parts and func:
+            bricks_parts.append(_build_func_brick(tgt, func, parts))
         elif src:
-            bricks_parts.append(_brick(src, tgt))
-    bricks = "".join(bricks_parts)
+            bricks_parts.append(_brick_direct(src, tgt))
 
-    src_lnk = _lnk("SOURCE_IFR_MESS", source_xsd_name, source_root)
-    tgt_lnk = _lnk("TARGET_IFR_MESS", target_xsd_name, target_root)
+    bricks   = "".join(bricks_parts)
+    src_lnk  = _lnk("SOURCE_IFR_MESS", source_xsd_name, source_root)
+    tgt_lnk  = _lnk("TARGET_IFR_MESS", target_xsd_name, target_root)
 
-    # NOTE: empty elements are self-closed (<modifBy/>) to match the real file exactly.
     return (
         '<?xml version="1.0" encoding="utf-8"?>'
         '<xiObj xmlns="urn:sap-com:xi">'
@@ -214,18 +473,17 @@ def build_mmap_xml(
 
         '<generic>'
         '<admInf>'
-        '<modifBy/>'
-        '<modifAt/>'
+        '<modifBy></modifBy>'
+        '<modifAt></modifAt>'
         f'<modifAtLong>{ts_ms}</modifAtLong>'
         '<owner/>'
         '</admInf>'
-        # TARGET link comes first (matches real file order)
         f'<lnks>{tgt_lnk}{src_lnk}</lnks>'
         f'<textInfo loadedL="EN">'
         f'<textObj id="{uid1}" masterL="EN" type="0">'
         f'<texts lang="EN">'
         f'<text label=""/>'
-        f'<text label="{uid2}"/>'
+        f'<text label="{uid2}"></text>'
         f'</texts>'
         f'</textObj>'
         f'</textInfo>'
@@ -239,15 +497,15 @@ def build_mmap_xml(
         '<libstorage>'
         '<entry name="usernamespace">'
         '<functionstorage version="XI7.1">'
-        '<key><key typeID=""><elem/><elem/></key></key>'
-        '<classname/>'
-        '<package/>'
+        '<key><key typeID=""><elem></elem><elem></elem></key></key>'
+        '<classname></classname>'
+        '<package></package>'
         '<imports/>'
         '<globals><javaText/></globals>'
         '<init>'
         '<functionmodel>'
         '<signature cacheType="0"/>'
-        '<name/><key/><tab/><title/><uiTitle/>'
+        '<name></name><key></key><tab></tab><title></title><uiTitle></uiTitle>'
         '<implementation type="udf"><javaText/></implementation>'
         '</functionmodel>'
         '</init>'
@@ -288,9 +546,7 @@ def build_mmap_xml(
     )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Public: build ZIP bundle
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Public: build ZIP bundle ─────────────────────────────────────────────────
 
 def build_mmap_zip(
     mapping_name: str,
@@ -300,26 +556,12 @@ def build_mmap_zip(
     source_xsd_name: str = "source.xsd",
     target_xsd_name: str = "target.xsd",
 ) -> bytes:
-    """
-    Bundle exactly like a real CPI export:
-      wsdl/<source_xsd_name>        — source XSD
-      wsdl/<target_xsd_name>        — target XSD (omitted if same name as source)
-      mapping/<mapping_name>.mmap   — the mapping XML
-
-    No README, no extra files — matches the sample ZIP structure exactly.
-    """
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        # Source XSD
         if source_xsd:
             zf.writestr(f"xsd/{source_xsd_name}", source_xsd.encode("utf-8"))
-
-        # Target XSD — only write if it has a different name from source
         if target_xsd and target_xsd_name != source_xsd_name:
             zf.writestr(f"xsd/{target_xsd_name}", target_xsd.encode("utf-8"))
-
-        # The .mmap — goes in mapping/ folder
         zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))
-
     buf.seek(0)
     return buf.read()

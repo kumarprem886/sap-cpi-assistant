@@ -390,30 +390,33 @@ async def preview_sheet(
 # ── AI Rule Derivation ────────────────────────────────────────────────────────
 
 _DERIVE_SYSTEM = """You are an SAP CPI integration expert. Convert a plain-English functional description
-into an exact SAP CPI Graphical Message Mapping node-function expression.
+into an exact SAP CPI Graphical Message Mapping function expression.
 
-Supported functions and their syntax:
-- Direct copy (blank rule): no expression — return empty string ""
-- toUpperCase: toUpperCase((/path/to/field))
-- toLowerCase: toLowerCase((/path/to/field))
-- trim: trim((/path/to/field))
-- concat: (/Field1)+SEP+(/Field2)  OR  concat((/Field1), SEP, (/Field2))
-- substring: substring((/field), startIndex, length)
-- formatDate: formatDate((/field), inputFormat, outputFormat)
-- mapWithDefault: mapWithDefault((/field), Key1, Value1, Key2, Value2, DEFAULT)
-- splitByValue: splitByValue((/field), DELIMITER)
-- if+equals: if(equals((/field), VALUE), TRUE_RESULT, FALSE_RESULT)
-- if+contains: if(contains((/field), TEXT), TRUE_RESULT, FALSE_RESULT)
-- replaceAll: replaceAll((/field), REGEX, REPLACEMENT)
-- length: length((/field))
-- UseOneAsMany: UseOneAsMany((/field))  OR  UseOneAsMany(CONSTANT)
+EXACT SAP CPI standard function syntax (use these names exactly):
+- Direct copy: leave blank — return ""
+- toUpperCase((/field))          — convert text to uppercase
+- toLowerCase((/field))          — convert text to lowercase
+- trim((/field))                 — remove leading/trailing whitespace
+- length((/field))               — string length as number
+- substring((/field), start, len) — extract substring (0-based start index)
+- concat: (/field1)+SEPARATOR+(/field2)  — join fields with separator between them
+- formatDate((/field), inputFmt, outputFmt) — reformat date string  e.g. formatDate((/date), yyyyMMdd, yyyy-MM-dd)
+- replaceAll((/field), searchStr, replacement) — replace text
+- SplitByValue((/field), delimiter)    — split field by delimiter (capital S)
+- useOneAsMany((/field))               — repeat value for each occurrence
+- mapWithDefault((/field), defaultVal) — pass value through, use defaultVal if empty
+- exists((/field))                     — boolean: field exists
+- if((/condition), (/then), (/else))   — conditional
+- equals((/field), VALUE)              — equality check
+- add((/field1), (/field2))            — numeric add
+- subtract((/field1), (/field2))       — numeric subtract
 
-IMPORTANT RULES:
-1. Replace placeholder field names with the ACTUAL source field name given (use short name in parentheses)
-2. Format: (/FieldName) — use the source field name as provided, NOT a full XPath
-3. Constants go WITHOUT parentheses, e.g. EUR, yyyyMMdd, -, T
-4. For direct copy, return exactly: ""
-5. Return ONLY the expression string — no explanation, no markdown
+RULES:
+1. Use ACTUAL field names from the source fields list, not generic placeholders
+2. Format: (/FieldName) — short field name, NOT full XPath
+3. Constants (separators, formats) go WITHOUT parentheses: T, -, yyyyMMdd, EUR
+4. For direct copy return exactly: ""
+5. Return ONLY the expression — no explanation, no markdown
 """
 
 
