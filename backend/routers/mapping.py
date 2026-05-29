@@ -324,7 +324,13 @@ async def preview_sheet(
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Failed to parse mapping sheet: {exc}")
 
-    # Build enriched row list with status
+    # Index unmatched rows by (source, target) for quick lookup of reason
+    unmatched_index: dict[tuple, str] = {
+        (str(u.get("source") or "").lower(), str(u.get("target") or "").lower()): u.get("reason", "")
+        for u in unmatched
+    }
+
+    # Build enriched row list with per-cell match status
     enriched_rows = []
     for raw in raw_rows:
         src_f   = raw.get("source") or ""
@@ -340,12 +346,19 @@ async def preview_sheet(
         )
         status = "matched" if is_matched else "unmatched" if (src_f or tgt_f) else "empty"
 
+        # Determine which specific cell is unmatched
+        reason = unmatched_index.get((src_f.lower(), tgt_f.lower()), "")
+        src_matched = is_matched or not src_f or ("source" not in reason and "no source" not in reason)
+        tgt_matched = is_matched or not tgt_f or ("target" not in reason)
+
         enriched_rows.append({
             "source":          src_f,
             "target":          tgt_f,
             "functional_rule": func_r,
             "technical_rule":  tech_r,
             "status":          status,
+            "source_matched":  src_matched,
+            "target_matched":  tgt_matched,
         })
 
     return {
