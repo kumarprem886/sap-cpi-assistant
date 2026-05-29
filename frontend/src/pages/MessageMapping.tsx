@@ -451,14 +451,27 @@ export default function MessageMapping() {
   const [derivingAll, setDerivingAll] = useState(false)
   const [derivingRow, setDerivingRow] = useState<number | null>(null)
 
+  // Build a CSV file from current preview rows (used when no sheet was uploaded, e.g. prebuilt quick-start)
+  const buildSheetFileFromPreview = (): File => {
+    const rows = sheetPreview?.rows ?? []
+    const header = 'Source Field,Target Field,Functional Mapping Rule,Technical Mapping Rule'
+    const lines  = rows
+      .filter(r => r.source || r.target)
+      .map(r => `"${(r.source||'').replace(/"/g,'""')}","${(r.target||'').replace(/"/g,'""')}","${(r.functional_rule||'').replace(/"/g,'""')}","${(r.technical_rule||'').replace(/"/g,'""')}"`)
+    const csv = [header, ...lines].join('\n')
+    return new File([csv], 'mapping.csv', { type: 'text/csv' })
+  }
+
   const generateFromSheet = async () => {
-    if (!sheetFile) return
+    if (!sheetFile && !sheetPreview) return
     setSheetLoading(true); setSheetError(''); setSheetSummary('')
     try {
       const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
       const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
       if (!srcFile || !tgtFile) { setSheetError('Please select or upload both XSD files.'); return }
-      const res = await mappingAPI.fromSheet(srcFile, tgtFile, sheetFile, sheetMmapName)
+      // Use uploaded sheet or synthesize CSV from preview rows (prebuilt quick-start)
+      const effectiveSheet = sheetFile ?? buildSheetFileFromPreview()
+      const res = await mappingAPI.fromSheet(srcFile, tgtFile, effectiveSheet, sheetMmapName)
       const summary = res.headers?.['x-mapping-summary'] ?? ''
       const parts   = Object.fromEntries(summary.split(',').map((s: string) => s.split('=')))
       if (parts.mapped) setSheetSummary(`Mapped ${parts.mapped} field(s)${parts.unmatched !== '0' ? `, ${parts.unmatched} unmatched` : ''}`)
@@ -1243,7 +1256,7 @@ export default function MessageMapping() {
               ) : (
                 <button
                   onClick={generateFromSheet}
-                  disabled={sheetLoading || !sheetSrcFile || !sheetTgtFile || !sheetFile}
+                  disabled={sheetLoading || !sheetSrcReady || !sheetTgtReady || (!sheetFile && !sheetPreview)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
                   {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                   {sheetLoading ? 'Building .mmap…' : 'Download .mmap'}
