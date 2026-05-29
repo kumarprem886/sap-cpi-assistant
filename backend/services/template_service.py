@@ -293,7 +293,7 @@ def _build_mapping_sheet(wb: xlsxwriter.Workbook) -> None:
     for i in range(50):
         row = user_start + i
         ws.set_row(row, 18)
-        ws.write(row, 0, i + 1, num_fmt)
+        ws.write(row, 0, "", num_fmt)   # blank — no row numbers in user rows
         ws.write(row, 1, "", blank_src)
         ws.write(row, 2, "", blank_tgt)
         ws.write(row, 3, "", blank_func)
