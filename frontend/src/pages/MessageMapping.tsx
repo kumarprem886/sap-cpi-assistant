@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Shuffle, Loader2, Wand2, Zap, Upload, X, FileCode,
   Package, Cpu, BookOpen, ArrowRight, ChevronDown, ChevronUp,
@@ -395,6 +395,8 @@ export default function MessageMapping() {
           functional_rule: fm.note?.startsWith('auto parent') ? '' : (fm.note ?? ''),
           technical_rule:  '',
           status:          'matched' as const,
+          source_path:     fm.source_path ?? '',
+          target_path:     fm.target_path ?? '',
         }))
 
       setSheetPreview({
@@ -420,11 +422,31 @@ export default function MessageMapping() {
       functional_rule: string; technical_rule: string
       status: string; ai_derived?: boolean; derive_error?: string
       source_matched?: boolean; target_matched?: boolean
+      source_path?: string; target_path?: string   // full resolved XSD paths
     }>
     matched: number; unmatched: number
     unmatched_detail: Array<{source: string; target: string; reason: string}>
     src_paths: string[]; tgt_paths: string[]
   } | null>(null)
+
+  // Pre-computed lookup: last-segment (lower) → full XPath — used to show resolved paths in table
+  const srcPathMap = useMemo(() => {
+    const m = new Map<string, string>()
+    sheetPreview?.src_paths.forEach(p => {
+      const seg = p.split('/').filter(Boolean).pop()?.toLowerCase()
+      if (seg && !m.has(seg)) m.set(seg, p)
+    })
+    return m
+  }, [sheetPreview?.src_paths])
+  const tgtPathMap = useMemo(() => {
+    const m = new Map<string, string>()
+    sheetPreview?.tgt_paths.forEach(p => {
+      const seg = p.split('/').filter(Boolean).pop()?.toLowerCase()
+      if (seg && !m.has(seg)) m.set(seg, p)
+    })
+    return m
+  }, [sheetPreview?.tgt_paths])
+
   const [previewLoading, setPreviewLoading] = useState(false)
   const [derivingAll, setDerivingAll] = useState(false)
   const [derivingRow, setDerivingRow] = useState<number | null>(null)
@@ -1056,11 +1078,14 @@ export default function MessageMapping() {
                         const isDirect = !row.functional_rule && !row.technical_rule && row.status !== 'unmatched'
                         const srcOk = row.source_matched !== false
                         const tgtOk = row.target_matched !== false
+                        // Resolved full XPath — from backend (uploaded sheet) or prebuilt JSON
+                        const srcFullPath = row.source_path || (row.source ? srcPathMap.get(row.source.toLowerCase()) : undefined)
+                        const tgtFullPath = row.target_path || (row.target ? tgtPathMap.get(row.target.toLowerCase()) : undefined)
                         return (
                           <tr key={i} className={`hover:bg-gray-800/30 ${row.status === 'unmatched' ? 'bg-red-950/10' : ''}`}>
-                            <td className="px-2 py-1 text-gray-600 text-[10px]">{i + 1}</td>
+                            <td className="px-2 py-1 text-gray-600 text-[10px] align-top pt-2">{i + 1}</td>
 
-                            {/* Source field + XSD picker if unmatched */}
+                            {/* Source field + full XPath + picker if unmatched */}
                             <td className="px-1 py-1">
                               <div className="flex items-center gap-0.5">
                                 <input value={row.source} onChange={e => updatePreviewRow(i, 'source', e.target.value)}
@@ -1078,9 +1103,13 @@ export default function MessageMapping() {
                                   </select>
                                 )}
                               </div>
+                              {srcFullPath
+                                ? <div className="text-[9px] text-gray-600 font-mono truncate px-1.5 mt-0.5" title={srcFullPath}>{srcFullPath}</div>
+                                : row.source && <div className="text-[9px] text-red-800 px-1.5 mt-0.5">not found in XSD</div>
+                              }
                             </td>
 
-                            {/* Target field + XSD picker if unmatched */}
+                            {/* Target field + full XPath + picker if unmatched */}
                             <td className="px-1 py-1">
                               <div className="flex items-center gap-0.5">
                                 <input value={row.target} onChange={e => updatePreviewRow(i, 'target', e.target.value)}
@@ -1098,6 +1127,10 @@ export default function MessageMapping() {
                                   </select>
                                 )}
                               </div>
+                              {tgtFullPath
+                                ? <div className="text-[9px] text-gray-600 font-mono truncate px-1.5 mt-0.5" title={tgtFullPath}>{tgtFullPath}</div>
+                                : row.target && <div className="text-[9px] text-red-800 px-1.5 mt-0.5">not found in XSD</div>
+                              }
                             </td>
 
                             {/* Functional rule — blank for direct maps */}

@@ -330,7 +330,14 @@ async def preview_sheet(
         for u in unmatched
     }
 
-    # Build enriched row list with per-cell match status
+    # Index matched rows by target last-segment for resolved path lookup
+    matched_by_tgt: dict[str, dict] = {}
+    for m in matched:
+        tgt_seg = m.get("target_path", "").rsplit("/", 1)[-1].lower()
+        if tgt_seg and tgt_seg not in matched_by_tgt:
+            matched_by_tgt[tgt_seg] = m
+
+    # Build enriched row list with per-cell match status + resolved full paths
     enriched_rows = []
     for raw in raw_rows:
         src_f   = raw.get("source") or ""
@@ -338,8 +345,9 @@ async def preview_sheet(
         func_r  = raw.get("functional_rule") or raw.get("rule") or ""
         tech_r  = raw.get("technical_rule") or ""
 
-        # Check if this row is in matched
-        is_matched = any(
+        # Find match entry for this target field
+        match_entry = matched_by_tgt.get(tgt_f.lower()) if tgt_f else None
+        is_matched  = match_entry is not None or any(
             (m.get("source_path", "").rsplit("/", 1)[-1].lower() == src_f.lower() or not src_f)
             and (m.get("target_path", "").rsplit("/", 1)[-1].lower() == tgt_f.lower())
             for m in matched
@@ -351,6 +359,10 @@ async def preview_sheet(
         src_matched = is_matched or not src_f or ("source" not in reason and "no source" not in reason)
         tgt_matched = is_matched or not tgt_f or ("target" not in reason)
 
+        # Resolved full XSD paths (for display in UI)
+        resolved_src_path = match_entry.get("source_path", "") if match_entry else ""
+        resolved_tgt_path = match_entry.get("target_path", "") if match_entry else ""
+
         enriched_rows.append({
             "source":          src_f,
             "target":          tgt_f,
@@ -359,6 +371,8 @@ async def preview_sheet(
             "status":          status,
             "source_matched":  src_matched,
             "target_matched":  tgt_matched,
+            "source_path":     resolved_src_path,
+            "target_path":     resolved_tgt_path,
         })
 
     return {
