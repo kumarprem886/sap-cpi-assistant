@@ -50,6 +50,112 @@ const GROUP_COLORS: Record<string, { card: string; badge: string }> = {
 
 type PrebuiltInfo = { id: string; status: string; fields: number }
 
+// ── Searchable XPath picker ───────────────────────────────────────────────────
+
+function XPathPicker({
+  value, onChange, paths, onSelect, isUnmatched, accentColor,
+}: {
+  value: string
+  onChange: (v: string) => void
+  paths: string[]
+  onSelect: (path: string, fieldName: string) => void
+  isUnmatched: boolean
+  accentColor: 'blue' | 'green'
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [search, setSearch] = React.useState('')
+  const ref = React.useRef<HTMLDivElement>(null)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const searchRef = React.useRef<HTMLInputElement>(null)
+
+  // Close on outside click
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false); setSearch('')
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Focus search input when dropdown opens
+  React.useEffect(() => {
+    if (open) setTimeout(() => searchRef.current?.focus(), 50)
+  }, [open])
+
+  const filtered = React.useMemo(() => {
+    if (!search) return paths
+    const q = search.toLowerCase()
+    return paths.filter(p =>
+      p.toLowerCase().includes(q) ||
+      (p.split('/').filter(Boolean).pop() ?? '').toLowerCase().includes(q)
+    )
+  }, [paths, search])
+
+  const accent = accentColor === 'blue'
+    ? { border: 'border-blue-600', focus: 'focus:border-blue-500', tag: 'text-blue-300', btn: 'hover:border-blue-600/60' }
+    : { border: 'border-green-600', focus: 'focus:border-green-500', tag: 'text-green-300', btn: 'hover:border-green-600/60' }
+
+  return (
+    <div ref={ref} className="relative flex-1 min-w-0">
+      <div className="flex items-center gap-0.5">
+        <input
+          ref={inputRef}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className={`flex-1 min-w-0 bg-gray-900/60 rounded-l px-2 py-1 font-mono text-xs text-white outline-none transition-colors
+            ${isUnmatched ? 'border border-red-600 bg-red-950/30' : `border border-gray-700 ${accent.focus} hover:border-gray-600`}`}
+        />
+        {paths.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className={`shrink-0 px-1.5 py-1 bg-gray-800 border border-gray-700 ${accent.btn} rounded-r text-gray-400 hover:text-white transition-colors text-[10px] font-bold`}
+            title="Search XSD paths"
+          >
+            {open ? '▲' : '▼'}
+          </button>
+        )}
+      </div>
+
+      {open && paths.length > 0 && (
+        <div className="absolute top-full left-0 z-50 mt-0.5 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden">
+          {/* Search input */}
+          <div className="px-2 py-2 border-b border-gray-700">
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search field name or XPath…"
+              className="w-full bg-gray-800 border border-gray-700 focus:border-blue-600 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none placeholder:text-gray-500"
+            />
+          </div>
+          {/* Results */}
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-gray-500 text-center">No paths match "{search}"</div>
+            ) : filtered.map(p => {
+              const seg = p.split('/').filter(Boolean).pop() ?? p
+              return (
+                <button key={p} type="button"
+                  onClick={() => { onSelect(p, seg); setOpen(false); setSearch('') }}
+                  className={`w-full text-left px-3 py-1.5 hover:bg-gray-800 transition-colors group`}>
+                  <div className={`text-xs font-semibold font-mono ${accent.tag}`}>{seg}</div>
+                  <div className="text-[9px] text-gray-500 font-mono truncate group-hover:text-gray-400">{p}</div>
+                </button>
+              )
+            })}
+          </div>
+          <div className="px-3 py-1.5 border-t border-gray-800 text-[9px] text-gray-600">
+            {filtered.length} of {paths.length} paths
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Reusable XSD slot: catalog picker OR file upload ──────────────────────────
 
 const ACCENT: Record<string, { border: string; bg: string; text: string; tab: string; tabActive: string }> = {
@@ -1141,46 +1247,40 @@ export default function MessageMapping() {
                         {/* Row number */}
                         <span className="text-[10px] text-gray-600 pt-1.5 text-center">{i + 1}</span>
 
-                        {/* Source field */}
+                        {/* Source field — searchable XPath picker */}
                         <div>
-                          <div className="flex items-center gap-1">
-                            <input value={row.source} onChange={e => updatePreviewRow(i, 'source', e.target.value)}
-                              className={`flex-1 min-w-0 bg-gray-900/60 rounded px-2 py-1 font-mono text-xs text-white outline-none transition-colors
-                                ${srcOk ? 'border border-gray-700 focus:border-blue-500 hover:border-blue-700/60'
-                                        : 'border border-red-600 bg-red-950/30 focus:border-red-500'}`} />
-                            {sheetPreview.src_paths.length > 0 && (
-                              <select value=""
-                                onChange={e => { if (e.target.value) { updatePreviewRow(i, 'source', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'source_path', e.target.value); updatePreviewRow(i, 'source_matched', 'true') } }}
-                                className={`w-8 text-[9px] rounded px-0.5 py-1 cursor-pointer bg-gray-800 border shrink-0 ${srcOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
-                                title="Pick from XSD">
-                                <option value="">↓</option>
-                                {sheetPreview.src_paths.map(p => <option key={p} value={p}>{p}</option>)}
-                              </select>
-                            )}
-                          </div>
+                          <XPathPicker
+                            value={row.source}
+                            onChange={v => updatePreviewRow(i, 'source', v)}
+                            paths={sheetPreview.src_paths}
+                            onSelect={(fullPath, seg) => {
+                              updatePreviewRow(i, 'source', seg)
+                              updatePreviewRow(i, 'source_path', fullPath)
+                              updatePreviewRow(i, 'source_matched', 'true')
+                            }}
+                            isUnmatched={!srcOk}
+                            accentColor="blue"
+                          />
                           <div className={`text-[9px] font-mono mt-0.5 truncate pl-0.5 ${srcFullPath ? 'text-gray-500' : row.source ? 'text-red-700' : ''}`}
                             title={srcFullPath}>
                             {srcFullPath || (row.source ? 'not found in XSD' : '')}
                           </div>
                         </div>
 
-                        {/* Target field */}
+                        {/* Target field — searchable XPath picker */}
                         <div>
-                          <div className="flex items-center gap-1">
-                            <input value={row.target} onChange={e => updatePreviewRow(i, 'target', e.target.value)}
-                              className={`flex-1 min-w-0 bg-gray-900/60 rounded px-2 py-1 font-mono text-xs text-white outline-none transition-colors
-                                ${tgtOk ? 'border border-gray-700 focus:border-green-500 hover:border-green-700/60'
-                                        : 'border border-red-600 bg-red-950/30 focus:border-red-500'}`} />
-                            {sheetPreview.tgt_paths.length > 0 && (
-                              <select value=""
-                                onChange={e => { if (e.target.value) { updatePreviewRow(i, 'target', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'target_path', e.target.value); updatePreviewRow(i, 'target_matched', 'true') } }}
-                                className={`w-8 text-[9px] rounded px-0.5 py-1 cursor-pointer bg-gray-800 border shrink-0 ${tgtOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
-                                title="Pick from XSD">
-                                <option value="">↓</option>
-                                {sheetPreview.tgt_paths.map(p => <option key={p} value={p}>{p}</option>)}
-                              </select>
-                            )}
-                          </div>
+                          <XPathPicker
+                            value={row.target}
+                            onChange={v => updatePreviewRow(i, 'target', v)}
+                            paths={sheetPreview.tgt_paths}
+                            onSelect={(fullPath, seg) => {
+                              updatePreviewRow(i, 'target', seg)
+                              updatePreviewRow(i, 'target_path', fullPath)
+                              updatePreviewRow(i, 'target_matched', 'true')
+                            }}
+                            isUnmatched={!tgtOk}
+                            accentColor="green"
+                          />
                           <div className={`text-[9px] font-mono mt-0.5 truncate pl-0.5 ${tgtFullPath ? 'text-gray-500' : row.target ? 'text-red-700' : ''}`}
                             title={tgtFullPath}>
                             {tgtFullPath || (row.target ? 'not found in XSD' : '')}
