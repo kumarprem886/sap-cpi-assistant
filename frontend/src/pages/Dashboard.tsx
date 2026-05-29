@@ -12,6 +12,8 @@ interface AISettings {
   provider: string
   anthropicKey: string; anthropicModel: string
   groqKey: string;      groqModel: string
+  openaiKey: string;    openaiModel: string
+  geminiKey: string;    geminiModel: string
   ollamaBaseUrl: string; ollamaModel: string
 }
 
@@ -69,7 +71,7 @@ const PROVIDERS = [
     id: 'anthropic',
     label: 'Anthropic',
     sub: 'Claude',
-    color:  { ring: 'ring-orange-600/60', bg: 'bg-orange-900/20', dot: 'bg-orange-400', text: 'text-orange-300', badge: 'bg-orange-900/40 text-orange-300 border-orange-700' },
+    color: { ring: 'ring-orange-600/60', bg: 'bg-orange-900/20', dot: 'bg-orange-400', text: 'text-orange-300', badge: 'bg-orange-900/40 text-orange-300 border-orange-700' },
     isConfigured: (s: AISettings) => !!s.anthropicKey,
     model:        (s: AISettings) => s.anthropicModel,
   },
@@ -77,16 +79,32 @@ const PROVIDERS = [
     id: 'groq',
     label: 'Groq',
     sub: 'Free Cloud',
-    color:  { ring: 'ring-green-600/60', bg: 'bg-green-900/20', dot: 'bg-green-400', text: 'text-green-300', badge: 'bg-green-900/40 text-green-300 border-green-700' },
+    color: { ring: 'ring-green-600/60', bg: 'bg-green-900/20', dot: 'bg-green-400', text: 'text-green-300', badge: 'bg-green-900/40 text-green-300 border-green-700' },
     isConfigured: (s: AISettings) => !!s.groqKey,
     model:        (s: AISettings) => s.groqModel,
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    sub: 'GPT',
+    color: { ring: 'ring-teal-600/60', bg: 'bg-teal-900/20', dot: 'bg-teal-400', text: 'text-teal-300', badge: 'bg-teal-900/40 text-teal-300 border-teal-700' },
+    isConfigured: (s: AISettings) => !!s.openaiKey,
+    model:        (s: AISettings) => s.openaiModel,
+  },
+  {
+    id: 'gemini',
+    label: 'Gemini',
+    sub: 'Google',
+    color: { ring: 'ring-purple-600/60', bg: 'bg-purple-900/20', dot: 'bg-purple-400', text: 'text-purple-300', badge: 'bg-purple-900/40 text-purple-300 border-purple-700' },
+    isConfigured: (s: AISettings) => !!s.geminiKey,
+    model:        (s: AISettings) => s.geminiModel,
   },
   {
     id: 'ollama',
     label: 'Ollama',
     sub: 'Local',
-    color:  { ring: 'ring-blue-600/60', bg: 'bg-blue-900/20', dot: 'bg-blue-400', text: 'text-blue-300', badge: 'bg-blue-900/40 text-blue-300 border-blue-700' },
-    isConfigured: (_: AISettings) => true,   // Ollama needs no key
+    color: { ring: 'ring-blue-600/60', bg: 'bg-blue-900/20', dot: 'bg-blue-400', text: 'text-blue-300', badge: 'bg-blue-900/40 text-blue-300 border-blue-700' },
+    isConfigured: (_: AISettings) => true,
     model:        (s: AISettings) => s.ollamaModel,
   },
 ]
@@ -120,7 +138,7 @@ export default function Dashboard() {
         <h2 className="text-lg font-semibold text-white mb-3">Connections</h2>
 
         {/* AI providers */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
           {PROVIDERS.map(p => {
             const isActive    = aiSettings?.provider === p.id
             const configured  = aiSettings ? p.isConfigured(aiSettings) : false

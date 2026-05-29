@@ -22,44 +22,53 @@ const nav = [
 const providerStyle: Record<string, { label: string; color: string; badge: string }> = {
   anthropic: { label: 'Claude',  color: 'text-orange-400', badge: 'bg-orange-900/40 text-orange-300 border-orange-700' },
   groq:      { label: 'Groq',    color: 'text-green-400',  badge: 'bg-green-900/40 text-green-300 border-green-700'   },
+  openai:    { label: 'GPT',     color: 'text-teal-400',   badge: 'bg-teal-900/40 text-teal-300 border-teal-700'      },
+  gemini:    { label: 'Gemini',  color: 'text-purple-400', badge: 'bg-purple-900/40 text-purple-300 border-purple-700'},
   ollama:    { label: 'Ollama',  color: 'text-blue-400',   badge: 'bg-blue-900/40 text-blue-300 border-blue-700'      },
 }
 
 const MASKED = '••••••••'
 
-// ── Groq model options ─────────────────────────────────────────────────────────
 const GROQ_MODELS = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-70b-versatile',
-  'llama-3.1-8b-instant',
-  'llama3-8b-8192',
-  'llama3-70b-8192',
-  'mixtral-8x7b-32768',
-  'gemma2-9b-it',
+  'llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant',
+  'llama3-8b-8192', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma2-9b-it',
 ]
-
 const ANTHROPIC_MODELS = [
-  'claude-opus-4-5',
-  'claude-sonnet-4-5',
-  'claude-3-5-sonnet-20241022',
-  'claude-3-5-haiku-20241022',
-  'claude-3-opus-20240229',
+  'claude-opus-4-5', 'claude-sonnet-4-5', 'claude-3-5-sonnet-20241022',
+  'claude-3-5-haiku-20241022', 'claude-3-opus-20240229',
+]
+const OPENAI_MODELS = [
+  'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo',
+]
+const GEMINI_MODELS = [
+  'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro', 'gemini-1.5-flash',
 ]
 
 // ── AI Settings Modal ──────────────────────────────────────────────────────────
 
 interface AISettings {
-  provider: 'anthropic' | 'groq' | 'ollama'
-  anthropicKey: string;   anthropicModel: string
-  groqKey: string;        groqModel: string
-  ollamaBaseUrl: string;  ollamaModel: string;  ollamaVisionModel: string
+  provider: 'anthropic' | 'groq' | 'openai' | 'gemini' | 'ollama'
+  anthropicKey: string;  anthropicModel: string
+  groqKey: string;       groqModel: string
+  openaiKey: string;     openaiModel: string
+  geminiKey: string;     geminiModel: string
+  ollamaBaseUrl: string; ollamaModel: string; ollamaVisionModel: string
+}
+
+const DEFAULT_FORM: AISettings = {
+  provider: 'groq',
+  anthropicKey: '', anthropicModel: 'claude-opus-4-5',
+  groqKey: '',      groqModel: 'llama-3.3-70b-versatile',
+  openaiKey: '',    openaiModel: 'gpt-4o',
+  geminiKey: '',    geminiModel: 'gemini-2.0-flash',
+  ollamaBaseUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5-coder:14b', ollamaVisionModel: 'llava:7b',
 }
 
 function AISettingsModal({ onClose, onSaved }: {
   onClose: () => void
   onSaved: (provider: string, model: string) => void
 }) {
-  const [form, setForm]       = useState<AISettings>({ provider: 'groq', anthropicKey: '', anthropicModel: 'claude-opus-4-5', groqKey: '', groqModel: 'llama-3.3-70b-versatile', ollamaBaseUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5-coder:14b', ollamaVisionModel: 'llava:7b' })
+  const [form, setForm]       = useState<AISettings>(DEFAULT_FORM)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
   const [result, setResult]   = useState<{ ok: boolean; msg: string } | null>(null)
@@ -67,7 +76,7 @@ function AISettingsModal({ onClose, onSaved }: {
 
   useEffect(() => {
     settingsAPI.getAI().then(r => {
-      setForm(r.data)
+      setForm({ ...DEFAULT_FORM, ...r.data })
       setCustomGroq(r.data.groqModel && !GROQ_MODELS.includes(r.data.groqModel))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
@@ -80,10 +89,7 @@ function AISettingsModal({ onClose, onSaved }: {
     try {
       const r = await settingsAPI.saveAI(form)
       const ok = !r.data.warning
-      const msg = ok
-        ? `Active: ${r.data.provider} · ${r.data.model}`
-        : `Saved — but reload warning: ${r.data.warning}`
-      setResult({ ok, msg })
+      setResult({ ok, msg: ok ? `Active: ${r.data.provider} · ${r.data.model}` : `Saved — warning: ${r.data.warning}` })
       onSaved(r.data.provider, r.data.model)
     } catch (e: any) {
       setResult({ ok: false, msg: e?.response?.data?.detail ?? 'Save failed' })
@@ -92,8 +98,7 @@ function AISettingsModal({ onClose, onSaved }: {
 
   const maskField = (val: string, setter: (v: string) => void, placeholder: string) => (
     <input
-      className="input-field w-full text-sm"
-      type="password"
+      className="input-field w-full text-sm" type="password"
       placeholder={val === MASKED ? 'unchanged' : placeholder}
       value={val === MASKED ? '' : val}
       onFocus={() => { if (val === MASKED) setter('') }}
@@ -101,6 +106,8 @@ function AISettingsModal({ onClose, onSaved }: {
       onChange={e => setter(e.target.value)}
     />
   )
+
+  const ALL_PROVIDERS = ['anthropic', 'groq', 'openai', 'gemini', 'ollama'] as const
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
@@ -127,11 +134,11 @@ function AISettingsModal({ onClose, onSaved }: {
         ) : (
           <div className="space-y-4">
 
-            {/* Provider tabs */}
+            {/* Provider tabs — 5 across */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-2">Provider</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(['anthropic', 'groq', 'ollama'] as const).map(p => {
+              <div className="grid grid-cols-5 gap-1">
+                {ALL_PROVIDERS.map(p => {
                   const ps = providerStyle[p]
                   return (
                     <button key={p} onClick={() => set('provider', p)}
@@ -147,7 +154,7 @@ function AISettingsModal({ onClose, onSaved }: {
               </div>
             </div>
 
-            {/* ── Anthropic fields ── */}
+            {/* ── Anthropic ── */}
             {form.provider === 'anthropic' && (
               <div className="space-y-3 p-4 rounded-xl bg-orange-950/20 border border-orange-800/40">
                 <p className="text-xs font-medium text-orange-400">Anthropic — Claude</p>
@@ -165,7 +172,7 @@ function AISettingsModal({ onClose, onSaved }: {
               </div>
             )}
 
-            {/* ── Groq fields ── */}
+            {/* ── Groq ── */}
             {form.provider === 'groq' && (
               <div className="space-y-3 p-4 rounded-xl bg-green-950/20 border border-green-800/40">
                 <p className="text-xs font-medium text-green-400">Groq — Free Cloud Inference</p>
@@ -195,7 +202,43 @@ function AISettingsModal({ onClose, onSaved }: {
               </div>
             )}
 
-            {/* ── Ollama fields ── */}
+            {/* ── OpenAI ── */}
+            {form.provider === 'openai' && (
+              <div className="space-y-3 p-4 rounded-xl bg-teal-950/20 border border-teal-800/40">
+                <p className="text-xs font-medium text-teal-400">OpenAI — GPT Models</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.openaiKey, v => set('openaiKey', v), 'sk-...')}
+                  <p className="text-xs text-gray-600 mt-1">Get your key at <span className="text-teal-400">platform.openai.com</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.openaiModel} onChange={e => set('openaiModel', e.target.value)}>
+                    {OPENAI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── Gemini ── */}
+            {form.provider === 'gemini' && (
+              <div className="space-y-3 p-4 rounded-xl bg-purple-950/20 border border-purple-800/40">
+                <p className="text-xs font-medium text-purple-400">Google — Gemini Models</p>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">API Key <span className="text-red-400">*</span></label>
+                  {maskField(form.geminiKey, v => set('geminiKey', v), 'AIza...')}
+                  <p className="text-xs text-gray-600 mt-1">Get your key at <span className="text-purple-400">aistudio.google.com</span></p>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Model</label>
+                  <select className="input-field w-full text-sm" value={form.geminiModel} onChange={e => set('geminiModel', e.target.value)}>
+                    {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* ── Ollama ── */}
             {form.provider === 'ollama' && (
               <div className="space-y-3 p-4 rounded-xl bg-blue-950/20 border border-blue-800/40">
                 <p className="text-xs font-medium text-blue-400">Ollama — Local Models (no key needed)</p>
