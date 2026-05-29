@@ -1156,7 +1156,6 @@ export default function MessageMapping() {
                                     )}
                                     {row.ai_derived && <span title="AI derived" className="shrink-0 text-purple-400 text-[9px]">✨</span>}
                                   </div>
-                              }
                             </td>
 
                             {/* Status badge */}
