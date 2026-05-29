@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
-  Shuffle, Loader2, Wand2, Zap, Upload, X, FileCode,
+  Shuffle, Loader2, Wand2, Zap, Upload, X, Plus, FileCode,
   Package, Cpu, BookOpen, ArrowRight, ChevronDown, ChevronUp,
   CheckCircle2, Clock, RefreshCw, Download, Eye, FileSpreadsheet,
   AlertCircle,
@@ -498,6 +498,22 @@ export default function MessageMapping() {
       const msg = e?.response?.data ? await new Response(e.response.data).text().then(t => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
       setSheetError(msg || 'Preview failed')
     } finally { setPreviewLoading(false) }
+  }
+
+  const deletePreviewRow = (idx: number) => {
+    setSheetPreview(prev => {
+      if (!prev) return prev
+      const rows = prev.rows.filter((_, i) => i !== idx)
+      return { ...prev, rows, matched: rows.filter(r => r.status === 'matched').length }
+    })
+  }
+
+  const addPreviewRow = () => {
+    setSheetPreview(prev => {
+      if (!prev) return prev
+      const newRow = { source: '', target: '', functional_rule: '', technical_rule: '', status: 'unmatched' as const, source_matched: false, target_matched: false }
+      return { ...prev, rows: [...prev.rows, newRow] }
+    })
   }
 
   const updatePreviewRow = (idx: number, field: string, value: string | boolean) => {
@@ -1093,13 +1109,14 @@ export default function MessageMapping() {
               {/* Preview — card-per-row layout (no horizontal scrolling) */}
               <div className="space-y-1.5 -mx-2">
                 {/* Column headers */}
-                <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2.5rem] gap-2 px-3 pb-1 border-b border-gray-700">
+                <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2.5rem_1.5rem] gap-2 px-3 pb-1 border-b border-gray-700">
                   <span className="text-[10px] font-semibold text-gray-600">#</span>
                   <span className="text-[10px] font-semibold text-blue-400">Source Field</span>
                   <span className="text-[10px] font-semibold text-green-400">Target Field</span>
                   <span className="text-[10px] font-semibold text-purple-400">Functional Rule</span>
                   <span className="text-[10px] font-semibold text-amber-400">Technical Rule</span>
                   <span className="text-[10px] font-semibold text-gray-600 text-center">OK</span>
+                  <span></span>{/* delete column header */}
                 </div>
 
                 {sheetPreview.rows.map((row, i) => {
@@ -1117,8 +1134,8 @@ export default function MessageMapping() {
                     <div key={i} className={`rounded-lg border px-3 py-2 transition-colors ${
                       row.status === 'unmatched' ? 'bg-red-950/10 border-red-800/40' : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
                     }`}>
-                      {/* Row: # | Source | Target | Functional | Technical | Status */}
-                      <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2.5rem] gap-2 items-start">
+                      {/* Row: # | Source | Target | Functional | Technical | Status | Delete */}
+                      <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2.5rem_1.5rem] gap-2 items-start">
 
                         {/* Row number */}
                         <span className="text-[10px] text-gray-600 pt-1.5 text-center">{i + 1}</span>
@@ -1200,11 +1217,26 @@ export default function MessageMapping() {
                             {row.status === 'matched' ? '✓' : row.status === 'unmatched' ? '✗' : '—'}
                           </span>
                         </div>
+
+                        {/* Delete row */}
+                        <div className="flex items-start justify-center pt-1">
+                          <button onClick={() => deletePreviewRow(i)}
+                            className="text-gray-600 hover:text-red-400 transition-colors p-0.5 rounded"
+                            title="Delete this row">
+                            <X size={12} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
+
+              {/* Add Row button */}
+              <button onClick={addPreviewRow}
+                className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700 border border-gray-700 hover:border-gray-600 rounded-lg transition-colors w-full justify-center">
+                <Plus size={13} /> Add Row
+              </button>
 
               {/* Unmatched detail */}
               {sheetPreview.unmatched_detail.length > 0 && (
