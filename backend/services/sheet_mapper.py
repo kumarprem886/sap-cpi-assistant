@@ -32,10 +32,7 @@ def _rows_from_xlsx(data: bytes) -> list[list]:
     try:
         import openpyxl  # type: ignore
     except ImportError:
-        raise RuntimeError(
-            "openpyxl is required for .xlsx support.  "
-            "Run: pip install openpyxl"
-        )
+        raise RuntimeError("openpyxl is required for .xlsx support. Run: pip install openpyxl")
     wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
     ws = wb.active
     return [
@@ -43,6 +40,38 @@ def _rows_from_xlsx(data: bytes) -> list[list]:
         for row in ws.iter_rows(values_only=True)
         if any(c is not None for c in row)
     ]
+
+
+def _rows_from_xls(data: bytes) -> list[list]:
+    """Read legacy .xls via xlrd. Scans all sheets; picks the one with mapping data."""
+    try:
+        import xlrd  # type: ignore
+    except ImportError:
+        raise RuntimeError("xlrd is required for .xls support. Run: pip install xlrd")
+    wb = xlrd.open_workbook(file_contents=data)
+
+    # Try to find a sheet that looks like a mapping table
+    # Priority: sheet whose first column header-like row contains source/target keywords
+    _SHEET_KEYWORDS = {"source", "target", "mapping", "field"}
+    best_sheet = None
+    for sheet in wb.sheets():
+        for r in range(min(15, sheet.nrows)):
+            row_lower = {str(sheet.cell_value(r, c)).strip().lower()
+                         for c in range(sheet.ncols)}
+            if row_lower & _SHEET_KEYWORDS:
+                best_sheet = sheet
+                break
+        if best_sheet:
+            break
+    if best_sheet is None:
+        best_sheet = wb.sheets()[0]   # fallback to first sheet
+
+    rows = []
+    for r in range(best_sheet.nrows):
+        row = [best_sheet.cell_value(r, c) for c in range(best_sheet.ncols)]
+        if any(str(v).strip() for v in row):
+            rows.append(row)
+    return rows
 
 
 def _rows_from_csv(data: bytes) -> list[list]:
@@ -56,9 +85,7 @@ def _rows_from_file(data: bytes, filename: str) -> list[list]:
     if ext in (".xlsx", ".xlsm", ".xlam"):
         return _rows_from_xlsx(data)
     if ext == ".xls":
-        raise RuntimeError(
-            ".xls is not supported — please save as .xlsx or .csv."
-        )
+        return _rows_from_xls(data)
     return _rows_from_csv(data)
 
 
@@ -98,12 +125,18 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
         func_col  = _detect_col(headers, ["functional mapping rule", "functional mapping",
                                            "functional rule", "functional", "business rule"])
         # Technical rule / CPI expression column.
-        # Supports: our template's "Technical Mapping Rule", common exports like
-        # "Mapping Logic", "Logic", "Rule", "Script" etc.
+        # Supports: our template ("Technical Mapping Rule"), CSV exports ("Mapping Logic"),
+        # and tools like SAP XI/PI ("Mapping").
         tech_col  = _detect_col(headers, ["technical mapping rule", "technical mapping",
                                            "technical rule", "technical", "cpi expression",
                                            "expression", "formula", "mapping logic",
                                            "logic", "script code", "script"])
+        # If still not found, try exact-header match for columns named exactly
+        # "MAPPING", "RULE", "EXPRESSION", "LOGIC", "SCRIPT" (common in tool exports)
+        if tech_col < 0:
+            _EXACT_TECH = {"mapping", "rule", "expression", "logic", "script"}
+            tech_col = next((j for j, h in enumerate(headers)
+                             if h.strip().lower() in _EXACT_TECH), -1)
         # If both point to same column (ambiguous header), try the next one for tech
         if tech_col >= 0 and tech_col == func_col:
             for j, h in enumerate(headers):
@@ -111,6 +144,10 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
                         for kw in ("rule", "mapping", "expression", "formula", "transform")):
                     tech_col = j
                     break
+        # TARGET | MAPPING style: no explicit source column — use MAPPING as source+rule
+        # (MAPPING column contains either source XPath for direct maps or a function expression)
+        if src_col < 0 and tech_col >= 0:
+            src_col = tech_col   # same column; sheet_to_field_mappings splits by content
     else:
         # No header found — assume col 0 = source, last col = target
         data_rows = rows
