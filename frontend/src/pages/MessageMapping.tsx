@@ -1070,131 +1070,116 @@ export default function MessageMapping() {
                 </div>
               </div>
 
-              {/* Preview table */}
-              <div className="card p-0 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="text-xs w-full">
-                    <thead className="bg-gray-800 sticky top-0">
-                      <tr>
-                        <th className="px-2 py-2 text-left text-gray-400 font-semibold w-4">#</th>
-                        <th className="px-2 py-2 text-left text-blue-400 font-semibold">Source Field</th>
-                        <th className="px-2 py-2 text-left text-green-400 font-semibold">Target Field</th>
-                        <th className="px-2 py-2 text-left text-purple-400 font-semibold w-64">Functional Rule</th>
-                        <th className="px-2 py-2 text-left text-amber-400 font-semibold w-72">Technical Rule (CPI expression)</th>
-                        <th className="px-2 py-2 text-center text-gray-400 font-semibold w-20">Status</th>
-                        <th className="px-2 py-2 text-center text-gray-400 font-semibold w-14">AI</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800">
-                      {sheetPreview.rows.map((row, i) => {
-                        const isDirect = !row.functional_rule && !row.technical_rule && row.status !== 'unmatched'
-                        const srcOk = row.source_matched !== false
-                        const tgtOk = row.target_matched !== false
-                        // Resolved full XPath — from backend (uploaded sheet) or prebuilt JSON
-                        const srcFullPath = row.source_path || (row.source ? srcPathMap.get(row.source.toLowerCase()) : undefined)
-                        const tgtFullPath = row.target_path || (row.target ? tgtPathMap.get(row.target.toLowerCase()) : undefined)
-                        return (
-                          <tr key={i} className={`hover:bg-gray-800/30 ${row.status === 'unmatched' ? 'bg-red-950/10' : ''}`}>
-                            <td className="px-2 py-1 text-gray-600 text-[10px] align-top pt-2">{i + 1}</td>
-
-                            {/* Source field — always shows full XPath picker */}
-                            <td className="px-1 py-1">
-                              <div className="flex items-center gap-0.5">
-                                <input value={row.source} onChange={e => updatePreviewRow(i, 'source', e.target.value)}
-                                  className={`flex-1 min-w-0 bg-transparent rounded px-1.5 py-0.5 font-mono text-white outline-none transition-colors text-[10px]
-                                    ${srcOk ? 'border border-transparent hover:border-blue-700/50 focus:border-blue-600'
-                                            : 'border border-red-600/60 bg-red-950/20 focus:border-red-500'}`} />
-                                {sheetPreview.src_paths.length > 0 && (
-                                  <select
-                                    value=""
-                                    onChange={e => { if (e.target.value) { updatePreviewRow(i, 'source', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'source_path', e.target.value); updatePreviewRow(i, 'source_matched', 'true') } }}
-                                    className={`text-[9px] rounded px-0.5 py-0.5 cursor-pointer bg-gray-800 border ${srcOk ? 'border-gray-700 text-gray-400 hover:border-blue-700/50' : 'border-red-700/50 text-orange-300'}`}
-                                    title="Pick from XSD paths">
-                                    <option value="">↓</option>
-                                    {sheetPreview.src_paths.map(p => (
-                                      <option key={p} value={p}>{p}</option>
-                                    ))}
-                                  </select>
-                                )}
-                              </div>
-                              {srcFullPath
-                                ? <div className="text-[9px] text-gray-600 font-mono truncate px-1.5 mt-0.5" title={srcFullPath}>{srcFullPath}</div>
-                                : row.source && <div className="text-[9px] text-red-800 px-1.5 mt-0.5">not found in XSD</div>
-                              }
-                            </td>
-
-                            {/* Target field — always shows full XPath picker */}
-                            <td className="px-1 py-1">
-                              <div className="flex items-center gap-0.5">
-                                <input value={row.target} onChange={e => updatePreviewRow(i, 'target', e.target.value)}
-                                  className={`flex-1 min-w-0 bg-transparent rounded px-1.5 py-0.5 font-mono text-white outline-none transition-colors text-[10px]
-                                    ${tgtOk ? 'border border-transparent hover:border-green-700/50 focus:border-green-600'
-                                            : 'border border-red-600/60 bg-red-950/20 focus:border-red-500'}`} />
-                                {sheetPreview.tgt_paths.length > 0 && (
-                                  <select
-                                    value=""
-                                    onChange={e => { if (e.target.value) { updatePreviewRow(i, 'target', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'target_path', e.target.value); updatePreviewRow(i, 'target_matched', 'true') } }}
-                                    className={`text-[9px] rounded px-0.5 py-0.5 cursor-pointer bg-gray-800 border ${tgtOk ? 'border-gray-700 text-gray-400 hover:border-green-700/50' : 'border-red-700/50 text-orange-300'}`}
-                                    title="Pick from XSD paths">
-                                    <option value="">↓</option>
-                                    {sheetPreview.tgt_paths.map(p => (
-                                      <option key={p} value={p}>{p}</option>
-                                    ))}
-                                  </select>
-                                )}
-                              </div>
-                              {tgtFullPath
-                                ? <div className="text-[9px] text-gray-600 font-mono truncate px-1.5 mt-0.5" title={tgtFullPath}>{tgtFullPath}</div>
-                                : row.target && <div className="text-[9px] text-red-800 px-1.5 mt-0.5">not found in XSD</div>
-                              }
-                            </td>
-
-                            {/* Functional rule — always editable; "direct" shown as placeholder when blank */}
-                            <td className="px-1 py-1">
-                              <input value={row.functional_rule || ''} onChange={e => updatePreviewRow(i, 'functional_rule', e.target.value)}
-                                placeholder={isDirect ? 'direct — click to add rule' : 'describe the mapping…'}
-                                className="w-full bg-transparent border border-transparent hover:border-purple-700/50 focus:border-purple-600 rounded px-1.5 py-0.5 text-purple-300 italic outline-none transition-colors text-[10px] placeholder:text-gray-600" />
-                            </td>
-
-                            {/* Technical rule — always editable; derive button when func_rule exists */}
-                            <td className="px-1 py-1">
-                              <div className="flex items-center gap-1">
-                                <input value={row.technical_rule || ''} onChange={e => updatePreviewRow(i, 'technical_rule', e.target.value)}
-                                  placeholder={row.functional_rule && !row.technical_rule ? '← click ✨' : isDirect ? 'direct' : ''}
-                                  className="flex-1 bg-transparent border border-transparent hover:border-amber-700/50 focus:border-amber-600 rounded px-1.5 py-0.5 font-mono text-amber-300 outline-none transition-colors text-[10px] placeholder:text-gray-600" />
-                                {row.functional_rule && (
-                                  <button onClick={() => deriveOneRule(i)} disabled={derivingRow === i}
-                                    className={`shrink-0 p-1 rounded transition-colors ${
-                                      row.technical_rule ? 'text-gray-600 hover:text-purple-400' : 'text-purple-400 hover:text-purple-200 bg-purple-900/20'
-                                    }`} title="AI derive technical rule from functional description">
-                                    {derivingRow === i ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
-                                      </button>
-                                    )}
-                                    {row.ai_derived && <span title="AI derived" className="shrink-0 text-purple-400 text-[9px]">✨</span>}
-                                  </div>
-                            </td>
-
-                            {/* Status badge */}
-                            <td className="px-2 py-1 text-center">
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
-                                row.status === 'matched'   ? 'bg-green-900/40 text-green-300' :
-                                row.status === 'unmatched' ? 'bg-red-900/40 text-red-300' :
-                                'bg-gray-800 text-gray-500'
-                              }`}>
-                                {row.status === 'matched' ? '✓' : row.status === 'unmatched' ? '✗' : '—'}
-                              </span>
-                            </td>
-
-                            {/* AI derived indicator */}
-                            <td className="px-2 py-1 text-center">
-                              {row.ai_derived && <span className="text-[9px] text-purple-400">✨</span>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+              {/* Preview — card-per-row layout (no horizontal scrolling) */}
+              <div className="space-y-1.5 -mx-2">
+                {/* Column headers */}
+                <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2.5rem] gap-2 px-3 pb-1 border-b border-gray-700">
+                  <span className="text-[10px] font-semibold text-gray-600">#</span>
+                  <span className="text-[10px] font-semibold text-blue-400">Source Field</span>
+                  <span className="text-[10px] font-semibold text-green-400">Target Field</span>
+                  <span className="text-[10px] font-semibold text-purple-400">Functional Rule</span>
+                  <span className="text-[10px] font-semibold text-amber-400">Technical Rule</span>
+                  <span className="text-[10px] font-semibold text-gray-600 text-center">OK</span>
                 </div>
+
+                {sheetPreview.rows.map((row, i) => {
+                  const isDirect = !row.functional_rule && !row.technical_rule && row.status !== 'unmatched'
+                  const srcOk = row.source_matched !== false
+                  const tgtOk = row.target_matched !== false
+                  const srcFullPath = row.source_path || (row.source ? srcPathMap.get(row.source.toLowerCase()) : undefined)
+                  const tgtFullPath = row.target_path || (row.target ? tgtPathMap.get(row.target.toLowerCase()) : undefined)
+
+                  return (
+                    <div key={i} className={`rounded-lg border px-3 py-2 transition-colors ${
+                      row.status === 'unmatched' ? 'bg-red-950/10 border-red-800/40' : 'bg-gray-800/30 border-gray-700/50 hover:border-gray-600'
+                    }`}>
+                      {/* Row: # | Source | Target | Functional | Technical | Status */}
+                      <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2.5rem] gap-2 items-start">
+
+                        {/* Row number */}
+                        <span className="text-[10px] text-gray-600 pt-1.5 text-center">{i + 1}</span>
+
+                        {/* Source field */}
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <input value={row.source} onChange={e => updatePreviewRow(i, 'source', e.target.value)}
+                              className={`flex-1 min-w-0 bg-gray-900/60 rounded px-2 py-1 font-mono text-xs text-white outline-none transition-colors
+                                ${srcOk ? 'border border-gray-700 focus:border-blue-500 hover:border-blue-700/60'
+                                        : 'border border-red-600 bg-red-950/30 focus:border-red-500'}`} />
+                            {sheetPreview.src_paths.length > 0 && (
+                              <select value=""
+                                onChange={e => { if (e.target.value) { updatePreviewRow(i, 'source', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'source_path', e.target.value); updatePreviewRow(i, 'source_matched', 'true') } }}
+                                className={`text-[9px] rounded px-1 py-1 cursor-pointer bg-gray-800 border shrink-0 ${srcOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
+                                title="Pick from XSD">
+                                <option value="">↓</option>
+                                {sheetPreview.src_paths.map(p => <option key={p} value={p}>{p}</option>)}
+                              </select>
+                            )}
+                          </div>
+                          <div className={`text-[9px] font-mono mt-0.5 truncate pl-0.5 ${srcFullPath ? 'text-gray-500' : row.source ? 'text-red-700' : ''}`}
+                            title={srcFullPath}>
+                            {srcFullPath || (row.source ? 'not found in XSD' : '')}
+                          </div>
+                        </div>
+
+                        {/* Target field */}
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <input value={row.target} onChange={e => updatePreviewRow(i, 'target', e.target.value)}
+                              className={`flex-1 min-w-0 bg-gray-900/60 rounded px-2 py-1 font-mono text-xs text-white outline-none transition-colors
+                                ${tgtOk ? 'border border-gray-700 focus:border-green-500 hover:border-green-700/60'
+                                        : 'border border-red-600 bg-red-950/30 focus:border-red-500'}`} />
+                            {sheetPreview.tgt_paths.length > 0 && (
+                              <select value=""
+                                onChange={e => { if (e.target.value) { updatePreviewRow(i, 'target', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'target_path', e.target.value); updatePreviewRow(i, 'target_matched', 'true') } }}
+                                className={`text-[9px] rounded px-1 py-1 cursor-pointer bg-gray-800 border shrink-0 ${tgtOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
+                                title="Pick from XSD">
+                                <option value="">↓</option>
+                                {sheetPreview.tgt_paths.map(p => <option key={p} value={p}>{p}</option>)}
+                              </select>
+                            )}
+                          </div>
+                          <div className={`text-[9px] font-mono mt-0.5 truncate pl-0.5 ${tgtFullPath ? 'text-gray-500' : row.target ? 'text-red-700' : ''}`}
+                            title={tgtFullPath}>
+                            {tgtFullPath || (row.target ? 'not found in XSD' : '')}
+                          </div>
+                        </div>
+
+                        {/* Functional rule */}
+                        <input value={row.functional_rule || ''}
+                          onChange={e => updatePreviewRow(i, 'functional_rule', e.target.value)}
+                          placeholder={isDirect ? 'direct' : 'describe the mapping…'}
+                          className="bg-gray-900/60 border border-gray-700 hover:border-purple-700/60 focus:border-purple-500 rounded px-2 py-1 text-xs text-purple-300 italic outline-none transition-colors placeholder:text-gray-600 w-full" />
+
+                        {/* Technical rule + derive */}
+                        <div className="flex items-center gap-1">
+                          <input value={row.technical_rule || ''}
+                            onChange={e => updatePreviewRow(i, 'technical_rule', e.target.value)}
+                            placeholder={row.functional_rule && !row.technical_rule ? 'click ✨ to derive' : isDirect ? 'direct' : ''}
+                            className="flex-1 min-w-0 bg-gray-900/60 border border-gray-700 hover:border-amber-700/60 focus:border-amber-500 rounded px-2 py-1 text-xs font-mono text-amber-300 outline-none transition-colors placeholder:text-gray-600" />
+                          {row.functional_rule && (
+                            <button onClick={() => deriveOneRule(i)} disabled={derivingRow === i}
+                              className={`shrink-0 p-1.5 rounded-lg transition-colors ${row.technical_rule ? 'text-gray-600 hover:text-purple-400 hover:bg-gray-700' : 'text-purple-300 bg-purple-900/30 hover:bg-purple-900/50'}`}
+                              title="AI derive from functional description">
+                              {derivingRow === i ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                            </button>
+                          )}
+                          {row.ai_derived && <span className="text-[9px] text-purple-400 shrink-0" title="AI derived">✨</span>}
+                        </div>
+
+                        {/* Status */}
+                        <div className="flex items-start justify-center pt-1">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                            row.status === 'matched'   ? 'text-green-400' :
+                            row.status === 'unmatched' ? 'text-red-400' : 'text-gray-600'
+                          }`}>
+                            {row.status === 'matched' ? '✓' : row.status === 'unmatched' ? '✗' : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
 
               {/* Unmatched detail */}
