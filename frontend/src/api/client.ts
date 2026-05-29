@@ -2,6 +2,27 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
+// Attach JWT from localStorage on every request
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('cpi_token')
+  if (token) config.headers['Authorization'] = `Bearer ${token}`
+  return config
+})
+
+// Auto-logout on 401 (expired / invalid token)
+api.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 401 &&
+        !err.config.url?.includes('/auth/login') &&
+        !err.config.url?.includes('/auth/register')) {
+      localStorage.removeItem('cpi_token')
+      window.location.href = '/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
 export const authAPI = {
   login:          (email: string, password: string)  => api.post('/auth/login', { email, password }),
   register:       (data: object)                      => api.post('/auth/register', data),
