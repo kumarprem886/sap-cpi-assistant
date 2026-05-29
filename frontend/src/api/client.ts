@@ -2,6 +2,22 @@ import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
 
+export const authAPI = {
+  login:          (email: string, password: string)  => api.post('/auth/login', { email, password }),
+  register:       (data: object)                      => api.post('/auth/register', data),
+  me:             ()                                  => api.get('/auth/me'),
+  updateMe:       (data: object)                      => api.put('/auth/me', data),
+  changePassword: (data: object)                      => api.post('/auth/change-password', data),
+}
+
+export const usersAPI = {
+  list:          ()                                   => api.get('/users'),
+  create:        (data: object)                       => api.post('/users', data),
+  update:        (id: string, data: object)           => api.put(`/users/${id}`, data),
+  resetPassword: (id: string, newPassword: string)   => api.post(`/users/${id}/reset-password`, { new_password: newPassword }),
+  delete:        (id: string)                         => api.delete(`/users/${id}`),
+}
+
 export const iflowAPI = {
   generate: (data: object) => api.post('/iflow/generate', data),
   explain: (xml: string) => api.post('/iflow/explain', { xml }),

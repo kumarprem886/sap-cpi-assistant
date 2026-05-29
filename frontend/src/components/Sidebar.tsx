@@ -4,9 +4,10 @@ import {
   LayoutDashboard, GitMerge, Code2, FileCode2,
   Shuffle, MessageSquare, Zap, FileText, Cloud, Cpu,
   Settings, X, Loader2, Check, CheckCircle, XCircle,
-  ChevronDown,
+  ChevronDown, Users, LogOut,
 } from 'lucide-react'
 import { settingsAPI } from '../api/client'
+import { useAuth } from '../contexts/AuthContext'
 
 const nav = [
   { to: '/',       icon: LayoutDashboard, label: 'Dashboard'       },
@@ -290,9 +291,20 @@ function AISettingsModal({ onClose, onSaved }: {
   )
 }
 
+// ── User Avatar Helper ─────────────────────────────────────────────────────────
+
+function userInitials(fullName: string, username: string) {
+  if (fullName?.trim()) {
+    const parts = fullName.trim().split(' ')
+    return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+  }
+  return username.slice(0, 2).toUpperCase()
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 
 export default function Sidebar() {
+  const { user, logout } = useAuth()
   const [aiInfo, setAiInfo]       = useState<{ provider: string; model: string } | null>(null)
   const [showAISettings, setShowAISettings] = useState(false)
 
@@ -305,6 +317,14 @@ export default function Sidebar() {
   useEffect(() => { fetchStatus() }, [])
 
   const ps = aiInfo ? (providerStyle[aiInfo.provider] ?? { label: aiInfo.provider, color: 'text-gray-400', badge: '' }) : null
+
+  const avatarColors = [
+    'bg-blue-700', 'bg-purple-700', 'bg-green-700',
+    'bg-orange-700', 'bg-pink-700', 'bg-teal-700',
+  ]
+  const avatarColor = user
+    ? avatarColors[user.username.charCodeAt(0) % avatarColors.length]
+    : 'bg-gray-700'
 
   return (
     <>
@@ -323,7 +343,7 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {nav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -341,10 +361,32 @@ export default function Sidebar() {
               {label}
             </NavLink>
           ))}
+
+          {/* Admin-only: User Management */}
+          {user?.role === 'admin' && (
+            <>
+              <div className="pt-2 pb-1 px-3">
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Admin</p>
+              </div>
+              <NavLink
+                to="/users"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-sap-blue text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`
+                }
+              >
+                <Users size={17} />
+                Users
+              </NavLink>
+            </>
+          )}
         </nav>
 
-        {/* AI provider footer */}
-        <div className="px-4 py-4 border-t border-gray-800">
+        {/* AI provider */}
+        <div className="px-4 py-3 border-t border-gray-800">
           <button
             onClick={() => setShowAISettings(true)}
             className="w-full flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-gray-800 transition-colors group"
@@ -367,6 +409,38 @@ export default function Sidebar() {
             <Settings size={13} className="text-gray-600 group-hover:text-gray-400 transition-colors shrink-0" />
           </button>
         </div>
+
+        {/* User section */}
+        {user && (
+          <div className="px-4 py-3 border-t border-gray-800">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-xs font-bold text-white shrink-0`}>
+                {userInitials(user.full_name, user.username)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-white truncate leading-tight">
+                  {user.full_name || user.username}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full border font-medium leading-none ${
+                    user.role === 'admin'
+                      ? 'bg-purple-900/40 text-purple-300 border-purple-700'
+                      : 'bg-blue-900/40 text-blue-300 border-blue-800'
+                  }`}>
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                title="Sign out"
+                className="p-1.5 rounded-md text-gray-600 hover:text-gray-300 hover:bg-gray-800 transition-colors shrink-0"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* AI Settings modal — rendered outside aside so it overlays everything */}
