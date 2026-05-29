@@ -8,7 +8,7 @@ from io import BytesIO
 from services.claude_service import generate
 from services.mmap_builder import build_mmap_xml, build_mmap_zip
 from services.xsd_parser import auto_map, smart_extract_paths
-from services.sheet_mapper import sheet_to_field_mappings
+from services.sheet_mapper import sheet_to_field_mappings, _parse_sheet_rows
 from services.prebuilt_mapper import (
     CATALOG_PAIRS as _CATALOG_PAIRS,
     prebuilt_status,
@@ -268,6 +268,163 @@ Rules:
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Template Download ─────────────────────────────────────────────────────────
+
+@router.get("/template")
+def download_template():
+    """Return the Excel mapping template (.xlsx) for download."""
+    from services.template_service import build_template_bytes
+    xlsx_bytes = build_template_bytes()
+    return StreamingResponse(
+        BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="CPI_Mapping_Template.xlsx"'},
+    )
+
+
+# ── Sheet Preview (parse + XSD resolve, no .mmap) ────────────────────────────
+
+@router.post("/preview-sheet")
+async def preview_sheet(
+    source_xsd:    UploadFile = File(...),
+    target_xsd:    UploadFile = File(...),
+    mapping_sheet: UploadFile = File(...),
+):
+    """
+    Parse the mapping sheet, resolve fields against uploaded XSDs,
+    and return matched + unmatched rows for the frontend preview table.
+    Does NOT generate a .mmap.
+    """
+    src_bytes   = await source_xsd.read()
+    tgt_bytes   = await target_xsd.read()
+    sheet_bytes = await mapping_sheet.read()
+
+    src_xsd_text = src_bytes.decode("utf-8", errors="replace")
+    tgt_xsd_text = tgt_bytes.decode("utf-8", errors="replace")
+
+    try:
+        src_root, src_paths = smart_extract_paths(src_xsd_text)
+        tgt_root, tgt_paths = smart_extract_paths(tgt_xsd_text)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse XSD: {exc}")
+
+    # Get the raw sheet rows first (with functional/technical columns)
+    raw_rows = _parse_sheet_rows(sheet_bytes, mapping_sheet.filename or "mapping.xlsx")
+
+    # Resolve paths
+    try:
+        matched, unmatched = sheet_to_field_mappings(
+            sheet_bytes,
+            mapping_sheet.filename or "mapping.xlsx",
+            src_paths,
+            tgt_paths,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse mapping sheet: {exc}")
+
+    # Build enriched row list with status
+    enriched_rows = []
+    for raw in raw_rows:
+        src_f   = raw.get("source") or ""
+        tgt_f   = raw.get("target") or ""
+        func_r  = raw.get("functional_rule") or raw.get("rule") or ""
+        tech_r  = raw.get("technical_rule") or ""
+
+        # Check if this row is in matched
+        is_matched = any(
+            (m.get("source_path", "").rsplit("/", 1)[-1].lower() == src_f.lower() or not src_f)
+            and (m.get("target_path", "").rsplit("/", 1)[-1].lower() == tgt_f.lower())
+            for m in matched
+        )
+        status = "matched" if is_matched else "unmatched" if (src_f or tgt_f) else "empty"
+
+        enriched_rows.append({
+            "source":          src_f,
+            "target":          tgt_f,
+            "functional_rule": func_r,
+            "technical_rule":  tech_r,
+            "status":          status,
+        })
+
+    return {
+        "rows":        enriched_rows,
+        "matched":     len(matched),
+        "unmatched":   len(unmatched),
+        "unmatched_detail": unmatched,
+        "src_root":    src_root,
+        "tgt_root":    tgt_root,
+        "src_paths":   src_paths[:200],   # cap for payload size
+        "tgt_paths":   tgt_paths[:200],
+    }
+
+
+# ── AI Rule Derivation ────────────────────────────────────────────────────────
+
+_DERIVE_SYSTEM = """You are an SAP CPI integration expert. Convert a plain-English functional description
+into an exact SAP CPI Graphical Message Mapping node-function expression.
+
+Supported functions and their syntax:
+- Direct copy (blank rule): no expression — return empty string ""
+- toUpperCase: toUpperCase((/path/to/field))
+- toLowerCase: toLowerCase((/path/to/field))
+- trim: trim((/path/to/field))
+- concat: (/Field1)+SEP+(/Field2)  OR  concat((/Field1), SEP, (/Field2))
+- substring: substring((/field), startIndex, length)
+- formatDate: formatDate((/field), inputFormat, outputFormat)
+- mapWithDefault: mapWithDefault((/field), Key1, Value1, Key2, Value2, DEFAULT)
+- splitByValue: splitByValue((/field), DELIMITER)
+- if+equals: if(equals((/field), VALUE), TRUE_RESULT, FALSE_RESULT)
+- if+contains: if(contains((/field), TEXT), TRUE_RESULT, FALSE_RESULT)
+- replaceAll: replaceAll((/field), REGEX, REPLACEMENT)
+- length: length((/field))
+- UseOneAsMany: UseOneAsMany((/field))  OR  UseOneAsMany(CONSTANT)
+
+IMPORTANT RULES:
+1. Replace placeholder field names with the ACTUAL source field name given (use short name in parentheses)
+2. Format: (/FieldName) — use the source field name as provided, NOT a full XPath
+3. Constants go WITHOUT parentheses, e.g. EUR, yyyyMMdd, -, T
+4. For direct copy, return exactly: ""
+5. Return ONLY the expression string — no explanation, no markdown
+"""
+
+
+class DeriveRuleRequest(BaseModel):
+    rows: list[dict]   # list of {source, target, functional_rule, technical_rule}
+
+
+@router.post("/derive-rules")
+def derive_rules(req: DeriveRuleRequest):
+    """
+    For each row with a functional_rule but no technical_rule,
+    use AI to derive the CPI node-function expression.
+    Returns the same rows list with technical_rule filled in.
+    """
+    results = []
+    for row in req.rows:
+        src       = (row.get("source") or "").strip()
+        func_rule = (row.get("functional_rule") or "").strip()
+        tech_rule = (row.get("technical_rule") or "").strip()
+
+        # Only derive if functional rule exists but technical is empty
+        if func_rule and not tech_rule:
+            prompt = f"""Source field name: {src or "(unknown)"}
+Functional description: {func_rule}
+
+Derive the SAP CPI Graphical Mapping expression. Return ONLY the expression string."""
+            try:
+                derived = generate(_DERIVE_SYSTEM, prompt, max_tokens=200).strip()
+                # Strip any accidental markdown fences
+                if derived.startswith("```"):
+                    derived = derived.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+                results.append({**row, "technical_rule": derived, "ai_derived": True})
+            except Exception as e:
+                results.append({**row, "ai_derived": False, "derive_error": str(e)})
+        else:
+            results.append({**row, "ai_derived": False})
+
+    return {"rows": results}
 
 
 # ── Sheet-driven .mmap ────────────────────────────────────────────────────────

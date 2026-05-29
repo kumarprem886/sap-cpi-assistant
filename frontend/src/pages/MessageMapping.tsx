@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Shuffle, Loader2, Wand2, Zap, Upload, X, FileCode,
   Package, Cpu, BookOpen, ArrowRight, ChevronDown, ChevronUp,
@@ -217,6 +217,18 @@ export default function MessageMapping() {
   const sheetTgtRef  = useRef<HTMLInputElement>(null)
   const sheetFileRef = useRef<HTMLInputElement>(null)
 
+  // Enhanced sheet mapping state
+  const [sheetStep, setSheetStep] = useState<'upload' | 'preview' | 'generate'>('upload')
+  const [sheetPreview, setSheetPreview] = useState<{
+    rows: Array<{source: string; target: string; functional_rule: string; technical_rule: string; status: string; ai_derived?: boolean; derive_error?: string}>
+    matched: number; unmatched: number
+    unmatched_detail: Array<{source: string; target: string; reason: string}>
+    src_paths: string[]; tgt_paths: string[]
+  } | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [derivingAll, setDerivingAll] = useState(false)
+  const [derivingRow, setDerivingRow] = useState<number | null>(null)
+
   const generateFromSheet = async () => {
     if (!sheetSrcFile || !sheetTgtFile || !sheetFile) return
     setSheetLoading(true); setSheetError(''); setSheetSummary('')
@@ -232,6 +244,49 @@ export default function MessageMapping() {
       const msg = e?.response?.data ? await new Response(e.response.data).text().then(t => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
       setSheetError(msg || 'Failed to generate .mmap')
     } finally { setSheetLoading(false) }
+  }
+
+  const loadPreview = async () => {
+    if (!sheetSrcFile || !sheetTgtFile || !sheetFile) return
+    setPreviewLoading(true); setSheetError('')
+    try {
+      const r = await mappingAPI.previewSheet(sheetSrcFile, sheetTgtFile, sheetFile)
+      setSheetPreview(r.data)
+      setSheetStep('preview')
+    } catch (e: any) {
+      const msg = e?.response?.data ? await new Response(e.response.data).text().then(t => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
+      setSheetError(msg || 'Preview failed')
+    } finally { setPreviewLoading(false) }
+  }
+
+  const updatePreviewRow = (idx: number, field: string, value: string) => {
+    setSheetPreview(prev => {
+      if (!prev) return prev
+      const rows = [...prev.rows]
+      rows[idx] = { ...rows[idx], [field]: value }
+      return { ...prev, rows }
+    })
+  }
+
+  const deriveAllRules = async () => {
+    if (!sheetPreview) return
+    setDerivingAll(true)
+    try {
+      const r = await mappingAPI.deriveRules(sheetPreview.rows)
+      setSheetPreview(prev => prev ? { ...prev, rows: r.data.rows } : prev)
+    } catch (e: any) { setSheetError('AI derive failed') }
+    finally { setDerivingAll(false) }
+  }
+
+  const deriveOneRule = async (idx: number) => {
+    if (!sheetPreview) return
+    setDerivingRow(idx)
+    try {
+      const r = await mappingAPI.deriveRules([sheetPreview.rows[idx]])
+      const derived = r.data.rows[0]
+      updatePreviewRow(idx, 'technical_rule', derived.technical_rule || '')
+      updatePreviewRow(idx, 'ai_derived', derived.ai_derived)
+    } catch {} finally { setDerivingRow(null) }
   }
 
   const [autoForm, setAutoForm] = useState({ source_fields: '', target_fields: '' })
@@ -524,78 +579,330 @@ export default function MessageMapping() {
       {/* ── Sheet Mapping tab ─────────────────────────────────────────────── */}
       {tab === 'sheet' && (
         <div className="space-y-4">
-          <div className="card space-y-5">
 
-            {/* Instructions */}
-            <div className="rounded-lg bg-sap-blue/10 border border-sap-blue/30 px-4 py-3 text-sm text-gray-300 space-y-1">
-              <p className="font-semibold text-white flex items-center gap-2">
-                <FileSpreadsheet size={15} className="text-sap-blue" />How it works
-              </p>
-              <p>Upload your source XSD, target XSD, and a mapping sheet (Excel or CSV). The sheet must have <strong className="text-white">Source Field</strong> and <strong className="text-white">Target Field</strong> columns containing field names or XPath segments. The tool resolves them to full paths in the XSDs and builds a ready-to-import <code className="bg-gray-800 px-1 rounded">.mmap</code> file.</p>
-              <p className="text-gray-400 text-xs">Supports: short field names (e.g. <em>mn</em>), full names (e.g. <em>MaterialNumber</em>), structural nodes (e.g. <em>body</em> → <em>to_Stock</em>), and mapping rules in the sheet.</p>
+          {/* ── Step indicator ─── */}
+          <div className="flex items-center gap-2 text-xs">
+            {[
+              { id: 'upload', label: '1. Upload Files' },
+              { id: 'preview', label: '2. Preview & Edit' },
+              { id: 'generate', label: '3. Generate .mmap' },
+            ].map((step, i) => (
+              <React.Fragment key={step.id}>
+                {i > 0 && <div className="w-6 h-px bg-gray-700" />}
+                <button
+                  onClick={() => step.id !== 'generate' || sheetPreview ? setSheetStep(step.id as any) : undefined}
+                  className={`px-3 py-1 rounded-full font-medium transition-colors ${
+                    sheetStep === step.id
+                      ? 'bg-blue-600 text-white'
+                      : sheetPreview || step.id === 'upload'
+                      ? 'bg-gray-800 text-gray-300 hover:text-white'
+                      : 'bg-gray-900 text-gray-600 cursor-default'
+                  }`}
+                >
+                  {step.label}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* ── Step 1: Upload ─── */}
+          {sheetStep === 'upload' && (
+            <div className="card space-y-5">
+
+              {/* Download template banner */}
+              <div className="flex items-center justify-between rounded-xl bg-blue-950/30 border border-blue-800/50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">Start with the template</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Pre-filled with examples, Function Reference sheet, and Instructions for functional consultants</p>
+                </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      const r = await mappingAPI.template()
+                      const url = URL.createObjectURL(new Blob([r.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
+                      const a = document.createElement('a'); a.href = url; a.download = 'CPI_Mapping_Template.xlsx'; a.click()
+                      URL.revokeObjectURL(url)
+                    } catch {}
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors whitespace-nowrap shrink-0"
+                >
+                  <Download size={14} /> Download Template
+                </button>
+              </div>
+
+              {/* File upload grid */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Source XSD */}
+                <div className="space-y-2">
+                  <label className="label mb-0">Source XSD</label>
+                  <button type="button" onClick={() => sheetSrcRef.current?.click()}
+                    className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+                      ${sheetSrcFile ? 'border-blue-600/60 bg-blue-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
+                    {sheetSrcFile
+                      ? <><FileCode size={20} className="text-blue-400" /><span className="text-xs text-blue-400 font-medium truncate max-w-full px-2">{sheetSrcFile.name}</span></>
+                      : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
+                    }
+                  </button>
+                  <input ref={sheetSrcRef} type="file" accept=".xsd,.xml" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetSrcFile(f); setSheetPreview(null); setSheetStep('upload'); e.target.value = '' } }} />
+                  {sheetSrcFile && <button onClick={() => { setSheetSrcFile(null); setSheetPreview(null) }} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
+                </div>
+
+                {/* Target XSD */}
+                <div className="space-y-2">
+                  <label className="label mb-0">Target XSD</label>
+                  <button type="button" onClick={() => sheetTgtRef.current?.click()}
+                    className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+                      ${sheetTgtFile ? 'border-green-600/60 bg-green-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
+                    {sheetTgtFile
+                      ? <><FileCode size={20} className="text-green-400" /><span className="text-xs text-green-400 font-medium truncate max-w-full px-2">{sheetTgtFile.name}</span></>
+                      : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
+                    }
+                  </button>
+                  <input ref={sheetTgtRef} type="file" accept=".xsd,.xml" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetTgtFile(f); setSheetPreview(null); setSheetStep('upload'); e.target.value = '' } }} />
+                  {sheetTgtFile && <button onClick={() => { setSheetTgtFile(null); setSheetPreview(null) }} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
+                </div>
+
+                {/* Mapping Sheet */}
+                <div className="space-y-2">
+                  <label className="label mb-0">Mapping Sheet</label>
+                  <button type="button" onClick={() => sheetFileRef.current?.click()}
+                    className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+                      ${sheetFile ? 'border-purple-600/60 bg-purple-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
+                    {sheetFile
+                      ? <><FileSpreadsheet size={20} className="text-purple-400" /><span className="text-xs text-purple-400 font-medium truncate max-w-full px-2">{sheetFile.name}</span></>
+                      : <><FileSpreadsheet size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xlsx / .csv</span></>
+                    }
+                  </button>
+                  <input ref={sheetFileRef} type="file" accept=".xlsx,.xlsm,.csv" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetFile(f); setSheetPreview(null); setSheetStep('upload'); e.target.value = '' } }} />
+                  {sheetFile && <button onClick={() => { setSheetFile(null); setSheetPreview(null) }} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
+                </div>
+              </div>
+
+              {sheetError && (
+                <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
+                  <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                  <span><strong>Error: </strong>{sheetError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={loadPreview}
+                  disabled={previewLoading || !sheetSrcFile || !sheetTgtFile || !sheetFile}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
+                  {previewLoading ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
+                  {previewLoading ? 'Parsing…' : 'Preview Sheet'}
+                </button>
+                <p className="text-xs text-gray-500 self-center">Parses the sheet and shows which fields matched the XSD — before generating any .mmap</p>
+              </div>
+
+              {/* Sheet format reference */}
+              <details className="border border-gray-700 rounded-lg overflow-hidden">
+                <summary className="px-4 py-2.5 text-xs font-semibold text-gray-400 cursor-pointer hover:text-white bg-gray-800/40 select-none">
+                  Expected sheet format & Mapping Rule syntax
+                </summary>
+                <div className="p-4 space-y-3">
+                  <div className="overflow-x-auto rounded-lg border border-gray-700">
+                    <table className="text-xs w-full">
+                      <thead className="bg-gray-800">
+                        <tr>
+                          {['Source Field','Target Field','Functional Mapping Rule','Technical Mapping Rule','Notes'].map(h => (
+                            <th key={h} className={`px-2 py-1.5 text-left font-semibold ${
+                              h.includes('Functional') ? 'text-purple-400' :
+                              h.includes('Technical') ? 'text-blue-400' : 'text-gray-400'}`}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-800">
+                        {[
+                          ['MaterialNumber', 'MATNR', 'Direct copy', '', ''],
+                          ['CreationDate', 'ERSDA', 'Reformat date from YYYYMMDD to YYYY-MM-DD', 'formatDate((/CreationDate), yyyyMMdd, yyyy-MM-dd)', ''],
+                          ['Sender + CompCode', 'SystemId', 'Concatenate Sender and CompCode with hyphen', '(/Sender)+- +(/CompCode)', ''],
+                          ['Status', 'StatusText', 'Map: A=Active, I=Inactive', "mapWithDefault((/Status), A, Active, I, Inactive, Unknown)", ''],
+                        ].map((row, i) => (
+                          <tr key={i} className="hover:bg-gray-800/40">
+                            {row.map((cell, j) => (
+                              <td key={j} className={`px-2 py-1 font-mono text-[10px] ${
+                                j === 2 ? 'text-purple-300 italic' :
+                                j === 3 ? 'text-amber-400' : 'text-white'}`}>{cell || <span className="text-gray-600">—</span>}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    <span className="text-purple-400 font-medium">Functional Rule</span> — plain English for functional consultants (AI derives Technical Rule from this) &nbsp;|&nbsp;
+                    <span className="text-blue-400 font-medium">Technical Rule</span> — CPI expression (overrides Functional if both present)
+                  </p>
+                </div>
+              </details>
             </div>
+          )}
 
-            {/* File upload grid */}
-            <div className="grid grid-cols-3 gap-3">
-
-              {/* Source XSD */}
-              <div className="space-y-2">
-                <label className="label mb-0">Source XSD</label>
-                <button type="button" onClick={() => sheetSrcRef.current?.click()}
-                  className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
-                    ${sheetSrcFile ? 'border-sap-blue/60 bg-sap-blue/5' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
-                  {sheetSrcFile
-                    ? <><FileCode size={20} className="text-sap-blue" /><span className="text-xs text-sap-blue font-medium truncate max-w-full px-2">{sheetSrcFile.name}</span></>
-                    : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
-                  }
-                </button>
-                <input ref={sheetSrcRef} type="file" accept=".xsd,.xml" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetSrcFile(f); e.target.value = '' } }} />
-                {sheetSrcFile && <button onClick={() => setSheetSrcFile(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
+          {/* ── Step 2: Preview & Edit ─── */}
+          {sheetStep === 'preview' && sheetPreview && (
+            <div className="space-y-3">
+              {/* Stats bar */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-green-900/30 border border-green-700/50 text-green-300">
+                  <CheckCircle2 size={11} /> {sheetPreview.matched} matched
+                </span>
+                {sheetPreview.unmatched > 0 && (
+                  <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-red-900/30 border border-red-700/50 text-red-300">
+                    <AlertCircle size={11} /> {sheetPreview.unmatched} unmatched
+                  </span>
+                )}
+                {sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length > 0 && (
+                  <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-purple-900/30 border border-purple-700/50 text-purple-300">
+                    <Wand2 size={11} /> {sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length} need AI derivation
+                  </span>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <button onClick={() => setSheetStep('upload')}
+                    className="px-3 py-1.5 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors">
+                    ← Back
+                  </button>
+                  <button
+                    onClick={deriveAllRules}
+                    disabled={derivingAll || sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition-colors disabled:opacity-50">
+                    {derivingAll ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
+                    {derivingAll ? 'Deriving…' : 'AI Derive All Rules'}
+                  </button>
+                  <button
+                    onClick={() => setSheetStep('generate')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+                    Continue → Generate .mmap
+                  </button>
+                </div>
               </div>
 
-              {/* Target XSD */}
-              <div className="space-y-2">
-                <label className="label mb-0">Target XSD</label>
-                <button type="button" onClick={() => sheetTgtRef.current?.click()}
-                  className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
-                    ${sheetTgtFile ? 'border-sap-blue/60 bg-sap-blue/5' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
-                  {sheetTgtFile
-                    ? <><FileCode size={20} className="text-sap-blue" /><span className="text-xs text-sap-blue font-medium truncate max-w-full px-2">{sheetTgtFile.name}</span></>
-                    : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
-                  }
-                </button>
-                <input ref={sheetTgtRef} type="file" accept=".xsd,.xml" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetTgtFile(f); e.target.value = '' } }} />
-                {sheetTgtFile && <button onClick={() => setSheetTgtFile(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
+              {/* Preview table */}
+              <div className="card p-0 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="text-xs w-full">
+                    <thead className="bg-gray-800 sticky top-0">
+                      <tr>
+                        <th className="px-2 py-2 text-left text-gray-400 font-semibold w-4">#</th>
+                        <th className="px-2 py-2 text-left text-blue-400 font-semibold">Source Field</th>
+                        <th className="px-2 py-2 text-left text-green-400 font-semibold">Target Field</th>
+                        <th className="px-2 py-2 text-left text-purple-400 font-semibold w-64">Functional Rule</th>
+                        <th className="px-2 py-2 text-left text-amber-400 font-semibold w-72">Technical Rule (CPI expression)</th>
+                        <th className="px-2 py-2 text-center text-gray-400 font-semibold w-20">Status</th>
+                        <th className="px-2 py-2 text-center text-gray-400 font-semibold w-14">AI</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {sheetPreview.rows.map((row, i) => (
+                        <tr key={i} className={`hover:bg-gray-800/30 ${
+                          row.status === 'matched' ? '' :
+                          row.status === 'unmatched' ? 'bg-red-950/10' : ''}`}>
+                          <td className="px-2 py-1 text-gray-600">{i + 1}</td>
+                          <td className="px-1 py-1">
+                            <input value={row.source} onChange={e => updatePreviewRow(i, 'source', e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-blue-700/50 focus:border-blue-600 rounded px-1.5 py-0.5 font-mono text-white outline-none transition-colors" />
+                          </td>
+                          <td className="px-1 py-1">
+                            <input value={row.target} onChange={e => updatePreviewRow(i, 'target', e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-green-700/50 focus:border-green-600 rounded px-1.5 py-0.5 font-mono text-white outline-none transition-colors" />
+                          </td>
+                          <td className="px-1 py-1">
+                            <input value={row.functional_rule || ''} onChange={e => updatePreviewRow(i, 'functional_rule', e.target.value)}
+                              className="w-full bg-transparent border border-transparent hover:border-purple-700/50 focus:border-purple-600 rounded px-1.5 py-0.5 text-purple-300 italic outline-none transition-colors" />
+                          </td>
+                          <td className="px-1 py-1">
+                            <div className="flex items-center gap-1">
+                              <input value={row.technical_rule || ''} onChange={e => updatePreviewRow(i, 'technical_rule', e.target.value)}
+                                placeholder={row.functional_rule ? 'click ✨ to AI-derive' : ''}
+                                className="flex-1 bg-transparent border border-transparent hover:border-amber-700/50 focus:border-amber-600 rounded px-1.5 py-0.5 font-mono text-amber-300 outline-none transition-colors placeholder:text-gray-600" />
+                              {row.functional_rule && !row.technical_rule && (
+                                <button onClick={() => deriveOneRule(i)} disabled={derivingRow === i}
+                                  className="shrink-0 p-1 rounded text-purple-400 hover:text-purple-200 hover:bg-purple-900/30 transition-colors" title="AI derive from functional rule">
+                                  {derivingRow === i ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
+                                </button>
+                              )}
+                              {row.ai_derived && <span title="AI derived" className="shrink-0 text-purple-400 text-[9px]">✨</span>}
+                            </div>
+                          </td>
+                          <td className="px-2 py-1 text-center">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${
+                              row.status === 'matched' ? 'bg-green-900/40 text-green-300' :
+                              row.status === 'unmatched' ? 'bg-red-900/40 text-red-300' :
+                              'bg-gray-800 text-gray-500'
+                            }`}>
+                              {row.status === 'matched' ? '✓' : row.status === 'unmatched' ? '✗' : '—'}
+                            </span>
+                          </td>
+                          <td className="px-2 py-1 text-center">
+                            {row.ai_derived && <span className="text-[9px] text-purple-400">✨</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Mapping Sheet */}
-              <div className="space-y-2">
-                <label className="label mb-0">Mapping Sheet</label>
-                <button type="button" onClick={() => sheetFileRef.current?.click()}
-                  className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
-                    ${sheetFile ? 'border-emerald-600/60 bg-emerald-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
-                  {sheetFile
-                    ? <><FileSpreadsheet size={20} className="text-emerald-400" /><span className="text-xs text-emerald-400 font-medium truncate max-w-full px-2">{sheetFile.name}</span></>
-                    : <><FileSpreadsheet size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xlsx / .csv</span></>
-                  }
-                </button>
-                <input ref={sheetFileRef} type="file" accept=".xlsx,.xlsm,.csv" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) { setSheetFile(f); e.target.value = '' } }} />
-                {sheetFile && <button onClick={() => setSheetFile(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>}
-              </div>
+              {/* Unmatched detail */}
+              {sheetPreview.unmatched_detail.length > 0 && (
+                <details className="border border-red-800/50 rounded-lg overflow-hidden">
+                  <summary className="px-4 py-2.5 text-xs font-semibold text-red-300 cursor-pointer bg-red-950/20 select-none">
+                    ✗ {sheetPreview.unmatched} unmatched fields — click to see details
+                  </summary>
+                  <div className="p-3 space-y-1">
+                    {sheetPreview.unmatched_detail.map((u, i) => (
+                      <div key={i} className="text-xs text-gray-400">
+                        <span className="text-red-400 font-mono">{u.source || '(blank)'}</span>
+                        <span className="text-gray-600"> → </span>
+                        <span className="text-red-400 font-mono">{u.target || '(blank)'}</span>
+                        <span className="text-gray-600"> — {u.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
+              {sheetError && (
+                <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
+                  <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                  <span><strong>Error: </strong>{sheetError}</span>
+                </div>
+              )}
             </div>
+          )}
 
-            {/* Mapping name + Generate */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <label className="text-xs text-gray-400 whitespace-nowrap">Mapping name:</label>
-              <input type="text" className="input-field text-sm py-1 px-2 w-60"
-                placeholder="MM_SheetMapping"
-                value={sheetMmapName}
-                onChange={e => setSheetMmapName(e.target.value.replace(/\s+/g, '_'))} />
+          {/* ── Step 3: Generate ─── */}
+          {sheetStep === 'generate' && sheetPreview && (
+            <div className="card space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-900/40 border border-blue-700/50 flex items-center justify-center">
+                  <Package size={18} className="text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">Generate .mmap file</p>
+                  <p className="text-xs text-gray-400">
+                    {sheetPreview.matched} matched fields &nbsp;·&nbsp;
+                    {sheetPreview.rows.filter(r => r.ai_derived).length} AI-derived rules &nbsp;·&nbsp;
+                    {sheetPreview.unmatched} unmatched (will be skipped)
+                  </p>
+                </div>
+                <button onClick={() => setSheetStep('preview')} className="ml-auto text-xs text-gray-500 hover:text-white">← Back to Preview</button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-gray-400 whitespace-nowrap">Mapping name:</label>
+                <input type="text" className="input-field text-sm py-1 px-2 w-60"
+                  placeholder="MM_SheetMapping"
+                  value={sheetMmapName}
+                  onChange={e => setSheetMmapName(e.target.value.replace(/\s+/g, '_'))} />
+              </div>
+
               {IS_STATIC_HOST ? (
-                <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-amber-900/40 border border-amber-700/50 text-amber-300">
+                <div className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm bg-amber-900/40 border border-amber-700/50 text-amber-300">
                   <AlertCircle size={15} className="shrink-0" />
                   Backend not available on GitHub Pages — run locally to use this feature
                 </div>
@@ -603,107 +910,26 @@ export default function MessageMapping() {
                 <button
                   onClick={generateFromSheet}
                   disabled={sheetLoading || !sheetSrcFile || !sheetTgtFile || !sheetFile}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50">
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
                   {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                  {sheetLoading ? 'Building .mmap…' : 'Generate & Download .mmap'}
+                  {sheetLoading ? 'Building .mmap…' : 'Download .mmap'}
                 </button>
               )}
-            </div>
 
-            {/* Success summary */}
-            {sheetSummary && !sheetError && (
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-950/50 border border-emerald-700/50 px-3 py-2 text-xs text-emerald-300">
-                <CheckCircle2 size={13} className="shrink-0" />
-                <span>{sheetSummary} — .mmap downloaded.</span>
-              </div>
-            )}
-
-            {/* Error */}
-            {sheetError && (
-              <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
-                <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                <span><strong>Error: </strong>{sheetError}</span>
-              </div>
-            )}
-
-            {/* Expected sheet format */}
-            <div className="border-t border-gray-700 pt-4 space-y-4">
-              <p className="text-xs text-gray-500 font-semibold">Expected sheet format (any extra columns are ignored):</p>
-              <div className="overflow-x-auto rounded-lg border border-gray-700">
-                <table className="text-xs w-full">
-                  <thead className="bg-gray-800">
-                    <tr>
-                      {['Source Field','Description','Entity Set','Property Details','Target Field','Mapping Rule','Comment'].map(h => (
-                        <th key={h} className={`px-2 py-1.5 text-left font-semibold ${h === 'Source Field' || h === 'Target Field' ? 'text-sap-blue' : 'text-gray-500'}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-800">
-                    {[
-                      ['mn','Material number','','','MaterialNumber','',''],
-                      ['pl','Plant','','','Plant','',''],
-                      ['sender','Sender ID','','','LSPId','toUpperCase((/msg/header/sender))','uppercase'],
-                      [null,'—','','','RunDate','(/msg/header/date)+T+(/msg/header/time)','concat shorthand'],
-                      ['date','','','','FormattedDate','formatDate((/msg/header/date), yyyyMMdd, yyyy-MM-dd)',''],
-                    ].map((row, i) => (
-                      <tr key={i} className="hover:bg-gray-800/40">
-                        {row.map((cell, j) => (
-                          <td key={j} className={`px-2 py-1 ${j === 0 || j === 4 ? 'text-white font-mono' : j === 5 ? 'text-amber-400 font-mono text-[10px]' : 'text-gray-500'}`}>
-                            {cell || <span className="italic text-gray-700">—</span>}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Node function reference */}
-              <div>
-                <p className="text-xs text-gray-500 font-semibold mb-2">Mapping Rule column — supported syntax:</p>
-                <div className="rounded-lg border border-gray-700 overflow-hidden">
-                  <table className="text-xs w-full">
-                    <thead className="bg-gray-800/80">
-                      <tr>
-                        <th className="px-3 py-1.5 text-left text-gray-400 font-semibold w-1/3">Rule (Mapping Rule column)</th>
-                        <th className="px-3 py-1.5 text-left text-gray-400 font-semibold w-1/4">Function used</th>
-                        <th className="px-3 py-1.5 text-left text-gray-400 font-semibold">Description</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-800">
-                      {[
-                        ['(/field1)+CONST+(/field2)', 'concat', 'Concat shorthand — joins fields/constants with +'],
-                        ['concat((/f1), SEP, (/f2))', 'concat', 'Explicit concat — same result, more readable'],
-                        ['toUpperCase((/field))', 'toUpperCase', 'Convert text to upper case'],
-                        ['toLowerCase((/field))', 'toLowerCase', 'Convert text to lower case'],
-                        ['trim((/field))', 'trim', 'Remove leading/trailing whitespace'],
-                        ['substring((/field), start, len)', 'substring', 'Extract substring (0-based start)'],
-                        ['formatDate((/field), inFmt, outFmt)', 'formatDate', 'Reformat a date string'],
-                        ['mapWithDefault((/field), k1, v1, k2, v2, …)', 'mapWithDefault', 'Value lookup table with key→value pairs'],
-                        ['splitByValue((/field), DELIM)', 'splitByValue', 'Split a field by delimiter into occurrences'],
-                        ['if(equals((/field), VAL), YES, NO)', 'if + equals', 'Conditional: if field = VAL then YES else NO'],
-                        ['replaceAll((/field), REGEX, REPLACEMENT)', 'replaceAll', 'Regex replace within a field value'],
-                        ['length((/field))', 'length', 'String length as a number'],
-                        ['UseOneAsMany((/field))', 'UseOneAsMany', 'Repeat a single value for each occurrence of target'],
-                      ].map(([rule, func, desc], i) => (
-                        <tr key={i} className="hover:bg-gray-800/30">
-                          <td className="px-3 py-1.5 font-mono text-amber-400 text-[10px]">{rule}</td>
-                          <td className="px-3 py-1.5 text-emerald-400 text-[10px]">{func}</td>
-                          <td className="px-3 py-1.5 text-gray-400">{desc}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="px-3 py-2 bg-gray-900/50 text-[10px] text-gray-500 border-t border-gray-700">
-                    <strong className="text-gray-400">Args:</strong>&nbsp;
-                    <code className="text-amber-400">(/xpath/to/field)</code> or <code className="text-amber-400">/xpath/to/field</code> → source field &nbsp;|&nbsp;
-                    Bare text (no slashes) → constant string &nbsp;|&nbsp;
-                    Any SAP CPI standard node function name works — write it exactly as in the mapping editor.
-                  </div>
+              {sheetSummary && !sheetError && (
+                <div className="flex items-center gap-2 rounded-lg bg-green-950/50 border border-green-700/50 px-3 py-2 text-xs text-green-300">
+                  <CheckCircle2 size={13} className="shrink-0" />
+                  {sheetSummary} — .mmap downloaded.
                 </div>
-              </div>
+              )}
+              {sheetError && (
+                <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
+                  <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                  <span><strong>Error: </strong>{sheetError}</span>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       )}
 

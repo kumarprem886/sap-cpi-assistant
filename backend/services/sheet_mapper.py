@@ -83,17 +83,24 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
     )
 
     if has_header:
-        headers  = first
+        headers   = first
         data_rows = rows[1:]
-        src_col  = _detect_col(headers, ["source field", "source"])
-        tgt_col  = _detect_col(headers, ["target field", "target"])
-        rule_col = _detect_col(headers, ["mapping rule", "rule", "formula",
-                                          "function", "transform"])
+        src_col   = _detect_col(headers, ["source field", "source"])
+        tgt_col   = _detect_col(headers, ["target field", "target"])
+        # Functional rule: plain-English description
+        func_col  = _detect_col(headers, ["functional mapping", "functional rule",
+                                           "functional", "business rule", "description"])
+        # Technical rule: CPI expression (takes priority for actual mapping)
+        tech_col  = _detect_col(headers, ["technical mapping", "technical rule",
+                                           "technical", "cpi expression", "expression",
+                                           "mapping rule", "rule", "formula",
+                                           "function", "transform"])
     else:
         data_rows = rows
         src_col   = 0
         tgt_col   = len(rows[0]) - 1
-        rule_col  = 2 if len(rows[0]) > 2 else -1
+        func_col  = -1
+        tech_col  = 2 if len(rows[0]) > 2 else -1
 
     src_col  = max(src_col, 0)
     tgt_col  = tgt_col if tgt_col >= 0 else 1
@@ -107,12 +114,22 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
             s = str(v).strip() if v is not None else ""
             return s or None
 
-        src  = _cell(src_col)
-        tgt  = _cell(tgt_col)
-        rule = _cell(rule_col) if rule_col >= 0 else None
+        src       = _cell(src_col)
+        tgt       = _cell(tgt_col)
+        func_rule = _cell(func_col) if func_col >= 0 else None
+        tech_rule = _cell(tech_col) if tech_col >= 0 else None
+
+        # Technical rule takes priority; fall back to functional rule as rule hint
+        effective_rule = tech_rule or None
 
         if src or tgt:
-            results.append({"source": src, "target": tgt, "rule": rule})
+            results.append({
+                "source":          src,
+                "target":          tgt,
+                "rule":            effective_rule,
+                "functional_rule": func_rule,
+                "technical_rule":  tech_rule,
+            })
 
     return results
 
