@@ -151,7 +151,7 @@ def _lnk(role: str, xsd_filename: str, root_element: str) -> str:
         f'<lnk rMode="R">'
         f'<key typeID="xsd" version="1.1">'
         f'<elem>{escape(xsd_filename)}</elem>'
-        f'<elem>src/main/resources/wsdl</elem>'
+        f'<elem>src/main/resources/xsd</elem>'
         f'<elem>{escape(root_element)}</elem>'
         f'</key>'
         f'</lnk>'
@@ -230,13 +230,6 @@ def build_mmap_xml(
         f'</textObj>'
         f'</textInfo>'
         '</generic>'
-
-        '<AdditionalProperties>'
-        '<Property Applicable="BOTH">'
-        '<PropertyName>externalNameSpace</PropertyName>'
-        '<PropertyValue>RESOLVED</PropertyValue>'
-        '</Property>'
-        '</AdditionalProperties>'
 
         '<content>'
         '<tr:XiTrafo xmlns:tr="urn:sap-com:xi:mapping:xitrafo">'
@@ -319,11 +312,11 @@ def build_mmap_zip(
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         # Source XSD
         if source_xsd:
-            zf.writestr(f"wsdl/{source_xsd_name}", source_xsd.encode("utf-8"))
+            zf.writestr(f"xsd/{source_xsd_name}", source_xsd.encode("utf-8"))
 
         # Target XSD — only write if it has a different name from source
         if target_xsd and target_xsd_name != source_xsd_name:
-            zf.writestr(f"wsdl/{target_xsd_name}", target_xsd.encode("utf-8"))
+            zf.writestr(f"xsd/{target_xsd_name}", target_xsd.encode("utf-8"))
 
         # The .mmap — goes in mapping/ folder
         zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))

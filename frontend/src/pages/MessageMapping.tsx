@@ -469,8 +469,9 @@ export default function MessageMapping() {
       const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
       const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
       if (!srcFile || !tgtFile) { setSheetError('Please select or upload both XSD files.'); return }
-      // Use uploaded sheet or synthesize CSV from preview rows (prebuilt quick-start)
-      const effectiveSheet = sheetFile ?? buildSheetFileFromPreview()
+      // Always use preview rows when available — they include all AI-derived rules and edits.
+      // Fall back to the raw uploaded sheet only if no preview exists.
+      const effectiveSheet = sheetPreview ? buildSheetFileFromPreview() : (sheetFile ?? buildSheetFileFromPreview())
       const res = await mappingAPI.fromSheet(srcFile, tgtFile, effectiveSheet, sheetMmapName)
       const summary = res.headers?.['x-mapping-summary'] ?? ''
       const parts   = Object.fromEntries(summary.split(',').map((s: string) => s.split('=')))
