@@ -76,26 +76,41 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
     if not rows:
         return []
 
-    first = [str(c).strip() if c is not None else "" for c in rows[0]]
-    has_header = (
-        _detect_col(first, ["source"]) >= 0 or
-        _detect_col(first, ["target"]) >= 0
-    )
+    # Scan up to first 15 rows to find the actual column-header row.
+    # Uses EXACT keyword matching so legend/description rows (which contain
+    # "source"/"target" as part of longer sentences) are not mistaken for headers.
+    _HEADER_KEYWORDS = {"source", "source field", "target", "target field",
+                        "mapping rule", "rule", "functional", "technical"}
+    header_row_idx = -1
+    for i, row in enumerate(rows[:15]):
+        cells_lower = {str(c).strip().lower() for c in row if c is not None}
+        # A header row must have at least one cell that IS a known keyword (exact match)
+        if cells_lower & _HEADER_KEYWORDS:
+            header_row_idx = i
+            break
 
-    if has_header:
-        headers   = first
-        data_rows = rows[1:]
+    if header_row_idx >= 0:
+        headers   = [str(c).strip() if c is not None else "" for c in rows[header_row_idx]]
+        data_rows = rows[header_row_idx + 1:]
         src_col   = _detect_col(headers, ["source field", "source"])
         tgt_col   = _detect_col(headers, ["target field", "target"])
         # Functional rule: plain-English description
-        func_col  = _detect_col(headers, ["functional mapping", "functional rule",
-                                           "functional", "business rule", "description"])
-        # Technical rule: CPI expression (takes priority for actual mapping)
-        tech_col  = _detect_col(headers, ["technical mapping", "technical rule",
-                                           "technical", "cpi expression", "expression",
-                                           "mapping rule", "rule", "formula",
-                                           "function", "transform"])
+        func_col  = _detect_col(headers, ["functional mapping rule", "functional mapping",
+                                           "functional rule", "functional", "business rule"])
+        # Technical rule: CPI expression. Intentionally excludes generic terms like
+        # "mapping rule" and "rule" which also appear in "Functional Mapping Rule".
+        tech_col  = _detect_col(headers, ["technical mapping rule", "technical mapping",
+                                           "technical rule", "technical", "cpi expression",
+                                           "expression", "formula"])
+        # If both point to same column (ambiguous header), try the next one for tech
+        if tech_col >= 0 and tech_col == func_col:
+            for j, h in enumerate(headers):
+                if j != func_col and h and any(kw in h.lower()
+                        for kw in ("rule", "mapping", "expression", "formula", "transform")):
+                    tech_col = j
+                    break
     else:
+        # No header found — assume col 0 = source, last col = target
         data_rows = rows
         src_col   = 0
         tgt_col   = len(rows[0]) - 1
@@ -122,7 +137,10 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
         # Technical rule takes priority; fall back to functional rule as rule hint
         effective_rule = tech_rule or None
 
-        if src or tgt:
+        # Skip rows where both source and target are blank or pure numbers
+        # (e.g. the # row-number column being picked up as source)
+        src_is_number = src is not None and src.replace(".", "").isdigit()
+        if (src or tgt) and not (src_is_number and not tgt):
             results.append({
                 "source":          src,
                 "target":          tgt,
