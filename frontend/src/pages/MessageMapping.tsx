@@ -1133,30 +1133,25 @@ export default function MessageMapping() {
                               }
                             </td>
 
-                            {/* Functional rule — blank for direct maps */}
+                            {/* Functional rule — always editable; "direct" shown as placeholder when blank */}
                             <td className="px-1 py-1">
-                              {isDirect
-                                ? <span className="text-[9px] text-gray-700 italic px-1.5">direct</span>
-                                : <input value={row.functional_rule || ''} onChange={e => updatePreviewRow(i, 'functional_rule', e.target.value)}
-                                    placeholder="describe the mapping…"
-                                    className="w-full bg-transparent border border-transparent hover:border-purple-700/50 focus:border-purple-600 rounded px-1.5 py-0.5 text-purple-300 italic outline-none transition-colors text-[10px] placeholder:text-gray-700" />
-                              }
+                              <input value={row.functional_rule || ''} onChange={e => updatePreviewRow(i, 'functional_rule', e.target.value)}
+                                placeholder={isDirect ? 'direct — click to add rule' : 'describe the mapping…'}
+                                className="w-full bg-transparent border border-transparent hover:border-purple-700/50 focus:border-purple-600 rounded px-1.5 py-0.5 text-purple-300 italic outline-none transition-colors text-[10px] placeholder:text-gray-600" />
                             </td>
 
-                            {/* Technical rule — blank for direct maps; derive button only when func_rule exists */}
+                            {/* Technical rule — always editable; derive button when func_rule exists */}
                             <td className="px-1 py-1">
-                              {isDirect
-                                ? <span className="text-[9px] text-gray-700 italic px-1.5">direct</span>
-                                : <div className="flex items-center gap-1">
-                                    <input value={row.technical_rule || ''} onChange={e => updatePreviewRow(i, 'technical_rule', e.target.value)}
-                                      placeholder={row.functional_rule && !row.technical_rule ? '← click ✨' : ''}
-                                      className="flex-1 bg-transparent border border-transparent hover:border-amber-700/50 focus:border-amber-600 rounded px-1.5 py-0.5 font-mono text-amber-300 outline-none transition-colors text-[10px] placeholder:text-gray-600" />
-                                    {row.functional_rule && (
-                                      <button onClick={() => deriveOneRule(i)} disabled={derivingRow === i}
-                                        className={`shrink-0 p-1 rounded transition-colors ${
-                                          row.technical_rule ? 'text-gray-600 hover:text-purple-400' : 'text-purple-400 hover:text-purple-200 bg-purple-900/20'
-                                        }`} title="AI derive technical rule from functional description">
-                                        {derivingRow === i ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
+                              <div className="flex items-center gap-1">
+                                <input value={row.technical_rule || ''} onChange={e => updatePreviewRow(i, 'technical_rule', e.target.value)}
+                                  placeholder={row.functional_rule && !row.technical_rule ? '← click ✨' : isDirect ? 'direct' : ''}
+                                  className="flex-1 bg-transparent border border-transparent hover:border-amber-700/50 focus:border-amber-600 rounded px-1.5 py-0.5 font-mono text-amber-300 outline-none transition-colors text-[10px] placeholder:text-gray-600" />
+                                {row.functional_rule && (
+                                  <button onClick={() => deriveOneRule(i)} disabled={derivingRow === i}
+                                    className={`shrink-0 p-1 rounded transition-colors ${
+                                      row.technical_rule ? 'text-gray-600 hover:text-purple-400' : 'text-purple-400 hover:text-purple-200 bg-purple-900/20'
+                                    }`} title="AI derive technical rule from functional description">
+                                    {derivingRow === i ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
                                       </button>
                                     )}
                                     {row.ai_derived && <span title="AI derived" className="shrink-0 text-purple-400 text-[9px]">✨</span>}
