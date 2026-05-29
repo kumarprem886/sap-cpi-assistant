@@ -322,7 +322,10 @@ def _resolve_arg(token: str, src_paths: list[str]) -> dict:
         field_name = xpath.rsplit("/", 1)[-1]
         resolved   = _match_field(field_name, src_paths) or xpath
         return {"type": "src", "path": resolved}
-    # Everything else is a constant (string, number, date pattern…)
+    # Strip surrounding quotes from constants so "T" → T and "_" → _
+    # (users often write separators with quotes; quotes break XML attributes)
+    if len(token) >= 2 and token[0] == token[-1] and token[0] in ('"', "'"):
+        token = token[1:-1]
     return {"type": "const", "value": token}
 
 

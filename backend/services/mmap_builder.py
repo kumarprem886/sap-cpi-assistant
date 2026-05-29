@@ -6,33 +6,41 @@ Format reverse-engineered from real CPI mmap exports:
   - Dst bricks  : <brick gid="0" path="..." type="Dst">
   - Src bricks  : <brick gid="0" path="..." type="Src">
   - Func bricks : <brick fname="..." fns="dflt" type="Func">
-                    <arg>…first arg…</arg>
-                    <arg pin="1">…second arg…</arg>
-                    <bindings><param name="…"><value>…</value></param></bindings>
+                    <arg>â€¦first argâ€¦</arg>
+                    <arg pin="1">â€¦second argâ€¦</arg>
+                    <bindings><param name="â€¦"><value>â€¦</value></param></bindings>
                   </brick>
 
 Confirmed fname values (from real CPI exports):
   String  : toUpperCase, toLowerCase, trim, length, substring, concat, replaceString, equalsS, indexOf
-  Date    : TransformDate   (user writes formatDate — translated here)
+  Date    : TransformDate   (user writes formatDate â€” translated here)
   Numeric : add, subtract, multiply, divide, abs, round, ceil, floor
   Boolean : if, Equals, notEquals, Not, And, Or
   Node    : useOneAsMany, SplitByValue, removeContexts, collapseContexts,
             createIf, exists, mapWithDefault, sort, sortByKey, replaceValue
 
 ZIP bundle structure matches real CPI exports:
-  xsd/<source_xsd_name>       — source XSD
-  xsd/<target_xsd_name>       — target XSD
-  mapping/<MappingName>.mmap  — the mapping XML
+  xsd/<source_xsd_name>       â€” source XSD
+  xsd/<target_xsd_name>       â€” target XSD
+  mapping/<MappingName>.mmap  â€” the mapping XML
 """
 
 import io
 import time
 import uuid
 import zipfile
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, quoteattr as _quoteattr
 
 
-# ── User-facing → real SAP fname mapping ──────────────────────────────────────
+def _attr(value: str) -> str:
+    """Safely escape a value for use inside an XML attribute (handles quotes)."""
+    # quoteattr wraps in the appropriate quote char and escapes the other
+    q = _quoteattr(value)
+    # quoteattr adds surrounding quotes â€” strip them; we add our own in f-strings
+    return q[1:-1].replace('"', '&quot;')
+
+
+# â”€â”€ User-facing â†’ real SAP fname mapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _FNAME_MAP: dict[str, str] = {
     # String
@@ -42,7 +50,7 @@ _FNAME_MAP: dict[str, str] = {
     "length":        "length",
     "substring":     "substring",
     "concat":        "concat",
-    "replaceAll":    "replaceString",   # user alias → real name
+    "replaceAll":    "replaceString",   # user alias â†’ real name
     "replaceString": "replaceString",
     "indexOf":       "indexOf",
     "indexOf3":      "indexOf",
@@ -50,7 +58,7 @@ _FNAME_MAP: dict[str, str] = {
     "startsWith":    "startsWith",
     "compare":       "compare",
     # Date
-    "formatDate":    "TransformDate",   # user alias → real name
+    "formatDate":    "TransformDate",   # user alias â†’ real name
     "TransformDate": "TransformDate",
     "DateTrans":     "TransformDate",
     "currentDate":   "currentDate",
@@ -70,7 +78,7 @@ _FNAME_MAP: dict[str, str] = {
     # Boolean
     "if":            "if",
     "ifWithoutElse": "ifWithoutElse",
-    "equals":        "Equals",          # user alias → real name (capital E)
+    "equals":        "Equals",          # user alias â†’ real name (capital E)
     "Equals":        "Equals",
     "equalsS":       "equalsS",
     "notEquals":     "notEquals",
@@ -82,7 +90,7 @@ _FNAME_MAP: dict[str, str] = {
     "or":            "Or",
     # Node
     "useOneAsMany":    "useOneAsMany",
-    "splitByValue":    "SplitByValue",  # user alias → real name (capital S)
+    "splitByValue":    "SplitByValue",  # user alias â†’ real name (capital S)
     "SplitByValue":    "SplitByValue",
     "removeContexts":  "removeContexts",
     "collapseContexts":"collapseContexts",
@@ -102,7 +110,7 @@ def _resolve_fname(user_func: str) -> str:
     return _FNAME_MAP.get(user_func, user_func)
 
 
-# ── Low-level XML helpers ─────────────────────────────────────────────────────
+# â”€â”€ Low-level XML helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _uid() -> str:
     return uuid.uuid4().hex
@@ -111,7 +119,7 @@ def _uid() -> str:
 def _src(path: str, x: int = 50, y: int = 40, context: str = "") -> str:
     ctx_attr = f' context="{escape(context)}"' if context else ""
     return (
-        f'<brick{ctx_attr} gid="0" path="{escape(path)}" type="Src">'
+        f'<brick{ctx_attr} gid="0" path="{_attr(path)}" type="Src">'
         f'<viewData x="{x}" y="{y}"/>'
         f'</brick>'
     )
@@ -125,7 +133,7 @@ def _const_as_binding_value(value: str) -> str:
 def _brick_direct(src_path: str, dst_path: str) -> str:
     """Direct 1-to-1 field mapping."""
     return (
-        f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+        f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
         f'<viewData x="200" y="40"/>'
         f'<arg>{_src(src_path)}</arg>'
         f'<group/>'
@@ -139,7 +147,7 @@ def _arg(content: str, pin: int | None = None) -> str:
 
 
 def _binding(name: str, value: str) -> str:
-    return f'<param name="{escape(name)}">{_const_as_binding_value(value)}</param>'
+    return f'<param name="{_attr(name)}">{_const_as_binding_value(value)}</param>'
 
 
 def _bindings(*params: tuple[str, str]) -> str:
@@ -150,16 +158,16 @@ def _bindings(*params: tuple[str, str]) -> str:
 
 
 def _func_open(fname: str, x: int = 125, y: int = 30) -> str:
-    return f'<brick fname="{escape(fname)}" fns="dflt" type="Func"><viewData x="{x}" y="{y}"/>'
+    return f'<brick fname="{_attr(fname)}" fns="dflt" type="Func"><viewData x="{x}" y="{y}"/>'
 
 
-# ── Function brick builders ───────────────────────────────────────────────────
+# â”€â”€ Function brick builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _build_brick_for_part(p: dict, y: int = 40) -> str:
     """Render one argument part as a Src brick (or nested Func brick when needed)."""
     if p["type"] == "src":
         return _src(p["path"], y=y)
-    # Constant — wrap as a no-arg concat with empty second arg as a workaround,
+    # Constant â€” wrap as a no-arg concat with empty second arg as a workaround,
     # because SAP's graphical mapping has no standalone "Const" brick.
     # In practice, constants appear as <bindings> values, not separate bricks.
     # Return empty so callers can move the value to a binding.
@@ -175,16 +183,16 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
     src_parts   = [p for p in parts if p["type"] == "src"]
     const_parts = [p for p in parts if p["type"] == "const"]
 
-    # ── concat ────────────────────────────────────────────────────────────────
+    # â”€â”€ concat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # SAP concat takes exactly 2 inputs and a separator in bindings.
-    # User syntax: (/src1)+SEP+(/src2) → parts=[src1, const:SEP, src2]
+    # User syntax: (/src1)+SEP+(/src2) â†’ parts=[src1, const:SEP, src2]
     if fname == "concat":
         sources   = src_parts
         separator = const_parts[0]["value"] if const_parts else ""
         if not sources:
             return ""
         if len(sources) == 1:
-            # Only one source → direct mapping with separator irrelevant
+            # Only one source â†’ direct mapping with separator irrelevant
             inner = _build_func_brick(dst_path, "toUpperCase", sources)  # fallback
             return _brick_direct(sources[0]["path"], dst_path)
         # Build left-associative chain for more than 2 sources
@@ -208,14 +216,14 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             )
         func_xml = _chain(sources)
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── TransformDate (formatDate) ────────────────────────────────────────────
+    # â”€â”€ TransformDate (formatDate) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Parts: [src, const:iform, const:oform]
     if fname == "TransformDate":
         src_path = src_parts[0]["path"] if src_parts else ""
@@ -232,15 +240,15 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + "</brick>"
         )
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── mapWithDefault ────────────────────────────────────────────────────────
-    # Parts: [src, const:default]  (key-value pairs not supported in XML — use Value Mapping)
+    # â”€â”€ mapWithDefault â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # Parts: [src, const:default]  (key-value pairs not supported in XML â€” use Value Mapping)
     if fname == "mapWithDefault":
         src_path = src_parts[0]["path"] if src_parts else ""
         default  = const_parts[-1]["value"] if const_parts else ""
@@ -251,14 +259,14 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + "</brick>"
         )
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── SplitByValue ─────────────────────────────────────────────────────────
+    # â”€â”€ SplitByValue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Parts: [src, const:delimiter]
     if fname == "SplitByValue":
         src_path  = src_parts[0]["path"] if src_parts else ""
@@ -270,14 +278,14 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + "</brick>"
         )
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── replaceString (replaceAll) ────────────────────────────────────────────
+    # â”€â”€ replaceString (replaceAll) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Parts: [src, const:search, const:replacement]
     if fname == "replaceString":
         src_path    = src_parts[0]["path"] if src_parts else ""
@@ -290,14 +298,14 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + "</brick>"
         )
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── substring ─────────────────────────────────────────────────────────────
+    # â”€â”€ substring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Parts: [src, const:start, const:length]
     if fname == "substring":
         src_path = src_parts[0]["path"] if src_parts else ""
@@ -311,27 +319,27 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + "</brick>"
         )
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── useOneAsMany ──────────────────────────────────────────────────────────
+    # â”€â”€ useOneAsMany â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Parts: [src]  (context args added automatically)
     if fname == "useOneAsMany":
         src_path = src_parts[0]["path"] if src_parts else ""
         func_xml = _func_open("useOneAsMany") + _arg(_src(src_path)) + "</brick>"
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── Simple single-arg functions ───────────────────────────────────────────
+    # â”€â”€ Simple single-arg functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # toUpperCase, toLowerCase, trim, length, abs, round, ceil, floor,
     # exists, removeContexts, collapseContexts, replaceValue, not, etc.
     _SIMPLE_ONE_ARG = {
@@ -343,14 +351,14 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         src_path = src_parts[0]["path"] if src_parts else dst_path
         func_xml = _func_open(fname) + _arg(_src(src_path)) + "</brick>"
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── Two-arg functions with optional bindings ──────────────────────────────
+    # â”€â”€ Two-arg functions with optional bindings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Equals, notEquals, equalsS, And, Or, compare, endsWith, startsWith, indexOf
     _TWO_ARG = {"Equals", "notEquals", "equalsS", "And", "Or", "compare",
                 "endsWith", "startsWith", "indexOf", "add", "subtract",
@@ -365,28 +373,28 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             bindings_xml = _bindings(*[(f"value{i}", cp["value"]) for i, cp in enumerate(const_parts)])
         func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── if / ifWithoutElse ────────────────────────────────────────────────────
+    # â”€â”€ if / ifWithoutElse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if fname in ("if", "ifWithoutElse"):
         args_xml = ""
         for pin_idx, p in enumerate(src_parts[:3]):
             args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
         func_xml = _func_open(fname) + args_xml + "</brick>"
         return (
-            f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
             f'<viewData x="200" y="40"/>'
             f'<arg>{func_xml}</arg>'
             f'<group/>'
             f'</brick>'
         )
 
-    # ── Fallback: generic function with all src args ──────────────────────────
+    # â”€â”€ Fallback: generic function with all src args â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     args_xml = ""
     for pin_idx, p in enumerate(src_parts):
         args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
@@ -395,7 +403,7 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         bindings_xml = _bindings(*[(f"param{i}", cp["value"]) for i, cp in enumerate(const_parts)])
     func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
     return (
-        f'<brick gid="0" path="{escape(dst_path)}" type="Dst">'
+        f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
         f'<viewData x="200" y="40"/>'
         f'<arg>{func_xml}</arg>'
         f'<group/>'
@@ -403,16 +411,16 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
     )
 
 
-# ── lnkRole helper ────────────────────────────────────────────────────────────
+# â”€â”€ lnkRole helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _lnk(role: str, xsd_filename: str, root_element: str) -> str:
     return (
         f'<lnkRole kpos="1" role="{role}">'
         f'<lnk rMode="R">'
         f'<key typeID="xsd" version="1.1">'
-        f'<elem>{escape(xsd_filename)}</elem>'
+        f'<elem>{_attr(xsd_filename)}</elem>'
         f'<elem>src/main/resources/xsd</elem>'
-        f'<elem>{escape(root_element)}</elem>'
+        f'<elem>{_attr(root_element)}</elem>'
         f'</key>'
         f'</lnk>'
         f'</lnkRole>'
@@ -424,7 +432,7 @@ def _concat_brick(dst_path: str, parts: list) -> str:
     return _build_func_brick(dst_path, "concat", parts)
 
 
-# ── Public: build .mmap XML string ───────────────────────────────────────────
+# â”€â”€ Public: build .mmap XML string â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def build_mmap_xml(
     mapping_name: str,
@@ -546,7 +554,7 @@ def build_mmap_xml(
     )
 
 
-# ── Public: build ZIP bundle ─────────────────────────────────────────────────
+# â”€â”€ Public: build ZIP bundle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def build_mmap_zip(
     mapping_name: str,
@@ -565,3 +573,4 @@ def build_mmap_zip(
         zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))
     buf.seek(0)
     return buf.read()
+
