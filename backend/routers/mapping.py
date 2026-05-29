@@ -436,10 +436,18 @@ def derive_rules(req: DeriveRuleRequest):
 
         # Only derive if functional rule exists but technical is empty
         if func_rule and not tech_rule:
-            prompt = f"""Source field name: {src or "(unknown)"}
+            # All source fields available in the sheet (for context when rule
+            # references multiple fields, e.g. "concat date and time with T")
+            all_src = (row.get("available_source_fields") or "").strip()
+            ctx_line = f"All source fields in this mapping: {all_src}" if all_src else ""
+            prompt = f"""Source field for this row: {src or "(see description)"}
+{ctx_line}
 Functional description: {func_rule}
 
-Derive the SAP CPI Graphical Mapping expression. Return ONLY the expression string."""
+Derive the SAP CPI Graphical Mapping expression.
+When the description references multiple fields (e.g. "date and time"), look them up from
+the available source fields list and use their actual names in the expression.
+Return ONLY the expression string — no explanation."""
             try:
                 derived = generate(_DERIVE_SYSTEM, prompt, max_tokens=200).strip()
                 # Strip any accidental markdown fences

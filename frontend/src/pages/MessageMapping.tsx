@@ -516,9 +516,18 @@ export default function MessageMapping() {
     if (!sheetPreview) return
     setDerivingAll(true)
     try {
-      const r = await mappingAPI.deriveRules(sheetPreview.rows)
+      const allSrcFields = sheetPreview.rows
+        .filter(r => r.source)
+        .map(r => r.source)
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .join(', ')
+      const rowsWithContext = sheetPreview.rows.map(r => ({
+        ...r,
+        available_source_fields: allSrcFields,
+      }))
+      const r = await mappingAPI.deriveRules(rowsWithContext)
       setSheetPreview(prev => prev ? { ...prev, rows: r.data.rows } : prev)
-    } catch (e: any) { setSheetError('AI derive failed') }
+    } catch { setSheetError('AI derive failed') }
     finally { setDerivingAll(false) }
   }
 
@@ -526,7 +535,18 @@ export default function MessageMapping() {
     if (!sheetPreview) return
     setDerivingRow(idx)
     try {
-      const r = await mappingAPI.deriveRules([sheetPreview.rows[idx]])
+      // Send all rows for context so AI can resolve references to other fields
+      // (e.g. "map date and time with T in between" needs to know both field names)
+      const allSrcFields = sheetPreview.rows
+        .filter(r => r.source)
+        .map(r => r.source)
+        .filter((v, i, a) => a.indexOf(v) === i)  // unique
+
+      const rowWithContext = {
+        ...sheetPreview.rows[idx],
+        available_source_fields: allSrcFields.join(', '),
+      }
+      const r = await mappingAPI.deriveRules([rowWithContext])
       const derived = r.data.rows[0]
       updatePreviewRow(idx, 'technical_rule', derived.technical_rule || '')
       updatePreviewRow(idx, 'ai_derived', derived.ai_derived)
@@ -1109,7 +1129,7 @@ export default function MessageMapping() {
                             {sheetPreview.src_paths.length > 0 && (
                               <select value=""
                                 onChange={e => { if (e.target.value) { updatePreviewRow(i, 'source', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'source_path', e.target.value); updatePreviewRow(i, 'source_matched', 'true') } }}
-                                className={`text-[9px] rounded px-1 py-1 cursor-pointer bg-gray-800 border shrink-0 ${srcOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
+                                className={`w-8 text-[9px] rounded px-0.5 py-1 cursor-pointer bg-gray-800 border shrink-0 ${srcOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
                                 title="Pick from XSD">
                                 <option value="">↓</option>
                                 {sheetPreview.src_paths.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1132,7 +1152,7 @@ export default function MessageMapping() {
                             {sheetPreview.tgt_paths.length > 0 && (
                               <select value=""
                                 onChange={e => { if (e.target.value) { updatePreviewRow(i, 'target', e.target.value.split('/').filter(Boolean).pop() ?? e.target.value); updatePreviewRow(i, 'target_path', e.target.value); updatePreviewRow(i, 'target_matched', 'true') } }}
-                                className={`text-[9px] rounded px-1 py-1 cursor-pointer bg-gray-800 border shrink-0 ${tgtOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
+                                className={`w-8 text-[9px] rounded px-0.5 py-1 cursor-pointer bg-gray-800 border shrink-0 ${tgtOk ? 'border-gray-700 text-gray-400' : 'border-red-600 text-orange-300'}`}
                                 title="Pick from XSD">
                                 <option value="">↓</option>
                                 {sheetPreview.tgt_paths.map(p => <option key={p} value={p}>{p}</option>)}
