@@ -1106,8 +1106,12 @@ export default function MessageMapping() {
                   const isDirect = !row.functional_rule && !row.technical_rule && row.status !== 'unmatched'
                   const srcOk = row.source_matched !== false
                   const tgtOk = row.target_matched !== false
-                  const srcFullPath = row.source_path || (row.source ? srcPathMap.get(row.source.toLowerCase()) : undefined)
-                  const tgtFullPath = row.target_path || (row.target ? tgtPathMap.get(row.target.toLowerCase()) : undefined)
+                  // If source/target is already a full XPath (contains /) use it directly;
+                  // otherwise look up the last-segment in the path map from the XSD
+                  const srcFullPath = row.source_path
+                    || (row.source?.includes('/') ? row.source : row.source ? srcPathMap.get(row.source.toLowerCase()) : undefined)
+                  const tgtFullPath = row.target_path
+                    || (row.target?.includes('/') ? row.target : row.target ? tgtPathMap.get(row.target.toLowerCase()) : undefined)
 
                   return (
                     <div key={i} className={`rounded-lg border px-3 py-2 transition-colors ${

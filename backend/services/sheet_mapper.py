@@ -97,11 +97,13 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
         # Functional rule: plain-English description
         func_col  = _detect_col(headers, ["functional mapping rule", "functional mapping",
                                            "functional rule", "functional", "business rule"])
-        # Technical rule: CPI expression. Intentionally excludes generic terms like
-        # "mapping rule" and "rule" which also appear in "Functional Mapping Rule".
+        # Technical rule / CPI expression column.
+        # Supports: our template's "Technical Mapping Rule", common exports like
+        # "Mapping Logic", "Logic", "Rule", "Script" etc.
         tech_col  = _detect_col(headers, ["technical mapping rule", "technical mapping",
                                            "technical rule", "technical", "cpi expression",
-                                           "expression", "formula"])
+                                           "expression", "formula", "mapping logic",
+                                           "logic", "script code", "script"])
         # If both point to same column (ambiguous header), try the next one for tech
         if tech_col >= 0 and tech_col == func_col:
             for j, h in enumerate(headers):
@@ -131,6 +133,21 @@ def _parse_sheet_rows(data: bytes, filename: str) -> list[dict]:
 
         src       = _cell(src_col)
         tgt       = _cell(tgt_col)
+
+        # Skip instruction/legend rows that look like column descriptions
+        # e.g. "(XPath from source root e.g. /msg/...)" or "(XPath from target root...)"
+        def _is_instruction(val: str | None) -> bool:
+            if not val:
+                return False
+            v = val.strip().lower()
+            return (v.startswith("(xpath from") or
+                    "xpath from source" in v or
+                    "xpath from target" in v or
+                    (v.startswith("(") and len(v) > 30))
+
+        if _is_instruction(src) or _is_instruction(tgt):
+            continue
+
         func_rule = _cell(func_col) if func_col >= 0 else None
         tech_rule = _cell(tech_col) if tech_col >= 0 else None
 
