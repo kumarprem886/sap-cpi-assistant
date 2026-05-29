@@ -366,6 +366,52 @@ export default function MessageMapping() {
   const sheetSrcLabel  = sheetSrcMode === 'catalog' ? (sheetSrcSchema || '') : (sheetSrcFile?.name || '')
   const sheetTgtLabel  = sheetTgtMode === 'catalog' ? (sheetTgtSchema || '') : (sheetTgtFile?.name || '')
 
+  // Prebuilt quick-start
+  const [selectedPrebuilt,  setSelectedPrebuilt]  = useState('')
+  const [loadingPrebuilt,   setLoadingPrebuilt]   = useState(false)
+
+  const loadFromPrebuilt = async (pairId: string) => {
+    if (!pairId) return
+    const pair = CATALOG_PAIRS.find(p => p.id === pairId)
+    if (!pair) return
+    setLoadingPrebuilt(true); setSheetError(''); setSheetPreview(null)
+
+    // Auto-select XSDs
+    setSheetSrcMode('catalog'); setSheetSrcSchema(pair.src)
+    setSheetTgtMode('catalog'); setSheetTgtSchema(pair.tgt)
+    setSheetMmapName(pair.name)
+
+    try {
+      const r = await mappingAPI.prebuiltPreview(pairId)
+      const data = r.data as { field_mappings?: Array<{source_path?: string; target_path?: string; note?: string}>; mapping_name?: string }
+
+      const lastSeg = (p: string) => p?.split('/').filter(Boolean).pop() ?? p
+
+      const rows = (data.field_mappings ?? [])
+        .filter(fm => fm.source_path && fm.target_path)
+        .map(fm => ({
+          source:          lastSeg(fm.source_path!),
+          target:          lastSeg(fm.target_path!),
+          functional_rule: fm.note?.startsWith('auto parent') ? '' : (fm.note ?? ''),
+          technical_rule:  '',
+          status:          'matched' as const,
+        }))
+
+      setSheetPreview({
+        rows,
+        matched: rows.length,
+        unmatched: 0,
+        unmatched_detail: [],
+        src_paths: [],
+        tgt_paths: [],
+      })
+      if (data.mapping_name) setSheetMmapName(data.mapping_name)
+      setSheetStep('preview')
+    } catch {
+      setSheetError(`Prebuilt mapping for "${pair.label}" not generated yet. Go to Schema Mapping → Pre-built Catalog and click Generate.`)
+    } finally { setLoadingPrebuilt(false) }
+  }
+
   // Enhanced sheet mapping state
   const [sheetStep, setSheetStep] = useState<'upload' | 'preview' | 'generate'>('upload')
   const [sheetPreview, setSheetPreview] = useState<{
@@ -763,6 +809,54 @@ export default function MessageMapping() {
           {/* ── Step 1: Upload ─── */}
           {sheetStep === 'upload' && (
             <div className="card space-y-5">
+
+              {/* ── Quick Start from Prebuilt ── */}
+              <div className="rounded-xl border border-amber-700/40 bg-amber-950/20 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className="text-amber-400 shrink-0" />
+                  <p className="text-sm font-semibold text-white">Quick Start from Prebuilt Mapping</p>
+                  <span className="text-xs text-gray-500">— auto-selects XSDs and loads all mapped fields</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedPrebuilt}
+                    onChange={e => { setSelectedPrebuilt(e.target.value); loadFromPrebuilt(e.target.value) }}
+                    className="input-field flex-1 text-sm"
+                    disabled={loadingPrebuilt}
+                  >
+                    <option value="">— Select a standard SAP mapping pair —</option>
+                    {['Material','Customer','Vendor','Procurement','Sales','Finance','Logistics'].map(grp => {
+                      const pairs = CATALOG_PAIRS.filter(p => p.group === grp)
+                      if (!pairs.length) return null
+                      return (
+                        <optgroup key={grp} label={`── ${grp} ──`}>
+                          {pairs.map(p => (
+                            <option key={p.id} value={p.id}
+                              disabled={prebuilt[p.id]?.status !== 'ready'}
+                            >
+                              {prebuilt[p.id]?.status === 'ready'
+                                ? `${p.label}  (${prebuilt[p.id].fields} fields)`
+                                : `${p.label}  — not generated`}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                  {loadingPrebuilt && <Loader2 size={16} className="animate-spin text-amber-400 shrink-0" />}
+                  {selectedPrebuilt && !loadingPrebuilt && (
+                    <button onClick={() => { setSelectedPrebuilt(''); setSheetSrcSchema(''); setSheetTgtSchema(''); setSheetPreview(null); setSheetStep('upload') }}
+                      className="text-gray-500 hover:text-red-400 shrink-0" title="Clear"><X size={14} /></button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Selects the paired XSDs automatically and populates the mapping table with AI-verified field mappings.
+                  Edit rows, add new fields, or tweak rules — then click <strong className="text-white">Generate .mmap</strong>.
+                  {Object.values(prebuilt).filter(p => p.status !== 'ready').length > 0 && (
+                    <span className="text-amber-500/80"> Greyed-out pairs need generation — go to Schema Mapping → Pre-built Catalog.</span>
+                  )}
+                </p>
+              </div>
 
               {/* Download template banner */}
               <div className="flex items-center justify-between rounded-xl bg-blue-950/30 border border-blue-800/50 px-4 py-3">
