@@ -697,32 +697,46 @@ async def import_zip_file(
     art_id   = art_id or "MyArtifact"
     art_name = art_name or art_id
 
-    # ── For Message Mapping: ArtifactContent = base64 of the .mmap file only ──
-    # The MessageMappingDesigntimeArtifacts POST API expects only the .mmap
-    # file content in base64, NOT the full ZIP. Sending the ZIP causes
-    # "Not a Message mapping resource" error. XSD files are not needed here —
-    # CPI resolves schemas from the package context.
+    # ── Prepare artifact content ───────────────────────────────────────────────
+    # Per official SAP spec (IntegrationContent.json): ArtifactContent is
+    # "message mapping zip content in base64-encoded format".
+    # The PUT description says CPI reads bundle version/name from MANIFEST.MF,
+    # so the ZIP must contain META-INF/MANIFEST.MF for API upload.
+    # Real CPI export ZIPs don't have the manifest (UI import is more lenient)
+    # but the API requires it.
     import zipfile as _zf, io as _io
     if artifact_type.lower() == "messagemapping":
         try:
             with _zf.ZipFile(_io.BytesIO(zip_bytes)) as zf:
-                mmap_files = [n for n in zf.namelist() if n.endswith(".mmap")]
+                existing = zf.namelist()
+                # Extract .mmap name for use as artifact ID/name if not set
+                mmap_files = [n for n in existing if n.endswith(".mmap")]
                 if mmap_files:
-                    mmap_content = zf.read(mmap_files[0])
-                    artifact_content = _b64.b64encode(mmap_content).decode()
-                    # Use the .mmap filename (without extension) as the artifact name/ID
-                    extracted_name = mmap_files[0].split("/")[-1].replace(".mmap", "")
-                    if extracted_name and not art_name:
-                        art_name = extracted_name
-                    if extracted_name and not art_id:
-                        art_id = re.sub(r"[^A-Za-z0-9_]", "_", extracted_name)
-                else:
-                    # No .mmap found — try sending ZIP as-is
-                    artifact_content = _b64.b64encode(zip_bytes).decode()
+                    extracted = mmap_files[0].split("/")[-1].replace(".mmap", "")
+                    if extracted and not art_name:
+                        art_name = extracted
+                    if extracted and not art_id:
+                        art_id = re.sub(r"[^A-Za-z0-9_]", "_", extracted)
+
+                # Inject MANIFEST.MF if missing (required by CPI API)
+                if "META-INF/MANIFEST.MF" not in existing:
+                    buf = _io.BytesIO()
+                    manifest_txt = (
+                        "Manifest-Version: 1.0\r\n"
+                        f"Bundle-SymbolicName: {art_id}\r\n"
+                        f"Bundle-Name: {art_name}\r\n"
+                        f"Bundle-Version: {version}\r\n"
+                        "\r\n"
+                    )
+                    with _zf.ZipFile(buf, "w", _zf.ZIP_DEFLATED) as out:
+                        out.writestr("META-INF/MANIFEST.MF", manifest_txt.encode())
+                        for item in zf.infolist():
+                            out.writestr(item, zf.read(item.filename))
+                    zip_bytes = buf.getvalue()
         except Exception:
-            artifact_content = _b64.b64encode(zip_bytes).decode()
-    else:
-        artifact_content = _b64.b64encode(zip_bytes).decode()
+            pass
+
+    artifact_content = _b64.b64encode(zip_bytes).decode()
 
     # ── Fetch CSRF token ──────────────────────────────────────────────────────
     csrf_resp = httpx.get(
@@ -747,16 +761,10 @@ async def import_zip_file(
     }
 
     # ── POST (create) ─────────────────────────────────────────────────────────
-    # iFlows use the flat entity path; other artifact types use the
-    # package-scoped navigation path which CPI requires for non-iFlow artifacts
-    is_iflow = artifact_type.lower() == "iflow"
-    post_url = (
-        f"{base}/{entity}"
-        if is_iflow
-        else f"{base}/IntegrationPackages('{package_id}')/{entity}"
-    )
+    # Per official SAP spec: POST to flat /MessageMappingDesigntimeArtifacts
+    # (not the package-scoped navigation path — that is GET only per spec)
     resp = httpx.post(
-        post_url,
+        f"{base}/{entity}",
         headers=write_headers, auth=_auth(), json=body, timeout=60,
     )
 
@@ -766,13 +774,8 @@ async def import_zip_file(
 
     # ── 409 → already exists → update ────────────────────────────────────────
     if resp.status_code == 409:
-        put_url = (
-            f"{base}/{entity}(Id='{art_id}',Version='active')"
-            if is_iflow
-            else f"{base}/IntegrationPackages('{package_id}')/{entity}(Id='{art_id}',Version='active')"
-        )
         put_resp = httpx.put(
-            put_url,
+            f"{base}/{entity}(Id='{art_id}',Version='active')",
             headers=write_headers, auth=_auth(),
             json={"ArtifactContent": artifact_content, "Name": art_name, "Version": version},
             timeout=60,
