@@ -760,8 +760,16 @@ async def import_zip_file(
     }
 
     # ── POST (create) ─────────────────────────────────────────────────────────
+    # iFlows use the flat entity path; other artifact types use the
+    # package-scoped navigation path which CPI requires for non-iFlow artifacts
+    is_iflow = artifact_type.lower() == "iflow"
+    post_url = (
+        f"{base}/{entity}"
+        if is_iflow
+        else f"{base}/IntegrationPackages('{package_id}')/{entity}"
+    )
     resp = httpx.post(
-        f"{base}/{entity}",
+        post_url,
         headers=write_headers, auth=_auth(), json=body, timeout=60,
     )
 
@@ -771,8 +779,13 @@ async def import_zip_file(
 
     # ── 409 → already exists → update ────────────────────────────────────────
     if resp.status_code == 409:
+        put_url = (
+            f"{base}/{entity}(Id='{art_id}',Version='active')"
+            if is_iflow
+            else f"{base}/IntegrationPackages('{package_id}')/{entity}(Id='{art_id}',Version='active')"
+        )
         put_resp = httpx.put(
-            f"{base}/{entity}(Id='{art_id}',Version='active')",
+            put_url,
             headers=write_headers, auth=_auth(),
             json={"ArtifactContent": artifact_content, "Name": art_name, "Version": version},
             timeout=60,
