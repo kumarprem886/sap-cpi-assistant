@@ -1649,17 +1649,55 @@ export default function CPIConnect() {
     finally { setCreating(false) }
   }
 
+  // Import preview state
+  const [importPreview, setImportPreview] = useState<{
+    idx: number; file: File; cpi_url: string; method: string
+    body: Record<string, string>; artifact_id: string; artifact_name: string
+  } | null>(null)
+  const [previewBodyText, setPreviewBodyText] = useState('')
+  const [previewJsonError, setPreviewJsonError] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+
   // Import helpers
   const addImportFiles = (files: FileList | File[]) => {
     const arr = Array.from(files).filter(f => f.name.endsWith('.zip'))
     setImportFiles(p => [...p, ...arr.map(f => ({ file: f, status: 'pending' as ImportStatus, message: '' }))])
   }
   const removeImportFile = (idx: number) => setImportFiles(p => p.filter((_, i) => i !== idx))
-  const importOne = async (idx: number, pkg: string, fileObj?: File) => {
+
+  // Show preview modal before actually importing
+  const previewImport = async (idx: number, pkg: string, fileObj?: File) => {
+    if (!pkg) return
+    const file = fileObj ?? importFiles[idx].file
+    setPreviewLoading(true)
+    try {
+      const r = await cpiAPI.previewImport(file, pkg, importArtifactType)
+      const preview = r.data
+      setImportPreview({ idx, file, cpi_url: preview.cpi_url, method: preview.method, body: preview.body, artifact_id: preview.artifact_id, artifact_name: preview.artifact_name })
+      setPreviewBodyText(JSON.stringify(preview.body, null, 2))
+      setPreviewJsonError('')
+    } catch (e: any) {
+      setImportFiles(p => p.map((f, i) => i === idx ? { ...f, status: 'error', message: 'Preview failed: ' + (e?.response?.data?.detail || e?.message) } : f))
+    } finally { setPreviewLoading(false) }
+  }
+
+  // Actually send after user confirms the preview
+  const confirmImport = async () => {
+    if (!importPreview) return
+    // Validate JSON
+    let edited: Record<string, string>
+    try {
+      edited = JSON.parse(previewBodyText)
+      setPreviewJsonError('')
+    } catch {
+      setPreviewJsonError('Invalid JSON — please fix before confirming.')
+      return
+    }
+    const { idx, file } = importPreview
+    setImportPreview(null)
     setImportFiles(p => p.map((f, i) => i === idx ? { ...f, status: 'uploading', message: '' } : f))
     try {
-      const file = fileObj ?? importFiles[idx].file
-      const r = await cpiAPI.importZip(file, pkg, importArtifactType)
+      const r = await cpiAPI.importZip(file, edited.PackageId ?? importPkg, importArtifactType, edited.Id, edited.Name)
       const verb = r.data.status === 'updated' ? 'updated' : 'imported'
       setImportFiles(p => p.map((f, i) => i === idx ? { ...f, status: 'done', message: `${verb} · ID: ${r.data.id}`, id: r.data.id } : f))
     } catch (e: any) {
@@ -1667,12 +1705,17 @@ export default function CPIConnect() {
       setImportFiles(p => p.map((f, i) => i === idx ? { ...f, status: 'error', message: String(msg) } : f))
     }
   }
+
+  const importOne = async (idx: number, pkg: string, fileObj?: File) => {
+    await previewImport(idx, pkg, fileObj)
+  }
   const importAll = async () => {
     if (!importPkg) return
-    setImportingAll(true)
+    // For Import All, show preview for first pending item at a time
     const pending = importFiles.map((f, i) => ({ f, i })).filter(({ f }) => f.status === 'pending' || f.status === 'error')
-    for (const { f, i } of pending) await importOne(i, importPkg, f.file)
-    setImportingAll(false)
+    if (pending.length > 0) {
+      await previewImport(pending[0].i, importPkg, pending[0].f.file)
+    }
   }
 
   const msgStatuses: MsgStatus[] = ['ALL', 'COMPLETED', 'FAILED', 'PROCESSING', 'RETRY', 'CANCELLED']
@@ -1984,6 +2027,70 @@ export default function CPIConnect() {
             </div>
           )}
         </>
+      )}
+
+      {/* ── Import Preview Modal ──────────────────────────────────────── */}
+      {importPreview && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setImportPreview(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+              <div>
+                <h3 className="text-white font-semibold">Preview CPI Request</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Review and edit before sending to CPI</p>
+              </div>
+              <button onClick={() => setImportPreview(null)} className="text-gray-500 hover:text-white"><X size={16} /></button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* URL + Method */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Endpoint</label>
+                <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
+                  <span className="text-xs font-bold text-green-400 shrink-0">{importPreview.method}</span>
+                  <span className="text-xs font-mono text-gray-300 break-all">{importPreview.cpi_url}</span>
+                </div>
+              </div>
+
+              {/* Editable JSON body */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-gray-400">Request Body (JSON)</label>
+                  <span className="text-[10px] text-gray-600">ArtifactContent sent as base64 ZIP at confirm — not shown here</span>
+                </div>
+                <textarea
+                  value={previewBodyText}
+                  onChange={e => { setPreviewBodyText(e.target.value); setPreviewJsonError('') }}
+                  rows={10}
+                  className="w-full bg-gray-800 border border-gray-700 focus:border-blue-500 rounded-lg px-3 py-2.5 text-xs font-mono text-gray-200 outline-none resize-none"
+                />
+                {previewJsonError && (
+                  <p className="text-xs text-red-400 mt-1">{previewJsonError}</p>
+                )}
+              </div>
+
+              {/* File info */}
+              <div className="flex items-center gap-2 text-xs text-gray-500 bg-gray-800/50 rounded-lg px-3 py-2">
+                <Archive size={13} />
+                <span>File: <span className="text-gray-300">{importPreview.file.name}</span></span>
+                <span>·</span>
+                <span>{(importPreview.file.size / 1024).toFixed(0)} KB</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 pt-1">
+                <button onClick={confirmImport}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold transition-colors">
+                  <Upload size={15} /> Confirm Send
+                </button>
+                <button onClick={() => setImportPreview(null)}
+                  className="px-4 py-2.5 text-sm text-gray-400 hover:text-white transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Not connected help */}

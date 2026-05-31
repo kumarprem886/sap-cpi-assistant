@@ -185,6 +185,13 @@ export const cpiAPI = {
     if (artifactName) form.append('artifact_name', artifactName)
     return api.post('/cpi/import-zip', form)
   },
+  previewImport: (file: File, packageId: string, artifactType = 'iflow') => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('package_id', packageId)
+    form.append('artifact_type', artifactType)
+    return api.post('/cpi/preview-import', form)
+  },
 
   // ── Variables (runtime iFlow string parameters) ──────────────────────────────
   variables:                ()                                    => api.get('/cpi/variables'),

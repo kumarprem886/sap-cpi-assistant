@@ -612,6 +612,91 @@ def _entity_for(artifact_type: str) -> str:
                                  "IntegrationDesigntimeArtifacts")
 
 
+# ── Preview import request (build payload without sending) ───────────────────
+
+@router.post("/preview-import")
+async def preview_import_request(
+    file:          UploadFile = File(...),
+    package_id:    str        = Form(...),
+    artifact_type: str        = Form("iflow"),
+    artifact_id:   str        = Form(""),
+    artifact_name: str        = Form(""),
+):
+    """
+    Build the CPI API request (URL + JSON body) for a ZIP import without
+    actually sending it. Returns everything the frontend needs to show the
+    preview/edit modal.
+    """
+    import zipfile as _zf, io as _io
+    base = _api_base()
+    if not base:
+        raise HTTPException(503, "CPI_API_BASE_URL not set in backend/.env")
+
+    zip_bytes = await file.read()
+    entity    = _entity_for(artifact_type)
+
+    art_id      = artifact_id.strip()
+    art_name    = artifact_name.strip()
+    version     = "1.0.0"
+    description = ""
+
+    try:
+        with _zf.ZipFile(_io.BytesIO(zip_bytes)) as zf:
+            names = zf.namelist()
+            if not art_id:
+                for ext in (".iflw", ".mmap"):
+                    hits = [n for n in names if n.endswith(ext)]
+                    if hits:
+                        art_id = hits[0].split("/")[-1].replace(ext, "")
+                        break
+            if not art_name and ".project" in names:
+                proj = zf.read(".project").decode("utf-8", errors="replace")
+                m = re.search(r"<name>([^<]+)</name>", proj)
+                if m:
+                    art_name = m.group(1).strip()
+            if "META-INF/MANIFEST.MF" in names:
+                manifest = zf.read("META-INF/MANIFEST.MF").decode("utf-8", errors="replace")
+                m = re.search(r"Bundle-Version:\s*([^\r\n]+)", manifest)
+                if m:
+                    version = m.group(1).strip()
+            if "metainfo.prop" in names:
+                metainfo = zf.read("metainfo.prop").decode("utf-8", errors="replace")
+                m = re.search(r"description=(.+)", metainfo)
+                if m:
+                    description = m.group(1).strip()
+    except Exception:
+        pass
+
+    if not art_id:
+        art_id = re.sub(r"\.(zip|mmap)$", "", file.filename or "artifact", flags=re.I)
+    art_id = re.sub(r"[^A-Za-z0-9_]", "_", art_id)
+    art_id = re.sub(r"_+", "_", art_id).strip("_")
+    if art_id and art_id[0].isdigit():
+        art_id = "_" + art_id
+    art_id   = art_id or "MyArtifact"
+    art_name = art_name or art_id
+
+    cpi_url = f"{base}/{entity}"
+    body = {
+        "PackageId":   package_id,
+        "Name":        art_name,
+        "Id":          art_id,
+        "Description": description,
+        "ArtifactContent": f"[base64 of ZIP — {len(zip_bytes):,} bytes — sent at confirm]",
+    }
+
+    return {
+        "cpi_url":      cpi_url,
+        "method":       "POST",
+        "entity":       entity,
+        "body":         body,
+        "artifact_id":  art_id,
+        "artifact_name": art_name,
+        "version":      version,
+        "file_size":    len(zip_bytes),
+    }
+
+
 # ── Import artifact ZIP (any type) ───────────────────────────────────────────
 
 @router.post("/import-zip")
