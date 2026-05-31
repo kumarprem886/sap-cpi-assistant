@@ -564,41 +564,42 @@ def build_mmap_zip(
     source_xsd_name: str = "source.xsd",
     target_xsd_name: str = "target.xsd",
     version: str = "1.0.0",
+    include_manifest: bool = True,
 ) -> bytes:
     """
-    Build a CPI-importable ZIP for a Message Mapping artifact.
+    Build a CPI Message Mapping ZIP.
 
-    Required structure (matches what CPI expects for MessageMappingDesigntimeArtifacts):
-      META-INF/MANIFEST.MF   — bundle metadata (required by CPI import API)
-      .project               — Eclipse project descriptor (required by CPI)
-      mapping/<name>.mmap    — the mapping XML
-      xsd/<source>.xsd       — source XSD
-      xsd/<target>.xsd       — target XSD
+    Standard export format (no manifest):
+      mapping/<name>.mmap  |  xsd/<source>.xsd  |  xsd/<target>.xsd
+
+    API import format (with manifest=True — required by MessageMappingDesigntimeArtifacts POST):
+      META-INF/MANIFEST.MF  |  .project  |  mapping/<name>.mmap  |  xsd/...
+
+    SAP's API import requires the manifest even though its own export does not include it.
+    Set include_manifest=False only when you want a "download" ZIP matching CPI's export format.
     """
-    # ── MANIFEST.MF ───────────────────────────────────────────────────────────
-    manifest = (
-        "Manifest-Version: 1.0\r\n"
-        f"Bundle-SymbolicName: {mapping_name}\r\n"
-        f"Bundle-Name: {mapping_name}\r\n"
-        f"Bundle-Version: {version}\r\n"
-        "\r\n"
-    )
-
-    # ── .project ──────────────────────────────────────────────────────────────
-    project = (
-        '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<projectDescription>\n'
-        f'  <name>{mapping_name}</name>\n'
-        '  <comment></comment>\n'
-        '  <buildSpec></buildSpec>\n'
-        '  <natures></natures>\n'
-        '</projectDescription>\n'
-    )
-
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("META-INF/MANIFEST.MF", manifest.encode("utf-8"))
-        zf.writestr(".project",             project.encode("utf-8"))
+        if include_manifest:
+            manifest = (
+                "Manifest-Version: 1.0\r\n"
+                f"Bundle-SymbolicName: {mapping_name}\r\n"
+                f"Bundle-Name: {mapping_name}\r\n"
+                f"Bundle-Version: {version}\r\n"
+                "\r\n"
+            )
+            project = (
+                '<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<projectDescription>\n'
+                f'  <name>{mapping_name}</name>\n'
+                '  <comment></comment>\n'
+                '  <buildSpec></buildSpec>\n'
+                '  <natures></natures>\n'
+                '</projectDescription>\n'
+            )
+            zf.writestr("META-INF/MANIFEST.MF", manifest.encode("utf-8"))
+            zf.writestr(".project",             project.encode("utf-8"))
+
         zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))
         if source_xsd:
             zf.writestr(f"xsd/{source_xsd_name}", source_xsd.encode("utf-8"))
