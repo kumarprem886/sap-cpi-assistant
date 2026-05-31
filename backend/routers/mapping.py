@@ -389,7 +389,17 @@ async def preview_sheet(
 
 # ── AI Rule Derivation ────────────────────────────────────────────────────────
 
-_DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
+def _build_derive_system() -> str:
+    cs = _CHEATSHEET
+    return f"""You are an SAP CPI Graphical Message Mapping expert.
+Reference cheat sheet (use correct fname values from Section 5):
+{cs[cs.find('## 5. ALL NODE FUNCTIONS'):cs.find('## 6. PATH FORMAT')]}
+
+Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression."""
+
+_DERIVE_SYSTEM = _build_derive_system()
+
+_DERIVE_SYSTEM_LEGACY = """You are an SAP CPI Graphical Message Mapping expert.
 
 Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression.
 
@@ -763,6 +773,29 @@ def generate_mmap_auto(req: MmapAutoRequest):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+# -- Cheat sheet loader -------------------------------------------------------
+
+def _load_cheatsheet() -> str:
+    """Load the CPI mapping cheat sheet — used in all AI generation prompts."""
+    try:
+        cs_path = Path(__file__).parent.parent.parent / "resources" / "cpi_mapping_cheatsheet.md"
+        return cs_path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
+
+_CHEATSHEET = _load_cheatsheet()
+
+_XSD_GEN_RULES = """
+CRITICAL XSD RULES for SAP CPI compatibility:
+1. DO NOT add targetNamespace attribute — causes CPI path resolution errors
+2. DO NOT add xmlns:tns or elementFormDefault="qualified" with namespace
+3. Root xs:element name must be a simple CamelCase noun (e.g. Order, Product, Material)
+4. Use minOccurs="0" on most elements for flexibility
+5. Keep nesting max 4 levels deep
+6. No type references outside the schema (keep self-contained)
+7. Example valid root: <xs:element name="StockReport"><xs:complexType><xs:sequence>...
+"""
+
 # -- Generate from Source XSD + Description ----------------------------------
 
 class GenerateFromSourceRequest(BaseModel):
@@ -787,6 +820,8 @@ def generate_from_source(req: GenerateFromSourceRequest):
     # Step 1: Generate target XSD
     tgt_xsd_prompt = (
         "You are an SAP CPI integration expert. Generate a valid XSD schema for the target system.\n\n"
+        f"{_XSD_GEN_RULES}\n\n"
+        "CHEAT SHEET REFERENCE:\n" + _CHEATSHEET[:3000] + "\n\n"
         "Source system XSD leaf fields:\n" + "\n".join(src_leaves) + "\n\n"
         "Target system requirement:\n" + req.description + "\n\n"
         "Generate a complete, valid XSD schema for the target system. Rules:\n"
@@ -900,11 +935,15 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     both_xsd_prompt = (
         "You are an SAP CPI integration architect. Given this integration requirement:\n\n"
         "\"" + req.idea + "\"\n\n"
-        "Generate BOTH the source XSD and target XSD schemas.\n\n"
+        f"{_XSD_GEN_RULES}\n\n"
+        "Generate BOTH the source XSD and target XSD schemas that match this integration.\n\n"
         "Return ONLY valid JSON (no markdown):\n"
-        '{"source_xsd": "<?xml ...>...", "target_xsd": "<?xml ...>...", '
-        '"source_root": "RootName", "target_root": "RootName", "description": "..."}\n\n'
-        "Both XSDs must be valid XML/XSD. Use xs: namespace. Include all relevant fields."
+        '{"source_xsd": "<?xml version=\\"1.0\\"?>...(complete XSD no targetNamespace)...", '
+        '"target_xsd": "<?xml version=\\"1.0\\"?>...(complete XSD no targetNamespace)...", '
+        '"source_root": "RootElementName", "target_root": "RootElementName", '
+        '"description": "What this mapping does"}\n\n'
+        "CRITICAL: Both XSDs must use xs: namespace, no targetNamespace, simple xs:element root.\n"
+        "REFERENCE:\n" + _CHEATSHEET[:2000]
     )
 
     raw = generate("Return ONLY valid JSON, no markdown fences.", both_xsd_prompt, max_tokens=6000)
