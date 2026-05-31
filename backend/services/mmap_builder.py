@@ -564,7 +564,7 @@ def build_mmap_zip(
     source_xsd_name: str = "source.xsd",
     target_xsd_name: str = "target.xsd",
     version: str = "1.0.0",
-    include_manifest: bool = True,
+    include_manifest: bool = False,
 ) -> bytes:
     """
     Build a CPI Message Mapping ZIP.
