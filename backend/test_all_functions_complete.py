@@ -263,7 +263,7 @@ RULES = [
     (f"{L}/Description",    f"{T}/AllDescriptions",
      f"collapseContexts(({L}/Description))",                                                           "collapseContexts"),
     (f"{S}/Tags",           f"{T}/TagList/Tag",
-     f"SplitByValue(({S}/Tags), ,)",                                                                   "SplitByValue"),
+     f'SplitByValue(({S}/Tags), ",")',                                                                  "SplitByValue"),
 
     # ── STATISTICS ────────────────────────────────────────────────────────────
     (f"{L}/Amount",         f"{T}/TotalLineAmount",
@@ -392,7 +392,7 @@ checks = [
     ("FormatNum has format binding",        'name="format"' in mmap_xml),
     ("TransformDate iform/oform bindings",  'name="iform"' in mmap_xml and 'name="oform"' in mmap_xml),
     ("mapWithDefault default_value",        'name="default_value"' in mmap_xml),
-    ("SplitByValue delimeter binding",      'name="delimeter"' in mmap_xml),
+    ("SplitByValue delimeter binding (,)",  'name="delimeter"><value>,</value>' in mmap_xml),
     ("getHeader headerName binding",        'name="headerName"' in mmap_xml),
     ("getProperty propName binding",        'name="propName"' in mmap_xml),
     ("No first()/last() used",              "first" not in func_set and "last" not in func_set),

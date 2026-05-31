@@ -290,25 +290,37 @@ def _match_all_fields(field_name: str, paths: list[str]) -> list[str]:
 
 def _split_func_args(args_str: str) -> list[str]:
     """
-    Split a function argument list by comma, respecting nested parentheses.
+    Split a function argument list by comma, respecting nested parentheses
+    AND quoted strings (single or double).  This lets users write delimiter
+    arguments such as  SplitByValue((/field), ",")  without the inner comma
+    being treated as an argument separator.
+
     Empty arguments (e.g. trailing comma for empty-string replacement) are kept.
     """
     args: list[str] = []
-    depth   = 0
-    current = ""
+    depth    = 0
+    in_quote: str | None = None   # None, '"', or "'"
+    current  = ""
     for ch in args_str:
-        if ch == "(":
-            depth += 1
+        if in_quote:
+            current += ch
+            if ch == in_quote:
+                in_quote = None         # closing quote — back to normal mode
+        elif ch in ('"', "'"):
+            in_quote = ch               # opening quote
+            current  += ch
+        elif ch == "(":
+            depth   += 1
             current += ch
         elif ch == ")":
-            depth -= 1
+            depth   -= 1
             current += ch
         elif ch == "," and depth == 0:
-            args.append(current)   # keep even if empty — valid empty-string constant
+            args.append(current)        # keep even if empty — valid empty-string constant
             current = ""
         else:
             current += ch
-    args.append(current)           # always append the last segment
+    args.append(current)                # always append the last segment
     return args
 
 

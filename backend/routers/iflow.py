@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -62,11 +63,31 @@ def Message processData(Message msg) {
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Compact tenant-specific system prompt
+# Load the iFlow cheatsheet (v4) — confirmed versions + adapter properties from
+# 4 live tenant iFlows.  Injected into IFLOW_SYSTEM so AI reads it first.
+# ─────────────────────────────────────────────────────────────────────────────
+def _load_iflow_cheatsheet() -> str:
+    """Load the iFlow cheatsheet from resources folder."""
+    try:
+        cs_path = Path(__file__).parent.parent / "resources" / "iflow_cheatsheet.md"
+        return cs_path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
+
+_IFLOW_CHEATSHEET = _load_iflow_cheatsheet()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tenant-specific system prompt — cheatsheet-driven
 # ─────────────────────────────────────────────────────────────────────────────
 IFLOW_SYSTEM = """\
 You are an SAP CPI iFlow generator. Produce complete, importable .iflw XML.
 Use ONLY the exact versions below — confirmed working on a live SAP Integration Suite tenant.
+
+""" + (_IFLOW_CHEATSHEET or "Use ONLY the exact versions confirmed on a live tenant.") + """
+
+══ ABSOLUTE FINAL RULES ══════════════════════════════════════════════════════
+The cheatsheet above is your source of truth.
+You are an SAP CPI iFlow generator. Produce complete, importable .iflw XML.
 
 ══ CRITICAL RULES (violation = import failure) ══════════════════════════════
 

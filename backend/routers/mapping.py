@@ -1,4 +1,4 @@
-import json
+﻿import json
 import time
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, BackgroundTasks, File, UploadFile, Form
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from io import BytesIO
 from services.claude_service import generate
 from services.mmap_builder import build_mmap_xml, build_mmap_zip
+from services.mapping_validator import quality_report as _quality_report, validate_mmap_xml as _validate_mmap
 from services.xsd_parser import auto_map, smart_extract_paths
 from services.sheet_mapper import sheet_to_field_mappings, _parse_sheet_rows
 from services.prebuilt_mapper import (
@@ -492,10 +493,16 @@ STATISTICS (aggregate â€” NO Groovy needed!):
   average((/field))                                -> average of all values
   count((/field))                                  -> count of occurrences
   index((/field))                                  -> 0-based index of current
-  last((/field))                                   -> last value in queue
+  NOTE: first() and last() do NOT exist in SAP CPI standard — never use them!
 
 NODE:
-  useOneAsMany((/field))                           -> repeat value for each occurrence
+  useOneAsMany((/value), (/contextParent), (/contextField))
+                                                   -> REPEAT 1 value for N occurrences (1->N)
+                                                      REQUIRES 3 arguments:
+                                                        arg1: value to repeat (e.g. header field)
+                                                        arg2: the repeating parent element
+                                                        arg3: a field inside the repeating element
+                                                      Example: useOneAsMany((/Header/Date), (/Items/Item), (/Items/Item/LineNum))
   mapWithDefault((/field), defaultValue)           -> pass value or default if empty
   exists((/field))                                 -> boolean: field has value
   getHeader(NAME)                                  -> get named message header
@@ -520,7 +527,7 @@ NODE:
 "join date and time with T"                        -> (/date)+T+(/time)
 "replace X with Y"                                 -> replaceAll((/field), X, Y)
 "remove dashes / hyphens"                          -> replaceAll((/field), -, )
-"split by comma"                                   -> SplitByValue((/field), ,)
+"split by comma"                                   -> SplitByValue((/field), ",")
 "format date YYYYMMDD to YYYY-MM-DD"               -> formatDate((/field), yyyyMMdd, yyyy-MM-dd)
 "today's date"                                    -> currentDate()
 "add two fields"                                   -> add((/field1), (/field2))
@@ -528,7 +535,7 @@ NODE:
 "format as 2 decimal places"                       -> FormatNum((/field), 0.00)
 "if field exists"                                  -> exists((/field))
 "default value if empty"                           -> mapWithDefault((/field), DEFAULT)
-"repeat for each line"                             -> useOneAsMany((/field))
+"repeat value for each item line (1->N)"           -> useOneAsMany((/HeaderField), (/Items/Item), (/Items/Item/KeyField))
 "sort ascending"                                   -> sort((/field))
 "direct copy" / "same value"                      -> ""
 "sum all quantities"                               -> sum((/path/to/Quantity))
@@ -588,13 +595,63 @@ Return ONLY the expression on one line."""
                 derived = generate(_DERIVE_SYSTEM, prompt, max_tokens=300).strip()
                 if derived.startswith("```"):
                     derived = derived.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-                results.append({**row, "technical_rule": derived, "ai_derived": True})
+
+                # ── Post-validation ──────────────────────────────────────────
+                # 1. Try to parse the rule — catches unparseable syntax
+                validation_warning = None
+                parse_ok = False
+                if derived and derived != '""':
+                    try:
+                        from services.sheet_mapper import _parse_rule
+                        # Build a minimal source paths list from available_source_fields
+                        _avail = [s.strip() for s in all_src.split(",") if s.strip()] if all_src else []
+                        _avail += [src] if src and src not in _avail else []
+                        parsed = _parse_rule(derived, _avail or ["/_dummy"])
+                        parse_ok = parsed is not None
+                        if not parse_ok:
+                            validation_warning = "Rule could not be parsed — check syntax"
+                    except Exception:
+                        parse_ok = False
+                        validation_warning = "Rule could not be parsed — check syntax"
+                else:
+                    parse_ok = True  # empty = direct copy, always valid
+
+                # 2. Check for known-bad patterns
+                import re as _re
+                _bad_funcs = {"first", "last"}   # don't exist in SAP CPI
+                _fname_match = _re.match(r'^([A-Za-z][A-Za-z0-9_:]*)\s*\(', derived or "")
+                if _fname_match and _fname_match.group(1).lower() in _bad_funcs:
+                    validation_warning = (
+                        f"'{_fname_match.group(1)}()' does not exist in SAP CPI standard functions. "
+                        "Use sum(), count(), or index() instead."
+                    )
+                    parse_ok = False
+
+                results.append({
+                    **row,
+                    "technical_rule": derived,
+                    "ai_derived":     True,
+                    "parse_ok":       parse_ok,
+                    **({"validation_warning": validation_warning} if validation_warning else {}),
+                })
             except Exception as e:
                 results.append({**row, "ai_derived": False, "derive_error": str(e)})
         else:
             results.append({**row, "ai_derived": False})
 
-    return {"rows": results}
+    # Compute quality report for all derived rows
+    # Build a flat list of all known source paths from the rows
+    all_srcs = []
+    for r in results:
+        avail = (r.get("available_source_fields") or "")
+        all_srcs += [s.strip() for s in avail.split(",") if s.strip()]
+        src = (r.get("source") or "").strip()
+        if src:
+            all_srcs.append(src)
+    all_srcs = list(set(all_srcs))
+
+    qr = _quality_report(results, all_srcs)
+    return {"rows": results, "quality": qr}
 
 
 # â”€â”€ ZIP preview â€” returns file list + mmap XML without downloading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -722,6 +779,9 @@ async def generate_mmap_from_sheet(
         target_root     = tgt_root or "Target",
         field_mappings  = matched,
     )
+    # Validate mmap XML structure
+    _mmap_report = _validate_mmap(mmap_xml)
+
     zip_bytes = build_mmap_zip(
         mapping_name    = safe_name,
         mmap_xml        = mmap_xml,
@@ -738,7 +798,9 @@ async def generate_mmap_from_sheet(
         headers={
             "Content-Disposition": f'attachment; filename="{safe_name}.zip"',
             "X-Mapping-Summary": summary,
-            "Access-Control-Expose-Headers": "X-Mapping-Summary",
+            "X-Mmap-Valid":     str(_mmap_report["xml_valid"]),
+            "X-Mmap-Dst-Count": str(_mmap_report["dst_count"]),
+            "Access-Control-Expose-Headers": "X-Mapping-Summary,X-Mmap-Valid,X-Mmap-Dst-Count",
         },
     )
 
@@ -918,7 +980,7 @@ def generate_from_source(req: GenerateFromSourceRequest):
         "SAP CPI expressions:\n"
         "- sum((/repeating/field)) â€” sum ALL occurrences of repeating field\n"
         "- toUpperCase((/field)), formatDate((/field), iFmt, oFmt)\n"
-        "- (/f1)+SEP+(/f2) for concatenation, useOneAsMany((/f)) to repeat 1â†’N\n\n"
+        "- (/f1)+SEP+(/f2) for concatenation, useOneAsMany((/val),(/ctxParent),(/ctxFld)) to repeat 1â†’N\n\n"
         'Return ONLY valid JSON (no markdown):\n'
         '{"field_mappings": [{"source_path": "/S/F", "target_path": "/T/F", "rule": "", "note": ""}]}'
     )
@@ -1134,8 +1196,7 @@ Other Statistics functions:
   - sum((/field))     â†’ total of all values
   - average((/field)) â†’ average
   - count((/field))   â†’ how many occurrences
-  - first((/field))   â†’ first value only
-  - last((/field))    â†’ last value only
+  NOTE: first() and last() do NOT exist in SAP CPI standard — never generate them!
 """
 
     map_prompt = (

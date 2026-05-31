@@ -218,9 +218,22 @@ def _wrap_dst(dst_path: str, func_xml: str) -> str:
 # -- Function brick builders -------------------------------------------------
 
 def _build_brick_for_part(p: dict, y: int = 40) -> str:
-    """Render one argument part as a Src brick (or nested Func brick when needed)."""
+    """Render one argument part — Src brick for field refs, constant Func brick for literals.
+
+    When a literal value (e.g. 'EUR', 'OPEN', 'HIGH') feeds into a comparison or
+    logical function, SAP CPI expects it as a *constant* function brick connected to
+    the input queue — NOT as a <bindings> parameter on the parent function.
+    """
     if p["type"] == "src":
         return _src(p["path"], y=y)
+    if p["type"] == "const":
+        val = p.get("value", "")
+        return (
+            f'<brick fname="constant" fns="dflt" type="Func">'
+            f'<viewData x="50" y="{y}"/>'
+            f'{_bindings(("constValue", val))}'
+            f'</brick>'
+        )
     return ""
 
 
@@ -475,20 +488,24 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         "DateBefore", "DateAfter", "CompareDates",
     }
     if fname in _TWO_ARG:
+        # Use ALL parts (src + const) in order — constants become constant-function bricks
+        # at the queue input, NOT bindings.  This is what CPI expects for comparison /
+        # arithmetic functions: e.g. notEquals(Currency-field, "EUR"-constant).
         args_xml = ""
-        for pin_idx, p in enumerate(src_parts[:2]):
-            args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
-        bindings_xml = ""
-        if const_parts:
-            bindings_xml = _bindings(*[(f"value{i}", cp["value"]) for i, cp in enumerate(const_parts)])
-        func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
+        for pin_idx, p in enumerate(parts[:2]):
+            inner = _build_brick_for_part(p, y=40 + pin_idx * 30)
+            args_xml += _arg(inner, pin=pin_idx if pin_idx > 0 else None)
+        func_xml = _func_open(fname) + args_xml + "</brick>"
         return _wrap_dst(dst_path, func_xml)
 
     # -- if / ifWithoutElse / ifS / ifSWithoutElse ----------------------------
+    # All 3 args (condition, trueValue, falseValue) are queue inputs.
+    # Literal true/false values become constant-function bricks.
     if fname in ("if", "ifWithoutElse", "ifS", "ifSWithoutElse"):
         args_xml = ""
-        for pin_idx, p in enumerate(src_parts[:3]):
-            args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
+        for pin_idx, p in enumerate(parts[:3]):
+            inner = _build_brick_for_part(p, y=40 + pin_idx * 30)
+            args_xml += _arg(inner, pin=pin_idx if pin_idx > 0 else None)
         func_xml = _func_open(fname) + args_xml + "</brick>"
         return _wrap_dst(dst_path, func_xml)
 
@@ -727,7 +744,7 @@ def build_mmap_xml(
     src_lnk      = _lnk("SOURCE_IFR_MESS", source_xsd_name, source_root)
     tgt_lnk      = _lnk("TARGET_IFR_MESS", target_xsd_name, target_root)
 
-    return (
+    full_xml = (
         '<?xml version="1.0" encoding="utf-8"?>'
         '<xiObj xmlns="urn:sap-com:xi">'
 
@@ -799,6 +816,17 @@ def build_mmap_xml(
 
         '</xiObj>'
     )
+
+    # Round-trip validation — catch any XML assembly bugs immediately
+    try:
+        from lxml import etree
+        etree.fromstring(full_xml.encode("utf-8"))
+    except Exception as xml_err:
+        import warnings
+        warnings.warn(f"mmap_builder produced invalid XML: {xml_err}", stacklevel=2)
+        # Don't crash — return the XML anyway so caller can debug it
+
+    return full_xml
 
 
 # -- Public: build ZIP bundle ------------------------------------------------

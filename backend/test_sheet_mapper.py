@@ -37,7 +37,11 @@ matched, unmatched = sheet_to_field_mappings(sheet_bytes, "mapping.xlsx", src_pa
 print(f"\n=== MATCHED ({len(matched)}) ===")
 for m in matched:
     note = f"  [{m['note']}]" if m.get("note") else ""
-    print(f"  {m['source_path']}  ->  {m['target_path']}{note}")
+    if m.get("parts"):
+        parts_str = " + ".join(f"[{p['type']}:{p.get('path') or p.get('value')}]" for p in m["parts"])
+        print(f"  CONCAT({parts_str})  ->  {m['target_path']}{note}")
+    else:
+        print(f"  {m['source_path']}  ->  {m['target_path']}{note}")
 
 print(f"\n=== UNMATCHED ({len(unmatched)}) ===")
 for u in unmatched:
