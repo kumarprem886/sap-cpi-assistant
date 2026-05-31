@@ -697,45 +697,32 @@ async def import_zip_file(
     art_id   = art_id or "MyArtifact"
     art_name = art_name or art_id
 
-    # ── For non-iflow artifact types, inject MANIFEST.MF if not present ───────
-    # SAP CPI's API import requires MANIFEST.MF for ALL artifact types even
-    # though CPI's own export format does not include it. This is a SAP
-    # inconsistency: export ZIP has no manifest, but API POST requires one.
-    _needs_manifest = artifact_type.lower() not in ("iflow",)
-    if _needs_manifest:
-        import zipfile as _zf, io as _io
+    # ── For Message Mapping: ArtifactContent = base64 of the .mmap file only ──
+    # The MessageMappingDesigntimeArtifacts POST API expects only the .mmap
+    # file content in base64, NOT the full ZIP. Sending the ZIP causes
+    # "Not a Message mapping resource" error. XSD files are not needed here —
+    # CPI resolves schemas from the package context.
+    import zipfile as _zf, io as _io
+    if artifact_type.lower() == "messagemapping":
         try:
-            orig = _zf.ZipFile(_io.BytesIO(zip_bytes))
-            if "META-INF/MANIFEST.MF" not in orig.namelist():
-                buf = _io.BytesIO()
-                manifest_txt = (
-                    "Manifest-Version: 1.0\r\n"
-                    f"Bundle-SymbolicName: {art_id}\r\n"
-                    f"Bundle-Name: {art_name}\r\n"
-                    f"Bundle-Version: {version}\r\n\r\n"
-                )
-                project_txt = (
-                    '<?xml version="1.0" encoding="UTF-8"?>\n'
-                    '<projectDescription>\n'
-                    f'  <name>{art_name}</name>\n'
-                    '  <comment></comment>\n'
-                    '  <buildSpec></buildSpec>\n'
-                    '  <natures></natures>\n'
-                    '</projectDescription>\n'
-                )
-                with _zf.ZipFile(buf, "w", _zf.ZIP_DEFLATED) as out:
-                    out.writestr("META-INF/MANIFEST.MF", manifest_txt.encode())
-                    out.writestr(".project", project_txt.encode())
-                    for item in orig.infolist():
-                        out.writestr(item, orig.read(item.filename))
-                orig.close()
-                zip_bytes = buf.getvalue()
-            else:
-                orig.close()
+            with _zf.ZipFile(_io.BytesIO(zip_bytes)) as zf:
+                mmap_files = [n for n in zf.namelist() if n.endswith(".mmap")]
+                if mmap_files:
+                    mmap_content = zf.read(mmap_files[0])
+                    artifact_content = _b64.b64encode(mmap_content).decode()
+                    # Use the .mmap filename (without extension) as the artifact name/ID
+                    extracted_name = mmap_files[0].split("/")[-1].replace(".mmap", "")
+                    if extracted_name and not art_name:
+                        art_name = extracted_name
+                    if extracted_name and not art_id:
+                        art_id = re.sub(r"[^A-Za-z0-9_]", "_", extracted_name)
+                else:
+                    # No .mmap found — try sending ZIP as-is
+                    artifact_content = _b64.b64encode(zip_bytes).decode()
         except Exception:
-            pass   # if zip manipulation fails, proceed with original
-
-    artifact_content = _b64.b64encode(zip_bytes).decode()
+            artifact_content = _b64.b64encode(zip_bytes).decode()
+    else:
+        artifact_content = _b64.b64encode(zip_bytes).decode()
 
     # ── Fetch CSRF token ──────────────────────────────────────────────────────
     csrf_resp = httpx.get(
