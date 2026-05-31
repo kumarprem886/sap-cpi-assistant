@@ -617,8 +617,52 @@ def build_mmap_xml(
     uid1  = _uid()
     uid2  = _uid()
 
+    # ── Auto-inject missing parent/container element mappings ────────────────────
+    # SAP CPI requires EVERY ancestor in the path to be explicitly mapped.
+    # Without a parent mapping, child field mappings cannot work — CPI has no
+    # structural context to create the parent element.
+    # This ensures that if /A/B/C is mapped, /A and /A/B are also mapped.
+    def _parent(path: str) -> str:
+        parts = [p for p in path.split("/") if p]
+        return "/" + "/".join(parts[:-1]) if len(parts) > 1 else ""
+
+    def _src_parent(tgt_path: str, src_path: str) -> str:
+        """Best-guess source parent from a source path (go up one level)."""
+        return _parent(src_path) if src_path else ""
+
+    # Build index: tgt_path → src_path for all existing direct mappings
+    existing_tgt: dict[str, str] = {
+        fm.get("target_path", "").strip(): fm.get("source_path", "").strip()
+        for fm in field_mappings
+        if fm.get("target_path") and fm.get("source_path") and not fm.get("parts") and not fm.get("func")
+    }
+
+    # Collect all ancestor paths that need to be mapped
+    parents_needed: dict[str, str] = {}  # tgt_parent → src_parent
+    for fm in list(field_mappings):
+        tgt_path = fm.get("target_path", "").strip()
+        src_path = fm.get("source_path", "").strip()
+        if not tgt_path:
+            continue
+        # Walk up the target path adding parent mappings if not already present
+        tgt_ancestor = _parent(tgt_path)
+        src_ancestor  = _parent(src_path) if src_path else ""
+        while tgt_ancestor and tgt_ancestor != "/":
+            if tgt_ancestor not in existing_tgt and tgt_ancestor not in parents_needed:
+                parents_needed[tgt_ancestor] = src_ancestor
+            tgt_ancestor = _parent(tgt_ancestor)
+            src_ancestor  = _parent(src_ancestor) if src_ancestor else ""
+
+    # Prepend parent mappings in order (shallowest first) so CPI sees them top-down
+    parent_fms = sorted(
+        [{"source_path": s, "target_path": t, "note": "auto parent"}
+         for t, s in parents_needed.items() if s],
+        key=lambda x: x["target_path"].count("/"),
+    )
+    all_mappings = parent_fms + list(field_mappings)
+
     bricks_parts: list[str] = []
-    for fm in field_mappings:
+    for fm in all_mappings:
         tgt   = fm.get("target_path", "").strip()
         if not tgt:
             continue
