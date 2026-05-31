@@ -563,14 +563,47 @@ def build_mmap_zip(
     target_xsd: str = "",
     source_xsd_name: str = "source.xsd",
     target_xsd_name: str = "target.xsd",
+    version: str = "1.0.0",
 ) -> bytes:
+    """
+    Build a CPI-importable ZIP for a Message Mapping artifact.
+
+    Required structure (matches what CPI expects for MessageMappingDesigntimeArtifacts):
+      META-INF/MANIFEST.MF   — bundle metadata (required by CPI import API)
+      .project               — Eclipse project descriptor (required by CPI)
+      mapping/<name>.mmap    — the mapping XML
+      xsd/<source>.xsd       — source XSD
+      xsd/<target>.xsd       — target XSD
+    """
+    # ── MANIFEST.MF ───────────────────────────────────────────────────────────
+    manifest = (
+        "Manifest-Version: 1.0\r\n"
+        f"Bundle-SymbolicName: {mapping_name}\r\n"
+        f"Bundle-Name: {mapping_name}\r\n"
+        f"Bundle-Version: {version}\r\n"
+        "\r\n"
+    )
+
+    # ── .project ──────────────────────────────────────────────────────────────
+    project = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<projectDescription>\n'
+        f'  <name>{mapping_name}</name>\n'
+        '  <comment></comment>\n'
+        '  <buildSpec></buildSpec>\n'
+        '  <natures></natures>\n'
+        '</projectDescription>\n'
+    )
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("META-INF/MANIFEST.MF", manifest.encode("utf-8"))
+        zf.writestr(".project",             project.encode("utf-8"))
+        zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))
         if source_xsd:
             zf.writestr(f"xsd/{source_xsd_name}", source_xsd.encode("utf-8"))
         if target_xsd and target_xsd_name != source_xsd_name:
             zf.writestr(f"xsd/{target_xsd_name}", target_xsd.encode("utf-8"))
-        zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))
     buf.seek(0)
     return buf.read()
 
