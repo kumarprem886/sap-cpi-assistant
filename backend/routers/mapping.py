@@ -393,6 +393,19 @@ _DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
 
 Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression.
 
+== CONTEXT & STATISTICS — CRITICAL KNOWLEDGE ==
+SAP CPI uses a CONTEXT concept for repeating elements:
+- When source has maxOccurs="unbounded", each occurrence is a separate value in the queue
+- Statistics functions process the ENTIRE queue and return ONE result:
+  * sum((/f))     → SUM of all occurrences (use for "total quantity", "sum of amounts")
+  * average((/f)) → average of all values
+  * count((/f))   → how many occurrences exist
+  * first((/f))   → first occurrence value
+  * last((/f))    → last occurrence value
+  * index((/f))   → 0-based index of current occurrence
+- DO NOT suggest Groovy UDF for sum/average/count — use the Statistics functions!
+- useOneAsMany((/f)) → repeat ONE value for EACH target occurrence (opposite of sum)
+
 == ALL SAP CPI STANDARD FUNCTIONS ==
 
 STRING:
@@ -1030,10 +1043,19 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     if needs_aggregate:
         aggregate_note = """
 AGGREGATION DETECTED: The user wants SUM/TOTAL/COUNT of repeating values.
-For aggregate fields (like TotalQuantity = sum of all Item/Quantity):
-  - Use rule: "GROOVY:sumAll" to indicate a Groovy UDF is needed
-  - The source_path should be the repeating field (e.g. /SalesOrder/Items/Item/Quantity)
-  - The note should say "UDF: sum all values of this repeating field"
+SAP CPI has BUILT-IN Statistics functions for this — NO Groovy UDF needed!
+
+For sum of a repeating field (e.g. TotalQuantity = sum of all Item/Quantity):
+  - rule: "sum((/SalesOrder/Items/Item/Quantity))"  ← use the repeating source path
+  - The sum() function takes ALL occurrences and returns one total value
+  - NEVER use GROOVY: for sum/average/count — use the Statistics functions
+
+Other Statistics functions:
+  - sum((/field))     → total of all values
+  - average((/field)) → average
+  - count((/field))   → how many occurrences
+  - first((/field))   → first value only
+  - last((/field))    → last value only
 """
 
     map_prompt = (
@@ -1063,22 +1085,6 @@ For aggregate fields (like TotalQuantity = sum of all Item/Quantity):
     from services.sheet_mapper import _parse_rule
 
     udfs: list[dict] = []  # collect UDFs to inject into mmap
-
-    _GROOVY_SUM_UDF = {
-        "name": "sumAll",
-        "title": "Sum All Values",
-        "description": "Sums all numeric values in a repeating queue (for aggregate mappings)",
-        "cacheType": "2",   # 2 = all values at once
-        "code": (
-            'double total = 0.0;\n'
-            'for (String v : arg1) {\n'
-            '    if (v != null && !v.trim().isEmpty()) {\n'
-            '        try { total += Double.parseDouble(v.trim()); } catch (Exception e) {}\n'
-            '    }\n'
-            '}\n'
-            'result.addValue(String.valueOf(total));'
-        ),
-    }
 
     matched = []
     udf_needed: set[str] = set()

@@ -116,6 +116,13 @@ _FNAME_MAP: dict[str, str] = {
     "replaceValue":     "replaceValue",
     "formatByExample":  "formatByExample",
     "UseOneAsMany":     "useOneAsMany",  # alternate capitalisation
+    # Statistics (operate on ALL values in a context queue — no Groovy needed!)
+    "sum":              "sum",           # sum of all values in queue
+    "average":          "average",       # average of all values
+    "count":            "count",         # count of occurrences
+    "index":            "index",         # index of current occurrence (0-based)
+    "first":            "first",         # first value in queue
+    "last":             "last",          # last value in queue
 }
 
 
@@ -411,6 +418,8 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         "round", "ceil", "floor",
         "exists", "removeContexts", "collapseContexts",
         "replaceValue", "Not", "createIf", "copyValue",
+        # Statistics — operate on ALL values in the queue (context-aware)
+        "sum", "average", "count", "index", "first", "last",
     }
     if fname in _SIMPLE_ONE_ARG:
         src_path = src_parts[0]["path"] if src_parts else dst_path

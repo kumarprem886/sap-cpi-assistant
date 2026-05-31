@@ -249,15 +249,32 @@ wsdl/<target_xsd_name>.xsd    ← target schema (REQUIRED, if different name)
 
 **IMPORTANT:** `equals` → real fname is `Equals` (capital E)
 
+### STATISTICS FUNCTIONS — USE THESE FOR AGGREGATION (no Groovy needed!)
+| User writes | fname | What it does |
+|-------------|-------|-------------|
+| sum((/f)) | sum | **SUM of ALL occurrences** — e.g. sum all Item/Quantity → TotalQuantity |
+| average((/f)) | average | Average of all values in queue |
+| count((/f)) | count | Count of occurrences |
+| index((/f)) | index | 0-based index of current occurrence |
+| first((/f)) | first | First value in the queue |
+| last((/f)) | last | Last value in the queue |
+
+**CONTEXT RULES for Statistics:**
+- Statistics functions work on ALL values of a REPEATING source field (maxOccurs="unbounded")
+- `sum((/Order/Items/Item/Quantity))` takes every Quantity occurrence and returns their SUM
+- No Groovy UDF needed — this is the standard CPI way to aggregate
+- The source field MUST repeat (1..* or 0..unbounded)
+- Statistics collapse context automatically — result is ONE value per source context
+
 ### NODE / CONTEXT FUNCTIONS
 | User writes | fname | Note |
 |-------------|-------|------|
-| useOneAsMany((/f)) | useOneAsMany | |
+| useOneAsMany((/f)) | useOneAsMany | repeat one value for N target occurrences |
 | SplitByValue((/f), ,) | **SplitByValue** | capital S, delimeter binding |
 | mapWithDefault((/f), val) | mapWithDefault | default_value binding |
 | exists((/f)) | exists | boolean result |
-| removeContexts((/f)) | removeContexts | |
-| collapseContexts((/f)) | collapseContexts | |
+| removeContexts((/f)) | removeContexts | flatten hierarchy to list |
+| collapseContexts((/f)) | collapseContexts | merge N contexts into 1 |
 | createIf((/cond)) | createIf | |
 | sort((/f)) | sort | order=ascending |
 | sortByKey((/f)) | sortByKey | |
