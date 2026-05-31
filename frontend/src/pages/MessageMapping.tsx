@@ -1,20 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Shuffle, Loader2, Wand2, Zap, Upload, X, Plus, FileCode,
-  Package, Cpu, BookOpen, ArrowRight, ChevronDown, ChevronUp,
+  Package, BookOpen, ArrowRight,
   CheckCircle2, Clock, RefreshCw, Download, Eye, FileSpreadsheet,
   AlertCircle, Sparkles, Lightbulb,
 } from 'lucide-react'
 import { mappingAPI } from '../api/client'
 import { IS_STATIC_HOST } from '../components/Layout'
-import ResultPanel from '../components/ResultPanel'
-import MarkdownResult from '../components/MarkdownResult'
-
-const outputFormats = [
-  { value: 'groovy', label: 'Groovy Script' },
-  { value: 'xslt', label: 'XSLT' },
-  { value: 'description', label: 'Mapping Table (Description)' },
-]
 
 // Must match the IDs in prebuilt_mapper.py CATALOG_PAIRS
 const CATALOG_PAIRS = [
@@ -611,32 +603,16 @@ function ZipPreviewStep({ sheetPreview, sheetMmapName, setSheetMmapName, sheetSr
 }
 
 export default function MessageMapping() {
-  const [tab, setTab] = useState<'schema' | 'sheet' | 'automap' | 'smart'>('schema')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState('')
-  const [resultType, setResultType] = useState('groovy')
+  const [tab, setTab] = useState<'catalog' | 'sheet' | 'smart'>('catalog')
 
-  const [schemaForm, setSchemaForm] = useState({ source_schema: '', target_schema: '', mapping_hints: '', output_format: 'groovy' })
-  const [mmapName, setMmapName] = useState('MM_Mapping')
-  const [mmapLoading, setMmapLoading] = useState(false)
-  const [mmapAutoLoading, setMmapAutoLoading] = useState(false)
-  const [mmapError, setMmapError] = useState('')
-  const [sourceFileName, setSourceFileName] = useState<string | null>(null)
-  const [targetFileName, setTargetFileName] = useState<string | null>(null)
-  const sourceFileRef = useRef<HTMLInputElement>(null)
-  const targetFileRef = useRef<HTMLInputElement>(null)
-
-  // Catalog state
-  const [catalogOpen, setCatalogOpen] = useState(true)
   const [filterGroup, setFilterGroup] = useState('All')
-  const [selectedPairIdx, setSelectedPairIdx] = useState<number | null>(null)
-  const [catalogLoading, setCatalogLoading] = useState(false)
 
   // Pre-built state
   const [prebuilt, setPrebuilt] = useState<Record<string, PrebuiltInfo>>({})
   const [generatingAll, setGeneratingAll] = useState(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
+  const [catalogError, setCatalogError] = useState('')
 
   const groups = ['All', ...Array.from(new Set(CATALOG_PAIRS.map(p => p.group)))]
   const filteredPairs = filterGroup === 'All' ? CATALOG_PAIRS : CATALOG_PAIRS.filter(p => p.group === filterGroup)
@@ -660,14 +636,14 @@ export default function MessageMapping() {
   // Download pre-built .mmap
   const downloadPrebuilt = async (pair: typeof CATALOG_PAIRS[0]) => {
     setDownloadingId(pair.id)
-    setMmapError('')
+    setCatalogError('')
     try {
       const res = await mappingAPI.prebuiltDownload(pair.id)
       const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
       const a = document.createElement('a'); a.href = url; a.download = `${pair.name}.zip`; a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {
-      setMmapError(`Download failed for ${pair.id}: ${e?.message}`)
+      setCatalogError(`Download failed for ${pair.id}: ${e?.message}`)
     } finally {
       setDownloadingId(null)
     }
@@ -676,14 +652,14 @@ export default function MessageMapping() {
   // Generate single pre-built
   const generateSingle = async (pair: typeof CATALOG_PAIRS[0]) => {
     setGeneratingId(pair.id)
-    setMmapError('')
+    setCatalogError('')
     try {
       await mappingAPI.prebuiltGenerate(pair.id)
       setTimeout(refreshPrebuilt, 3000)
       setTimeout(refreshPrebuilt, 8000)
       setTimeout(refreshPrebuilt, 15000)
     } catch (e: any) {
-      setMmapError(`Generation failed: ${e?.message}`)
+      setCatalogError(`Generation failed: ${e?.message}`)
     } finally {
       setGeneratingId(null)
     }
@@ -692,7 +668,7 @@ export default function MessageMapping() {
   // Generate all pre-built
   const generateAll = async () => {
     setGeneratingAll(true)
-    setMmapError('')
+    setCatalogError('')
     try {
       await mappingAPI.prebuiltGenerateAll()
       // Poll more aggressively while generating
@@ -704,65 +680,9 @@ export default function MessageMapping() {
       }, 5000)
       setTimeout(() => { clearInterval(poll); setGeneratingAll(false) }, 300000) // 5min safety
     } catch (e: any) {
-      setMmapError(`Generate all failed: ${e?.message}`)
+      setCatalogError(`Generate all failed: ${e?.message}`)
       setGeneratingAll(false)
     }
-  }
-
-  // Load schemas for the schema editor
-  const loadCatalogPair = async (idx: number) => {
-    const pair = filteredPairs[idx]
-    setCatalogLoading(true)
-    setMmapError('')
-    try {
-      const [srcRes, tgtRes] = await Promise.all([mappingAPI.schema(pair.src), mappingAPI.schema(pair.tgt)])
-      setSchemaForm(f => ({ ...f, source_schema: srcRes.data.content, target_schema: tgtRes.data.content }))
-      setSourceFileName(pair.src)
-      setTargetFileName(pair.tgt)
-      setMmapName(pair.name)
-      setSelectedPairIdx(idx)
-    } catch (e: any) {
-      setMmapError(e?.response?.data?.detail || 'Failed to load schemas')
-    } finally {
-      setCatalogLoading(false)
-    }
-  }
-
-  const handleFileUpload = (side: 'source' | 'target', file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      if (side === 'source') { setSchemaForm(f => ({ ...f, source_schema: text })); setSourceFileName(file.name) }
-      else { setSchemaForm(f => ({ ...f, target_schema: text })); setTargetFileName(file.name) }
-      setSelectedPairIdx(null)
-    }
-    reader.readAsText(file)
-  }
-
-  const clearFile = (side: 'source' | 'target') => {
-    if (side === 'source') { setSchemaForm(f => ({ ...f, source_schema: '' })); setSourceFileName(null); if (sourceFileRef.current) sourceFileRef.current.value = '' }
-    else { setSchemaForm(f => ({ ...f, target_schema: '' })); setTargetFileName(null); if (targetFileRef.current) targetFileRef.current.value = '' }
-    setSelectedPairIdx(null)
-  }
-
-  const generateMmap = async () => {
-    if (!schemaForm.source_schema || !schemaForm.target_schema) return
-    setMmapLoading(true); setMmapError('')
-    try {
-      const res = await mappingAPI.generateMmap({ source_xsd: schemaForm.source_schema, target_xsd: schemaForm.target_schema, source_xsd_name: sourceFileName || 'source.xsd', target_xsd_name: targetFileName || 'target.xsd', mapping_name: mmapName || 'MM_Mapping', hints: schemaForm.mapping_hints })
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
-      const a = document.createElement('a'); a.href = url; a.download = `${mmapName || 'MM_Mapping'}.zip`; a.click(); URL.revokeObjectURL(url)
-    } catch (e: any) { setMmapError(e?.message || 'Failed') } finally { setMmapLoading(false) }
-  }
-
-  const generateMmapAuto = async () => {
-    if (!schemaForm.source_schema || !schemaForm.target_schema) return
-    setMmapAutoLoading(true); setMmapError('')
-    try {
-      const res = await mappingAPI.generateMmapAuto({ source_xsd: schemaForm.source_schema, target_xsd: schemaForm.target_schema, source_xsd_name: sourceFileName || 'source.xsd', target_xsd_name: targetFileName || 'target.xsd', mapping_name: mmapName || 'MM_Mapping' })
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
-      const a = document.createElement('a'); a.href = url; a.download = `${mmapName || 'MM_Mapping'}.zip`; a.click(); URL.revokeObjectURL(url)
-    } catch (e: any) { setMmapError(e?.message || 'Auto-map failed') } finally { setMmapAutoLoading(false) }
   }
 
   // Sheet Mapping state
@@ -806,8 +726,6 @@ export default function MessageMapping() {
 
   const sheetSrcReady  = sheetSrcMode === 'catalog' ? !!sheetSrcSchema : !!sheetSrcFile
   const sheetTgtReady  = sheetTgtMode === 'catalog' ? !!sheetTgtSchema : !!sheetTgtFile
-  const sheetSrcLabel  = sheetSrcMode === 'catalog' ? (sheetSrcSchema || '') : (sheetSrcFile?.name || '')
-  const sheetTgtLabel  = sheetTgtMode === 'catalog' ? (sheetTgtSchema || '') : (sheetTgtFile?.name || '')
 
   // Prebuilt quick-start
   const [selectedPrebuilt,  setSelectedPrebuilt]  = useState('')
@@ -1013,10 +931,6 @@ export default function MessageMapping() {
     } catch {} finally { setDerivingRow(null) }
   }
 
-  const [autoForm, setAutoForm] = useState({ source_fields: '', target_fields: '' })
-  const generateFromSchema = async () => { setLoading(true); try { const res = await mappingAPI.generate(schemaForm); setResult(res.data.result); setResultType(schemaForm.output_format) } finally { setLoading(false) } }
-  const autoMap = async () => { setLoading(true); try { const res = await mappingAPI.automap(autoForm); setResult(res.data.result); setResultType('markdown') } finally { setLoading(false) } }
-
   // Smart Generate state
   const [smartSrcFile, setSmartSrcFile]   = useState<File | null>(null)
   const [smartSrcMode, setSmartSrcMode]   = useState<'catalog' | 'upload'>('catalog')
@@ -1087,280 +1001,137 @@ export default function MessageMapping() {
         <Shuffle size={24} className="text-green-400" />
         <div>
           <h1 className="text-2xl font-bold text-white">Message Mapping</h1>
-          <p className="text-gray-400 text-sm">Auto-generate field mappings between source and target schemas</p>
+          <p className="text-gray-400 text-sm">Generate SAP CPI .mmap files from mapping sheets, prebuilt pairs, or AI descriptions</p>
         </div>
       </div>
 
       <div className="flex gap-1 bg-gray-900 p-1 rounded-lg w-fit mb-6 border border-gray-800">
-        <button onClick={() => { setTab('schema'); setResult('') }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'schema' ? 'bg-sap-blue text-white' : 'text-gray-400 hover:text-white'}`}>
-          <Wand2 size={13} className="inline mr-1.5" />Schema Mapping
+        <button onClick={() => setTab('catalog')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'catalog' ? 'bg-sap-blue text-white' : 'text-gray-400 hover:text-white'}`}>
+          <BookOpen size={13} className="inline mr-1.5" />Prebuilt Catalog
         </button>
-        <button onClick={() => { setTab('sheet'); setResult('') }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'sheet' ? 'bg-sap-blue text-white' : 'text-gray-400 hover:text-white'}`}>
+        <button onClick={() => setTab('sheet')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'sheet' ? 'bg-sap-blue text-white' : 'text-gray-400 hover:text-white'}`}>
           <FileSpreadsheet size={13} className="inline mr-1.5" />Sheet Mapping
         </button>
-        <button onClick={() => { setTab('automap'); setResult('') }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'automap' ? 'bg-sap-blue text-white' : 'text-gray-400 hover:text-white'}`}>
-          <Zap size={13} className="inline mr-1.5" />Quick Field Automap
-        </button>
-        <button onClick={() => { setTab('smart'); setResult('') }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'smart' ? 'bg-purple-700 text-white' : 'text-gray-400 hover:text-white'}`}>
-          <Sparkles size={13} className="inline mr-1.5" />Smart Generate
+        <button onClick={() => setTab('smart')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'smart' ? 'bg-purple-700 text-white' : 'text-gray-400 hover:text-white'}`}>
+          <Sparkles size={13} className="inline mr-1.5" />AI Generate
         </button>
       </div>
 
-      {tab === 'schema' && (
+      {tab === 'catalog' && (
         <div className="space-y-4">
-
-          {/* ── Mapping Catalog ─────────────────────────────────────────────── */}
-          <div className="card border border-gray-700 p-0 overflow-hidden">
-            <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800/50 transition-colors" onClick={() => setCatalogOpen(o => !o)}>
-              <div className="flex items-center gap-2">
-                <BookOpen size={15} className="text-sap-blue shrink-0" />
-                <span className="text-sm font-semibold text-white">Pre-built Mapping Catalog</span>
-                <span className="text-xs text-gray-500 ml-1">— {totalCount} S/4HANA IDoc ↔ OData pairs</span>
-                {readyCount > 0 && (
-                  <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-900/50 border border-emerald-700/50 text-emerald-300">
-                    <CheckCircle2 size={10} />{readyCount}/{totalCount} ready
-                  </span>
-                )}
-              </div>
-              {catalogOpen ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
-            </button>
-
-            {catalogOpen && (
-              <div className="border-t border-gray-700 p-4 space-y-3">
-
-                {/* Header actions */}
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  {/* Group filter chips */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {groups.map(g => (
-                      <button key={g} onClick={() => setFilterGroup(g)}
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${filterGroup === g ? 'bg-sap-blue border-sap-blue text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'}`}>
-                        {g}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Generate all button */}
-                  <button
-                    onClick={generateAll}
-                    disabled={generatingAll}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-60"
-                  >
-                    {generatingAll ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
-                    {generatingAll ? 'Generating…' : 'Generate All with AI'}
-                  </button>
-                </div>
-
-                {/* Pair cards */}
-                <div className="grid grid-cols-1 gap-2">
-                  {filteredPairs.map((pair) => {
-                    const colors  = GROUP_COLORS[pair.group] ?? { card: 'border-gray-700 bg-gray-800', badge: 'bg-gray-700 text-gray-300' }
-                    const pb      = prebuilt[pair.id]
-                    const isReady = pb?.status === 'ready'
-                    const isPending = !pb || pb.status === 'pending'
-                    const isActive = selectedPairIdx !== null && filteredPairs[selectedPairIdx]?.id === pair.id
-
-                    return (
-                      <div key={pair.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${colors.card} ${isActive ? 'ring-2 ring-sap-blue' : ''}`}>
-                        {/* Group badge */}
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${colors.badge}`}>{pair.group}</span>
-
-                        {/* Label */}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-xs font-medium text-white">{pair.label}</span>
-                          <div className="text-[10px] text-gray-500 mt-0.5">
-                            {pair.src} <ArrowRight size={9} className="inline" /> {pair.tgt}
-                          </div>
-                        </div>
-
-                        {/* Status + actions */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {isReady ? (
-                            <>
-                              <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                                <CheckCircle2 size={10} />{pb.fields} fields
-                              </span>
-                              {/* Download pre-built */}
-                              <button
-                                onClick={() => downloadPrebuilt(pair)}
-                                disabled={downloadingId === pair.id}
-                                title="Download pre-built .mmap (Claude-verified)"
-                                className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-emerald-700 hover:bg-emerald-600 text-white transition-colors disabled:opacity-60"
-                              >
-                                {downloadingId === pair.id ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
-                                .mmap
-                              </button>
-                              {/* Re-generate */}
-                              <button
-                                onClick={() => generateSingle(pair)}
-                                disabled={generatingId === pair.id}
-                                title="Re-generate with AI"
-                                className="p-1 rounded text-gray-500 hover:text-white transition-colors"
-                              >
-                                {generatingId === pair.id ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="flex items-center gap-1 text-[10px] text-gray-500">
-                                <Clock size={10} />{generatingAll || generatingId === pair.id ? 'generating…' : 'pending'}
-                              </span>
-                              <button
-                                onClick={() => generateSingle(pair)}
-                                disabled={generatingId === pair.id || generatingAll}
-                                title="Generate with AI"
-                                className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-60"
-                              >
-                                {generatingId === pair.id ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
-                                Generate
-                              </button>
-                            </>
-                          )}
-                          {/* Load into editor */}
-                          <button
-                            onClick={() => loadCatalogPair(filteredPairs.indexOf(pair))}
-                            disabled={catalogLoading}
-                            title="Load schemas into editor below"
-                            className="p-1 rounded text-gray-500 hover:text-sap-blue transition-colors"
-                          >
-                            {catalogLoading && isActive ? <Loader2 size={10} className="animate-spin" /> : <Eye size={10} />}
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <p className="text-[10px] text-gray-600 leading-relaxed">
-                  <strong className="text-gray-500">Pre-built .mmap</strong> — Claude AI analyses both schemas and maps only fields with a real semantic equivalent.
-                  No forced mappings, no parent containers, no guessing.
-                  Click <em>Generate</em> on any row to create it (uses Groq API), or <em>Generate All with AI</em> for all 18 pairs.
-                  Once ready, <em>.mmap</em> downloads instantly — no API call needed at download time.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* ── Schema editor ───────────────────────────────────────────────── */}
-          <div className="card space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Source */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="label mb-0">Source Schema</label>
-                  <button type="button" onClick={() => sourceFileRef.current?.click()}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
-                    <Upload size={12} />Upload XSD / XML
-                  </button>
-                  <input ref={sourceFileRef} type="file" accept=".xsd,.xml" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload('source', f) }} />
-                </div>
-                {sourceFileName && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-sap-blue/10 border border-sap-blue/30 text-xs text-sap-blue">
-                    <FileCode size={12} className="shrink-0" />
-                    <span className="truncate flex-1">{sourceFileName}</span>
-                    <button onClick={() => clearFile('source')} className="hover:text-red-400"><X size={12} /></button>
-                  </div>
-                )}
-                <textarea className="textarea-field" rows={7}
-                  placeholder="Paste source XSD / XML — or pick a catalog pair above (Eye icon) to load automatically..."
-                  value={schemaForm.source_schema}
-                  onChange={e => { setSchemaForm(f => ({ ...f, source_schema: e.target.value })); if (!e.target.value) setSourceFileName(null) }} />
-              </div>
-
-              {/* Target */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="label mb-0">Target Schema</label>
-                  <button type="button" onClick={() => targetFileRef.current?.click()}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
-                    <Upload size={12} />Upload XSD / XML
-                  </button>
-                  <input ref={targetFileRef} type="file" accept=".xsd,.xml" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload('target', f) }} />
-                </div>
-                {targetFileName && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-sap-blue/10 border border-sap-blue/30 text-xs text-sap-blue">
-                    <FileCode size={12} className="shrink-0" />
-                    <span className="truncate flex-1">{targetFileName}</span>
-                    <button onClick={() => clearFile('target')} className="hover:text-red-400"><X size={12} /></button>
-                  </div>
-                )}
-                <textarea className="textarea-field" rows={7}
-                  placeholder="Paste target XSD / XML — or pick a catalog pair above..."
-                  value={schemaForm.target_schema}
-                  onChange={e => { setSchemaForm(f => ({ ...f, target_schema: e.target.value })); if (!e.target.value) setTargetFileName(null) }} />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">Mapping Hints / Business Rules (optional)</label>
-              <textarea className="textarea-field" rows={2} placeholder="e.g. Map OrderId to PurchaseOrderNumber, convert date from YYYY-MM-DD to DD.MM.YYYY..." value={schemaForm.mapping_hints} onChange={e => setSchemaForm(f => ({ ...f, mapping_hints: e.target.value }))} />
-            </div>
-
-            <div>
-              <label className="label">Output Format</label>
-              <div className="flex gap-3">
-                {outputFormats.map(({ value, label }) => (
-                  <label key={value} className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="format" value={value} checked={schemaForm.output_format === value} onChange={() => setSchemaForm(f => ({ ...f, output_format: value }))} className="accent-sap-blue" />
-                    <span className="text-sm text-gray-300">{label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <button className="btn-primary flex items-center gap-2" onClick={generateFromSchema} disabled={loading || !schemaForm.source_schema || !schemaForm.target_schema}>
-              {loading ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-              {loading ? 'Generating...' : 'Generate Mapping (AI)'}
-            </button>
-
-            {/* .mmap export */}
-            <div className="border-t border-gray-700 pt-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Package size={15} className="text-sap-blue shrink-0" />
-                <span className="text-sm font-medium text-white">Generate .mmap for CPI Graphical Message Mapping</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400 whitespace-nowrap">Mapping name:</label>
-                <input type="text" className="input-field text-sm py-1 px-2 w-64" placeholder="MM_Mapping" value={mmapName} onChange={e => setMmapName(e.target.value.replace(/\s+/g, '_'))} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Cpu size={13} className="text-emerald-400 shrink-0" />
-                    <span className="text-xs font-semibold text-white">Auto-Map (Local · No AI)</span>
-                  </div>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Parses both XSDs locally. Maps only <span className="text-white font-medium">leaf fields</span> with score ≥ 0.82 using SAP field dictionary (472 pairs). Omits unmatched fields — no forced mappings.
-                  </p>
-                  <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-emerald-700 hover:bg-emerald-600 text-white transition-colors disabled:opacity-50"
-                    onClick={generateMmapAuto} disabled={mmapAutoLoading || !schemaForm.source_schema || !schemaForm.target_schema}>
-                    {mmapAutoLoading ? <Loader2 size={13} className="animate-spin" /> : <Cpu size={13} />}
-                    {mmapAutoLoading ? 'Parsing XSD…' : 'Download .mmap (Auto)'}
-                  </button>
-                </div>
-                <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Wand2 size={13} className="text-sap-blue shrink-0" />
-                    <span className="text-xs font-semibold text-white">AI-Assisted Map</span>
-                  </div>
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Sends schemas to AI for <span className="text-white font-medium">semantic analysis</span>. Maps fields by business meaning. Uses Groq API — may be rate-limited on large schemas.
-                  </p>
-                  <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
-                    onClick={generateMmap} disabled={mmapLoading || !schemaForm.source_schema || !schemaForm.target_schema}>
-                    {mmapLoading ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
-                    {mmapLoading ? 'Building .mmap…' : 'Download .mmap (AI)'}
-                  </button>
-                </div>
-              </div>
-              {mmapError && (
-                <div className="rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
-                  <span className="font-semibold">Error: </span>{mmapError}
-                </div>
+          {/* Header actions */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <BookOpen size={15} className="text-sap-blue shrink-0" />
+              <span className="text-sm font-semibold text-white">Pre-built Mapping Catalog</span>
+              <span className="text-xs text-gray-500 ml-1">— {totalCount} S/4HANA IDoc ↔ OData pairs</span>
+              {readyCount > 0 && (
+                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-900/50 border border-emerald-700/50 text-emerald-300">
+                  <CheckCircle2 size={10} />{readyCount}/{totalCount} ready
+                </span>
               )}
             </div>
+            <button
+              onClick={generateAll}
+              disabled={generatingAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-60"
+            >
+              {generatingAll ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
+              {generatingAll ? 'Generating…' : 'Generate All with AI'}
+            </button>
           </div>
+
+          {/* Group filter chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {groups.map(g => (
+              <button key={g} onClick={() => setFilterGroup(g)}
+                className={`px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors ${filterGroup === g ? 'bg-sap-blue border-sap-blue text-white' : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'}`}>
+                {g}
+              </button>
+            ))}
+          </div>
+
+          {/* Pair cards */}
+          <div className="grid grid-cols-1 gap-2">
+            {filteredPairs.map((pair) => {
+              const colors  = GROUP_COLORS[pair.group] ?? { card: 'border-gray-700 bg-gray-800', badge: 'bg-gray-700 text-gray-300' }
+              const pb      = prebuilt[pair.id]
+              const isReady = pb?.status === 'ready'
+
+              return (
+                <div key={pair.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg border ${colors.card}`}>
+                  {/* Group badge */}
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${colors.badge}`}>{pair.group}</span>
+
+                  {/* Label */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-medium text-white">{pair.label}</span>
+                    <div className="text-[10px] text-gray-500 mt-0.5">
+                      {pair.src} <ArrowRight size={9} className="inline" /> {pair.tgt}
+                    </div>
+                  </div>
+
+                  {/* Status + actions */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isReady ? (
+                      <>
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                          <CheckCircle2 size={10} />{pb.fields} fields
+                        </span>
+                        {/* Download pre-built */}
+                        <button
+                          onClick={() => downloadPrebuilt(pair)}
+                          disabled={downloadingId === pair.id}
+                          title="Download pre-built .mmap (Claude-verified)"
+                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-emerald-700 hover:bg-emerald-600 text-white transition-colors disabled:opacity-60"
+                        >
+                          {downloadingId === pair.id ? <Loader2 size={10} className="animate-spin" /> : <Download size={10} />}
+                          .mmap
+                        </button>
+                        {/* Re-generate */}
+                        <button
+                          onClick={() => generateSingle(pair)}
+                          disabled={generatingId === pair.id}
+                          title="Re-generate with AI"
+                          className="p-1 rounded text-gray-500 hover:text-white transition-colors"
+                        >
+                          {generatingId === pair.id ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                          <Clock size={10} />{generatingAll || generatingId === pair.id ? 'generating…' : 'pending'}
+                        </span>
+                        <button
+                          onClick={() => generateSingle(pair)}
+                          disabled={generatingId === pair.id || generatingAll}
+                          title="Generate with AI"
+                          className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold bg-sap-blue hover:bg-blue-600 text-white transition-colors disabled:opacity-60"
+                        >
+                          {generatingId === pair.id ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
+                          Generate
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {catalogError && (
+            <div className="rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
+              <span className="font-semibold">Error: </span>{catalogError}
+            </div>
+          )}
+
+          <p className="text-[10px] text-gray-600 leading-relaxed">
+            <strong className="text-gray-500">Pre-built .mmap</strong> — Claude AI analyses both schemas and maps only fields with a real semantic equivalent.
+            No forced mappings, no parent containers, no guessing.
+            Click <em>Generate</em> on any row to create it (uses Groq API), or <em>Generate All with AI</em> for all {totalCount} pairs.
+            Once ready, <em>.mmap</em> downloads instantly — no API call needed at download time.
+          </p>
         </div>
       )}
 
@@ -1796,27 +1567,7 @@ export default function MessageMapping() {
         </div>
       )}
 
-      {tab === 'automap' && (
-        <div className="card space-y-4">
-          <p className="text-sm text-gray-400">List fields one per line in format: <code className="bg-gray-800 px-1 rounded text-gray-300">fieldName: dataType</code></p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Source Fields</label>
-              <textarea className="textarea-field" rows={10} placeholder={"OrderId: String\nCustomerName: String\nOrderDate: Date\nTotalAmount: Decimal"} value={autoForm.source_fields} onChange={e => setAutoForm(f => ({ ...f, source_fields: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label">Target Fields</label>
-              <textarea className="textarea-field" rows={10} placeholder={"PurchaseOrderNo: String\nBuyerName: String\nDocumentDate: String\nNetValue: Number"} value={autoForm.target_fields} onChange={e => setAutoForm(f => ({ ...f, target_fields: e.target.value }))} />
-            </div>
-          </div>
-          <button className="btn-primary flex items-center gap-2" onClick={autoMap} disabled={loading || !autoForm.source_fields || !autoForm.target_fields}>
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-            {loading ? 'Mapping...' : 'Auto-Map Fields'}
-          </button>
-        </div>
-      )}
-
-      {/* ── Smart Generate tab ─────────────────────────────────────────────── */}
+      {/* ── AI Generate tab ─────────────────────────────────────────────── */}
       {tab === 'smart' && (
         <div className="space-y-4">
           {/* Header */}
@@ -2030,9 +1781,6 @@ export default function MessageMapping() {
         </div>
       )}
 
-      {result && resultType === 'groovy' && <ResultPanel result={result} language="groovy" title="Generated Mapping (Groovy)" />}
-      {result && resultType === 'xslt' && <ResultPanel result={result} language="xml" title="Generated Mapping (XSLT)" />}
-      {result && (resultType === 'description' || resultType === 'markdown' || resultType === 'automap') && <MarkdownResult content={result} title="Mapping Result" />}
     </div>
   )
 }
