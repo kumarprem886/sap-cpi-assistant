@@ -878,7 +878,7 @@ def generate_from_source(req: GenerateFromSourceRequest):
     import json as _json
 
     src_root, src_paths = smart_extract_paths(req.source_xsd)
-    src_leaves = leaf_paths(src_paths)[:40]
+    src_leaves = leaf_paths(src_paths)  # ALL leaf paths — no truncation
 
     # Step 1: Generate target XSD
     tgt_xsd_prompt = (
@@ -910,18 +910,18 @@ def generate_from_source(req: GenerateFromSourceRequest):
         tgt_root = "Root"
         tgt_paths = []
 
-    # Step 3: Generate mappings
+    # Step 3: Generate mappings — send ALL paths, no truncation
     mapping_prompt = (
         "Generate SAP CPI Graphical Message Mapping field mappings.\n\n"
-        "SOURCE XSD fields:\n" + "\n".join(src_paths[:60]) + "\n\n"
-        "TARGET XSD fields:\n" + "\n".join(tgt_paths[:60]) + "\n\n"
+        "CRITICAL: Map ROOT element first, then ALL parent containers, then leaf fields.\n"
+        "Use ONLY paths from the SOURCE XSD list below — do NOT invent paths.\n\n"
+        "SOURCE XSD fields (ALL available):\n" + "\n".join(src_paths) + "\n\n"
+        "TARGET XSD fields:\n" + "\n".join(tgt_paths) + "\n\n"
         "Mapping goal: " + req.description + "\n\n"
-        "Use SAP CPI node function expressions where transformation is needed:\n"
-        "- toUpperCase((/field)), toLowerCase((/field)), trim((/field))\n"
-        "- formatDate((/field), inputFmt, outputFmt)\n"
-        "- (/field1)+SEPARATOR+(/field2) for concatenation\n"
-        "- replaceAll((/field), search, replacement)\n"
-        "- mapWithDefault((/field), defaultValue)\n\n"
+        "SAP CPI expressions:\n"
+        "- sum((/repeating/field)) — sum ALL occurrences of repeating field\n"
+        "- toUpperCase((/field)), formatDate((/field), iFmt, oFmt)\n"
+        "- (/f1)+SEP+(/f2) for concatenation, useOneAsMany((/f)) to repeat 1→N\n\n"
         'Return ONLY valid JSON (no markdown):\n'
         '{"field_mappings": [{"source_path": "/S/F", "target_path": "/T/F", "rule": "", "note": ""}]}'
     )
@@ -1086,6 +1086,41 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     except Exception:
         tgt_root, tgt_paths = "Target", []
 
+    # ── 3b. Ask AI to identify the RIGHT fields before mapping ────────────────
+    # This prevents hallucination of wrong field paths by first confirming
+    # which paths in the XSD correspond to what the user described.
+    field_intelligence_prompt = (
+        f"You are an SAP S/4HANA expert. The user wants: \"{req.idea}\"\n\n"
+        f"The source XSD is: {src_xsd_name}\n"
+        "COMPLETE list of available source fields:\n"
+        + "\n".join(src_paths)  # ALL paths, not truncated
+        + "\n\nFor each concept the user mentioned, identify the EXACT source field path.\n"
+        "Examples:\n"
+        "  'item quantity' in SalesOrder → /A_SalesOrder/SalesOrderItem/RequestedQuantity\n"
+        "  'order date' → /A_SalesOrder/SalesOrder/CreationDate\n"
+        "  'sold to party' → /A_SalesOrder/SalesOrder/SoldToParty\n\n"
+        "Return JSON: {\"identified_fields\": ["
+        "{\"concept\": \"item quantity\", \"source_path\": \"/A_SalesOrder/SalesOrderItem/RequestedQuantity\", \"is_repeating\": true}, ...]}"
+    )
+    identified_fields: list[dict] = []
+    try:
+        raw_fi = generate("Return ONLY valid JSON.", field_intelligence_prompt, max_tokens=1000).strip()
+        if raw_fi.startswith("```"):
+            raw_fi = raw_fi.split("\n", 1)[-1].rsplit("```", 1)[0]
+        identified_fields = _json.loads(raw_fi).get("identified_fields", [])
+    except Exception:
+        pass  # proceed without intelligence if this fails
+
+    # Build a hint string for the mapping step
+    field_hints = ""
+    if identified_fields:
+        field_hints = "\nIDENTIFIED FIELD MAPPINGS (use these exact paths):\n"
+        for f in identified_fields:
+            field_hints += (
+                f"  Concept '{f.get('concept')}' → source: {f.get('source_path')}"
+                f"{' (REPEATING - use sum() or count())' if f.get('is_repeating') else ''}\n"
+            )
+
     # ── 4. Generate field mappings (with aggregate awareness) ─────────────────
     aggregate_note = ""
     if needs_aggregate:
@@ -1109,8 +1144,10 @@ Other Statistics functions:
     map_prompt = (
         "Generate SAP CPI field mappings for: " + req.idea + "\n\n"
         + aggregate_note
-        + "SOURCE fields available:\n" + "\n".join(src_paths[:60]) + "\n\n"
-        "TARGET fields to map:\n" + "\n".join(tgt_paths[:60]) + "\n\n"
+        + field_hints
+        + "SOURCE fields (ALL available — use ONLY paths from this list):\n"
+        + "\n".join(src_paths)  # Send ALL paths, not truncated
+        + "\n\nTARGET fields to map:\n" + "\n".join(tgt_paths) + "\n\n"
         "CRITICAL PARENT MAPPING RULE:\n"
         "SAP CPI requires EVERY ancestor element to be explicitly mapped.\n"
         "If you map /OrderSummary/TotalQuantity, you MUST ALSO map /OrderSummary.\n"
