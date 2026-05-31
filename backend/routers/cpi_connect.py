@@ -594,18 +594,40 @@ def import_iflow(req: ImportIFlowRequest):
     raise HTTPException(resp.status_code, f"Import failed: {resp.text[:500]}")
 
 
-# ── Import existing ZIP file ──────────────────────────────────────────────────
+# ── Artifact type → CPI OData entity mapping ─────────────────────────────────
+
+_ARTIFACT_ENTITY: dict[str, str] = {
+    "iflow":            "IntegrationDesigntimeArtifacts",
+    "messagemapping":   "MessageMappingDesigntimeArtifacts",
+    "valuemapping":     "ValueMappingDesigntimeArtifacts",
+    "scriptcollection": "ScriptCollectionDesigntimeArtifacts",
+    "functionlibrary":  "FunctionLibraryDesigntimeArtifacts",
+    "restapi":          "RestApiDesigntimeArtifacts",
+    "soapapi":          "SoapApiDesigntimeArtifacts",
+    "odataapi":         "OdataDesigntimeArtifacts",
+}
+
+def _entity_for(artifact_type: str) -> str:
+    return _ARTIFACT_ENTITY.get(artifact_type.lower().replace(" ", "").replace("_", ""),
+                                 "IntegrationDesigntimeArtifacts")
+
+
+# ── Import artifact ZIP (any type) ───────────────────────────────────────────
 
 @router.post("/import-zip")
 async def import_zip_file(
-    file:       UploadFile = File(...),
-    package_id: str        = Form(...),
+    file:          UploadFile = File(...),
+    package_id:    str        = Form(...),
+    artifact_type: str        = Form("iflow"),
+    artifact_id:   str        = Form(""),    # optional override
+    artifact_name: str        = Form(""),    # optional override
 ):
     """
-    Import an existing SAP CPI iFlow ZIP directly into a package.
-    Reads the artifact ID, name, version and description from the ZIP itself
-    (MANIFEST.MF + .project + metainfo.prop) so no extra metadata is needed.
-    Creates the artifact on CPI; falls back to PUT update on 409 conflict.
+    Import a SAP CPI artifact ZIP into a package.
+    Supports: iflow, messagemapping, valuemapping, scriptcollection,
+              functionlibrary, restapi, soapapi, odataapi.
+    Reads metadata from the ZIP when possible; falls back to filename.
+    Creates the artifact if new; PUT-updates if it already exists (409).
     """
     import zipfile
     import io as _io
@@ -615,10 +637,11 @@ async def import_zip_file(
         raise HTTPException(503, "CPI_API_BASE_URL not set in backend/.env")
 
     zip_bytes = await file.read()
+    entity    = _entity_for(artifact_type)
 
     # ── Extract metadata from the ZIP ────────────────────────────────────────
-    iflow_id    = ""
-    iflow_name  = ""
+    art_id      = artifact_id.strip()
+    art_name    = artifact_name.strip()
     version     = "1.0.0"
     description = ""
 
@@ -626,26 +649,33 @@ async def import_zip_file(
         with zipfile.ZipFile(_io.BytesIO(zip_bytes)) as zf:
             names = zf.namelist()
 
-            # ID from .iflw filename  e.g. src/.../integrationflow/MyFlow.iflw
-            iflw_files = [n for n in names if n.endswith(".iflw")]
-            if iflw_files:
-                iflow_id = iflw_files[0].split("/")[-1].replace(".iflw", "")
+            # iFlow ID from .iflw filename
+            if not art_id:
+                iflw = [n for n in names if n.endswith(".iflw")]
+                if iflw:
+                    art_id = iflw[0].split("/")[-1].replace(".iflw", "")
 
-            # Name from .project  <name>…</name>
-            if ".project" in names:
-                proj_xml = zf.read(".project").decode("utf-8", errors="replace")
-                m = re.search(r"<name>([^<]+)</name>", proj_xml)
+            # Message Mapping ID from .mmap filename
+            if not art_id:
+                mmaps = [n for n in names if n.endswith(".mmap")]
+                if mmaps:
+                    art_id = mmaps[0].split("/")[-1].replace(".mmap", "")
+
+            # Name from .project
+            if not art_name and ".project" in names:
+                proj = zf.read(".project").decode("utf-8", errors="replace")
+                m = re.search(r"<name>([^<]+)</name>", proj)
                 if m:
-                    iflow_name = m.group(1).strip()
+                    art_name = m.group(1).strip()
 
-            # Version from MANIFEST.MF  Bundle-Version: x.y.z
+            # Version from MANIFEST.MF
             if "META-INF/MANIFEST.MF" in names:
                 manifest = zf.read("META-INF/MANIFEST.MF").decode("utf-8", errors="replace")
                 m = re.search(r"Bundle-Version:\s*([^\r\n]+)", manifest)
                 if m:
                     version = m.group(1).strip()
 
-            # Description from metainfo.prop  description=…
+            # Description from metainfo.prop
             if "metainfo.prop" in names:
                 metainfo = zf.read("metainfo.prop").decode("utf-8", errors="replace")
                 m = re.search(r"description=(.+)", metainfo)
@@ -653,33 +683,29 @@ async def import_zip_file(
                     description = m.group(1).strip()
 
     except zipfile.BadZipFile:
-        raise HTTPException(400, "Invalid ZIP file — not a valid SAP CPI iFlow export.")
+        raise HTTPException(400, "Invalid ZIP file.")
 
-    # Fall back to uploaded filename if we couldn't extract the ID
-    if not iflow_id:
-        iflow_id = (file.filename or "iflow").replace(".zip", "")
+    # Fallback: derive from filename
+    if not art_id:
+        art_id = re.sub(r"\.(zip|mmap)$", "", file.filename or "artifact", flags=re.I)
 
-    # Sanitize to CPI-valid ID: only [A-Za-z0-9_], must not start with digit
-    iflow_id = re.sub(r"[^A-Za-z0-9_]", "_", iflow_id)
-    iflow_id = re.sub(r"_+", "_", iflow_id).strip("_")
-    if iflow_id and iflow_id[0].isdigit():
-        iflow_id = "_" + iflow_id
-    iflow_id = iflow_id or "MyIFlow"
-
-    if not iflow_name:
-        iflow_name = iflow_id
+    # Sanitize ID
+    art_id = re.sub(r"[^A-Za-z0-9_]", "_", art_id)
+    art_id = re.sub(r"_+", "_", art_id).strip("_")
+    if art_id and art_id[0].isdigit():
+        art_id = "_" + art_id
+    art_id   = art_id or "MyArtifact"
+    art_name = art_name or art_id
 
     artifact_content = _b64.b64encode(zip_bytes).decode()
 
     # ── Fetch CSRF token ──────────────────────────────────────────────────────
     csrf_resp = httpx.get(
-        f"{base}/IntegrationDesigntimeArtifacts?$top=1&$format=json",
+        f"{base}/{entity}?$top=1&$format=json",
         headers={**_headers(), "X-CSRF-Token": "Fetch"},
-        auth=_auth(),
-        timeout=15,
+        auth=_auth(), timeout=15,
     )
     csrf_token = csrf_resp.headers.get("x-csrf-token", "")
-
     write_headers = {
         **_headers(),
         "Content-Type": "application/json",
@@ -687,42 +713,35 @@ async def import_zip_file(
         "Accept": "application/json",
     }
 
-    # NOTE: "Version" must NOT be in the POST body — CPI auto-assigns it on create.
     body = {
-        "PackageId": package_id,
-        "Name":      iflow_name,
-        "Id":        iflow_id,
+        "PackageId":       package_id,
+        "Name":            art_name,
+        "Id":              art_id,
         "ArtifactContent": artifact_content,
         "Description":     description,
     }
 
     # ── POST (create) ─────────────────────────────────────────────────────────
     resp = httpx.post(
-        f"{base}/IntegrationDesigntimeArtifacts",
-        headers=write_headers,
-        auth=_auth(),
-        json=body,
-        timeout=60,
+        f"{base}/{entity}",
+        headers=write_headers, auth=_auth(), json=body, timeout=60,
     )
 
     if resp.status_code in (200, 201):
-        return {"status": "imported", "id": iflow_id, "name": iflow_name, "package": package_id}
+        return {"status": "imported", "id": art_id, "name": art_name,
+                "package": package_id, "type": artifact_type}
 
-    # ── 409 → artifact exists already → update ────────────────────────────────
+    # ── 409 → already exists → update ────────────────────────────────────────
     if resp.status_code == 409:
         put_resp = httpx.put(
-            f"{base}/IntegrationDesigntimeArtifacts(Id='{iflow_id}',Version='active')",
-            headers=write_headers,
-            auth=_auth(),
-            json={
-                "ArtifactContent": artifact_content,
-                "Name":    iflow_name,
-                "Version": version,
-            },
+            f"{base}/{entity}(Id='{art_id}',Version='active')",
+            headers=write_headers, auth=_auth(),
+            json={"ArtifactContent": artifact_content, "Name": art_name, "Version": version},
             timeout=60,
         )
         if put_resp.status_code in (200, 201, 202, 204):
-            return {"status": "updated", "id": iflow_id, "name": iflow_name, "package": package_id}
+            return {"status": "updated", "id": art_id, "name": art_name,
+                    "package": package_id, "type": artifact_type}
         raise HTTPException(put_resp.status_code, f"Update failed: {put_resp.text[:500]}")
 
     raise HTTPException(resp.status_code, f"Import failed: {resp.text[:500]}")

@@ -176,10 +176,13 @@ export const cpiAPI = {
 
   // ── Import ──────────────────────────────────────────────────────────────────
   importIflow: (data: object) => api.post('/cpi/import-iflow', data),
-  importZip: (file: File, packageId: string) => {
+  importZip: (file: File, packageId: string, artifactType = 'iflow', artifactId = '', artifactName = '') => {
     const form = new FormData()
     form.append('file', file)
     form.append('package_id', packageId)
+    form.append('artifact_type', artifactType)
+    if (artifactId)   form.append('artifact_id',   artifactId)
+    if (artifactName) form.append('artifact_name', artifactName)
     return api.post('/cpi/import-zip', form)
   },
 

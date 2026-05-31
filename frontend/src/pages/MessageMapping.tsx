@@ -273,6 +273,90 @@ function XsdSlot({
   )
 }
 
+// ── Upload to CPI button (for generated .mmap files) ─────────────────────────
+
+import { cpiAPI } from '../api/client'
+
+function UploadToCpiButton({
+  buildFile, artifactType, defaultName,
+}: {
+  buildFile: () => Promise<File>
+  artifactType: string
+  defaultName: string
+}) {
+  const [open, setOpen]       = React.useState(false)
+  const [packages, setPkgs]   = React.useState<Array<{id: string; name: string}>>([])
+  const [pkg, setPkg]         = React.useState('')
+  const [uploading, setUp]    = React.useState(false)
+  const [msg, setMsg]         = React.useState('')
+  const [loadingPkgs, setLP]  = React.useState(false)
+
+  const openModal = async () => {
+    setOpen(true); setMsg(''); setLP(true)
+    try {
+      const r = await cpiAPI.packages()
+      setPkgs(r.data.value || r.data || [])
+    } catch { setPkgs([]) }
+    finally { setLP(false) }
+  }
+
+  const doUpload = async () => {
+    if (!pkg) { setMsg('Please select a package'); return }
+    setUp(true); setMsg('')
+    try {
+      const file = await buildFile()
+      await cpiAPI.importZip(file, pkg, artifactType, '', defaultName)
+      setMsg('✓ Uploaded successfully!')
+      setTimeout(() => setOpen(false), 1500)
+    } catch (e: any) {
+      setMsg('Error: ' + (e?.response?.data?.detail || e?.message || 'Upload failed'))
+    } finally { setUp(false) }
+  }
+
+  return (
+    <>
+      <button onClick={openModal}
+        className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-green-700 hover:bg-green-600 text-white transition-colors">
+        <Upload size={15} /> Upload to CPI
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-semibold">Upload to CPI</h3>
+              <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white"><X size={16} /></button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Artifact: <span className="text-white font-mono">{defaultName}</span>
+              &nbsp;·&nbsp;Type: <span className="text-white">{artifactType === 'messagemapping' ? 'Message Mapping' : artifactType}</span>
+            </p>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Target Package</label>
+              {loadingPkgs
+                ? <div className="text-xs text-gray-500 py-2">Loading packages…</div>
+                : <select className="input-field w-full text-sm" value={pkg} onChange={e => setPkg(e.target.value)}>
+                    <option value="">Select a package…</option>
+                    {packages.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+              }
+            </div>
+            {msg && <p className={`text-xs px-3 py-2 rounded-lg ${msg.startsWith('✓') ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>{msg}</p>}
+            <div className="flex gap-2 pt-1">
+              <button onClick={doUpload} disabled={uploading || !pkg}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors">
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {uploading ? 'Uploading…' : 'Upload'}
+              </button>
+              <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-white">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function MessageMapping() {
   const [tab, setTab] = useState<'schema' | 'sheet' | 'automap'>('schema')
   const [loading, setLoading] = useState(false)
@@ -1399,13 +1483,28 @@ export default function MessageMapping() {
                   Backend not available on GitHub Pages — run locally to use this feature
                 </div>
               ) : (
-                <button
-                  onClick={generateFromSheet}
-                  disabled={sheetLoading || !sheetSrcReady || !sheetTgtReady || (!sheetFile && !sheetPreview)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
-                  {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                  {sheetLoading ? 'Building .mmap…' : 'Download .mmap'}
-                </button>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button
+                    onClick={generateFromSheet}
+                    disabled={sheetLoading || !sheetSrcReady || !sheetTgtReady || (!sheetFile && !sheetPreview)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
+                    {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                    {sheetLoading ? 'Building .mmap…' : 'Download .mmap'}
+                  </button>
+                  <UploadToCpiButton
+                    buildFile={async () => {
+                      const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
+                      const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
+                      if (!srcFile || !tgtFile) throw new Error('XSD files not ready')
+                      const sheet = sheetPreview ? buildSheetFileFromPreview() : sheetFile
+                      if (!sheet) throw new Error('No mapping sheet')
+                      const res = await mappingAPI.fromSheet(srcFile, tgtFile, sheet, sheetMmapName)
+                      return new File([res.data], `${sheetMmapName}.zip`, { type: 'application/zip' })
+                    }}
+                    artifactType="messagemapping"
+                    defaultName={sheetMmapName}
+                  />
+                </div>
               )}
 
               {sheetSummary && !sheetError && (
