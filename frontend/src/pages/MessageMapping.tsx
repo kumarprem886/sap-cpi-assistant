@@ -946,9 +946,21 @@ export default function MessageMapping() {
 
   const smartSrcReady = smartSrcMode === 'catalog' ? !!smartSrcSchema : !!smartSrcFile
 
+  // Store generated blobs so user can download OR upload to CPI
+  const [smartSrcBlob,  setSmartSrcBlob]  = useState<Blob | null>(null)
+  const [smartSrcCount, setSmartSrcCount] = useState(0)
+  const [smartIdeaBlob,  setSmartIdeaBlob]  = useState<Blob | null>(null)
+  const [smartIdeaCount, setSmartIdeaCount] = useState(0)
+
+  const downloadBlob = (blob: Blob, name: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `${name}.zip`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const generateFromSourceXsd = async () => {
     if (!smartSrcReady || !smartDesc.trim()) return
-    setSmartSrcLoading(true); setSmartError('')
+    setSmartSrcLoading(true); setSmartError(''); setSmartSrcBlob(null)
     try {
       let xsdText = ''
       let xsdName = 'source.xsd'
@@ -966,9 +978,9 @@ export default function MessageMapping() {
         description: smartDesc,
         mapping_name: smartSrcName || 'MM_SmartMapping',
       })
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
-      const a = document.createElement('a'); a.href = url; a.download = `${smartSrcName || 'MM_SmartMapping'}.zip`; a.click()
-      URL.revokeObjectURL(url)
+      const blob = new Blob([res.data], { type: 'application/zip' })
+      setSmartSrcBlob(blob)
+      setSmartSrcCount(parseInt(res.headers?.['x-mapping-count'] || '0', 10))
     } catch (e: any) {
       const msg = e?.response?.data ? await new Response(e.response.data).text().then((t: string) => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
       setSmartError(msg || 'Generation failed')
@@ -977,15 +989,15 @@ export default function MessageMapping() {
 
   const generateFromIdea = async () => {
     if (!smartIdea.trim()) return
-    setSmartIdeaLoading(true); setSmartError('')
+    setSmartIdeaLoading(true); setSmartError(''); setSmartIdeaBlob(null)
     try {
       const res = await mappingAPI.generateFromIdea({
         idea: smartIdea,
         mapping_name: smartIdeaName || 'MM_IdeaMapping',
       })
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
-      const a = document.createElement('a'); a.href = url; a.download = `${smartIdeaName || 'MM_IdeaMapping'}.zip`; a.click()
-      URL.revokeObjectURL(url)
+      const blob = new Blob([res.data], { type: 'application/zip' })
+      setSmartIdeaBlob(blob)
+      setSmartIdeaCount(parseInt(res.headers?.['x-mapping-count'] || '0', 10))
     } catch (e: any) {
       const msg = e?.response?.data ? await new Response(e.response.data).text().then((t: string) => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
       setSmartError(msg || 'Generation failed')
@@ -1697,14 +1709,37 @@ export default function MessageMapping() {
                     onClick={generateFromSourceXsd}
                     disabled={smartSrcLoading || !smartSrcReady || !smartDesc.trim()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
-                    {smartSrcLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                    {smartSrcLoading ? 'AI is generating target XSD + mapping…' : 'Generate Mapping'}
+                    {smartSrcLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                    {smartSrcLoading ? 'AI generating target XSD + mapping…' : 'Generate Mapping →'}
                   </button>
                 )}
               </div>
 
+              {/* Result panel for Mode 2 */}
+              {smartSrcBlob && !smartSrcLoading && (
+                <div className="rounded-xl border border-green-700/50 bg-green-900/10 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-green-300">
+                    <CheckCircle2 size={16} className="shrink-0" />
+                    <span className="text-sm font-semibold">Mapping generated!</span>
+                    {smartSrcCount > 0 && <span className="text-xs text-green-500 ml-1">· {smartSrcCount} fields mapped</span>}
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => downloadBlob(smartSrcBlob, smartSrcName || 'MM_SmartMapping')}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors">
+                      <Download size={14} /> Download .mmap
+                    </button>
+                    <UploadToCpiButton
+                      buildFile={async () => new File([smartSrcBlob], `${smartSrcName || 'MM_SmartMapping'}.zip`, { type: 'application/zip' })}
+                      artifactType="messagemapping"
+                      defaultName={smartSrcName || 'MM_SmartMapping'}
+                    />
+                  </div>
+                </div>
+              )}
+
               <p className="text-[10px] text-gray-600 leading-relaxed">
-                AI creates a target XSD from your description, maps fields intelligently, and downloads a ready-to-import .mmap ZIP.
+                AI creates a target XSD from your description, maps fields intelligently, then gives you download and CPI import options.
               </p>
             </div>
 
@@ -1754,14 +1789,38 @@ export default function MessageMapping() {
                     disabled={smartIdeaLoading || !smartIdea.trim()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50">
                     {smartIdeaLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-                    {smartIdeaLoading ? 'AI is generating source XSD, target XSD + mapping…' : 'Generate Everything'}
+                    {smartIdeaLoading ? 'AI generating source XSD, target XSD + mapping…' : 'Generate Everything →'}
                   </button>
                 )}
               </div>
 
+              {/* Result panel for Mode 3 */}
+              {smartIdeaBlob && !smartIdeaLoading && (
+                <div className="rounded-xl border border-purple-700/50 bg-purple-900/10 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-purple-300">
+                    <CheckCircle2 size={16} className="shrink-0" />
+                    <span className="text-sm font-semibold">Complete mapping generated!</span>
+                    {smartIdeaCount > 0 && <span className="text-xs text-purple-400 ml-1">· {smartIdeaCount} fields mapped</span>}
+                  </div>
+                  <p className="text-xs text-gray-400">ZIP contains: source XSD, target XSD, and the .mmap mapping file — ready to import into CPI.</p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => downloadBlob(smartIdeaBlob, smartIdeaName || 'MM_IdeaMapping')}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-colors">
+                      <Download size={14} /> Download .mmap
+                    </button>
+                    <UploadToCpiButton
+                      buildFile={async () => new File([smartIdeaBlob], `${smartIdeaName || 'MM_IdeaMapping'}.zip`, { type: 'application/zip' })}
+                      artifactType="messagemapping"
+                      defaultName={smartIdeaName || 'MM_IdeaMapping'}
+                    />
+                  </div>
+                </div>
+              )}
+
               <p className="text-[10px] text-gray-600 leading-relaxed">
-                AI creates both XSD schemas and all field mappings from your description alone. Downloads a complete .mmap ZIP bundle.
-                This may take 20-60 seconds depending on complexity.
+                AI creates both XSD schemas and all field mappings from your description alone.
+                Result includes Download and Upload to CPI options.
               </p>
             </div>
           </div>
