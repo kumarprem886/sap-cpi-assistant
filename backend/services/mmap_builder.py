@@ -6,23 +6,25 @@ Format reverse-engineered from real CPI mmap exports:
   - Dst bricks  : <brick gid="0" path="..." type="Dst">
   - Src bricks  : <brick gid="0" path="..." type="Src">
   - Func bricks : <brick fname="..." fns="dflt" type="Func">
-                    <arg>â€¦first argâ€¦</arg>
-                    <arg pin="1">â€¦second argâ€¦</arg>
-                    <bindings><param name="â€¦"><value>â€¦</value></param></bindings>
+                    <arg>...first arg...</arg>
+                    <arg pin="1">...second arg...</arg>
+                    <bindings><param name="..."><value>...</value></param></bindings>
                   </brick>
 
 Confirmed fname values (from real CPI exports):
-  String  : toUpperCase, toLowerCase, trim, length, substring, concat, replaceString, equalsS, indexOf
-  Date    : TransformDate   (user writes formatDate â€” translated here)
-  Numeric : add, subtract, multiply, divide, abs, round, ceil, floor
-  Boolean : if, Equals, notEquals, Not, And, Or
+  String  : toUpperCase, toLowerCase, trim, length, substring, concat, replaceString,
+            equalsS, indexOf, lastIndexOf, endsWith, startsWith, compare, contains, copyValue
+  Date    : TransformDate, currentDate, DateBefore, DateAfter, CompareDates
+  Numeric : add, subtract, multiply, divide, abs, neg, sqrt, sqr, sign, round, ceil, floor,
+            power, less, greater, max, min, equalsA, counter, FormatNum
+  Boolean : if, ifWithoutElse, Equals, notEquals, Not, And, Or
   Node    : useOneAsMany, SplitByValue, removeContexts, collapseContexts,
-            createIf, exists, mapWithDefault, sort, sortByKey, replaceValue
+            createIf, exists, mapWithDefault, sort, sortByKey, replaceValue, formatByExample
 
 ZIP bundle structure matches real CPI exports:
-  xsd/<source_xsd_name>       â€” source XSD
-  xsd/<target_xsd_name>       â€” target XSD
-  mapping/<MappingName>.mmap  â€” the mapping XML
+  xsd/<source_xsd_name>       - source XSD
+  xsd/<target_xsd_name>       - target XSD
+  mapping/<MappingName>.mmap  - the mapping XML
 """
 
 import io
@@ -34,13 +36,11 @@ from xml.sax.saxutils import escape, quoteattr as _quoteattr
 
 def _attr(value: str) -> str:
     """Safely escape a value for use inside an XML attribute (handles quotes)."""
-    # quoteattr wraps in the appropriate quote char and escapes the other
     q = _quoteattr(value)
-    # quoteattr adds surrounding quotes â€” strip them; we add our own in f-strings
     return q[1:-1].replace('"', '&quot;')
 
 
-# â”€â”€ User-facing â†’ real SAP fname mapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- User-facing -> real SAP fname mapping -----------------------------------
 
 _FNAME_MAP: dict[str, str] = {
     # String
@@ -50,15 +50,19 @@ _FNAME_MAP: dict[str, str] = {
     "length":        "length",
     "substring":     "substring",
     "concat":        "concat",
-    "replaceAll":    "replaceString",   # user alias â†’ real name
+    "replaceAll":    "replaceString",   # user alias -> real name
     "replaceString": "replaceString",
     "indexOf":       "indexOf",
     "indexOf3":      "indexOf",
+    "lastIndexOf":   "lastIndexOf",
     "endsWith":      "endsWith",
     "startsWith":    "startsWith",
     "compare":       "compare",
+    "equalsS":       "equalsS",
+    "contains":      "contains",
+    "copyValue":     "copyValue",
     # Date
-    "formatDate":    "TransformDate",   # user alias â†’ real name
+    "formatDate":    "TransformDate",   # user alias -> real name
     "TransformDate": "TransformDate",
     "DateTrans":     "TransformDate",
     "currentDate":   "currentDate",
@@ -71,16 +75,26 @@ _FNAME_MAP: dict[str, str] = {
     "multiply":      "multiply",
     "divide":        "divide",
     "abs":           "abs",
+    "neg":           "neg",
+    "sqrt":          "sqrt",
+    "sqr":           "sqr",
+    "sign":          "sign",
     "round":         "round",
     "ceil":          "ceil",
     "floor":         "floor",
+    "power":         "power",
+    "less":          "less",
+    "greater":       "greater",
+    "max":           "max",
+    "min":           "min",
+    "equalsA":       "equalsA",
+    "counter":       "counter",
     "FormatNum":     "FormatNum",
     # Boolean
     "if":            "if",
     "ifWithoutElse": "ifWithoutElse",
-    "equals":        "Equals",          # user alias â†’ real name (capital E)
+    "equals":        "Equals",          # user alias -> real name (capital E)
     "Equals":        "Equals",
-    "equalsS":       "equalsS",
     "notEquals":     "notEquals",
     "Not":           "Not",
     "not":           "Not",
@@ -89,19 +103,19 @@ _FNAME_MAP: dict[str, str] = {
     "Or":            "Or",
     "or":            "Or",
     # Node
-    "useOneAsMany":    "useOneAsMany",
-    "splitByValue":    "SplitByValue",  # user alias â†’ real name (capital S)
-    "SplitByValue":    "SplitByValue",
-    "removeContexts":  "removeContexts",
-    "collapseContexts":"collapseContexts",
-    "createIf":        "createIf",
-    "exists":          "exists",
-    "mapWithDefault":  "mapWithDefault",
-    "sort":            "sort",
-    "sortByKey":       "sortByKey",
-    "replaceValue":    "replaceValue",
-    "formatByExample": "formatByExample",
-    "UseOneAsMany":    "useOneAsMany",  # alternate capitalisation
+    "useOneAsMany":     "useOneAsMany",
+    "splitByValue":     "SplitByValue",  # user alias -> real name (capital S)
+    "SplitByValue":     "SplitByValue",
+    "removeContexts":   "removeContexts",
+    "collapseContexts": "collapseContexts",
+    "createIf":         "createIf",
+    "exists":           "exists",
+    "mapWithDefault":   "mapWithDefault",
+    "sort":             "sort",
+    "sortByKey":        "sortByKey",
+    "replaceValue":     "replaceValue",
+    "formatByExample":  "formatByExample",
+    "UseOneAsMany":     "useOneAsMany",  # alternate capitalisation
 }
 
 
@@ -110,7 +124,7 @@ def _resolve_fname(user_func: str) -> str:
     return _FNAME_MAP.get(user_func, user_func)
 
 
-# â”€â”€ Low-level XML helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Low-level XML helpers ---------------------------------------------------
 
 def _uid() -> str:
     return uuid.uuid4().hex
@@ -161,16 +175,23 @@ def _func_open(fname: str, x: int = 125, y: int = 30) -> str:
     return f'<brick fname="{_attr(fname)}" fns="dflt" type="Func"><viewData x="{x}" y="{y}"/>'
 
 
-# â”€â”€ Function brick builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def _wrap_dst(dst_path: str, func_xml: str) -> str:
+    """Wrap a function brick in a Dst brick."""
+    return (
+        f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
+        f'<viewData x="200" y="40"/>'
+        f'<arg>{func_xml}</arg>'
+        f'<group/>'
+        f'</brick>'
+    )
+
+
+# -- Function brick builders -------------------------------------------------
 
 def _build_brick_for_part(p: dict, y: int = 40) -> str:
     """Render one argument part as a Src brick (or nested Func brick when needed)."""
     if p["type"] == "src":
         return _src(p["path"], y=y)
-    # Constant â€” wrap as a no-arg concat with empty second arg as a workaround,
-    # because SAP's graphical mapping has no standalone "Const" brick.
-    # In practice, constants appear as <bindings> values, not separate bricks.
-    # Return empty so callers can move the value to a binding.
     return ""
 
 
@@ -183,19 +204,16 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
     src_parts   = [p for p in parts if p["type"] == "src"]
     const_parts = [p for p in parts if p["type"] == "const"]
 
-    # â”€â”€ concat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- concat ---------------------------------------------------------------
     # SAP concat takes exactly 2 inputs and a separator in bindings.
-    # User syntax: (/src1)+SEP+(/src2) â†’ parts=[src1, const:SEP, src2]
+    # User syntax: (/src1)+SEP+(/src2) -> parts=[src1, const:SEP, src2]
     if fname == "concat":
         sources   = src_parts
         separator = const_parts[0]["value"] if const_parts else ""
         if not sources:
             return ""
         if len(sources) == 1:
-            # Only one source â†’ direct mapping with separator irrelevant
-            inner = _build_func_brick(dst_path, "toUpperCase", sources)  # fallback
             return _brick_direct(sources[0]["path"], dst_path)
-        # Build left-associative chain for more than 2 sources
         def _chain(srcs: list) -> str:
             if len(srcs) == 2:
                 return (
@@ -205,7 +223,6 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
                     + _bindings(("delimeter", separator))
                     + "</brick>"
                 )
-            # 3+: concat(chain(first N-1), last)
             inner_chain = _chain(srcs[:-1])
             return (
                 _func_open("concat", x=150)
@@ -215,15 +232,15 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
                 + "</brick>"
             )
         func_xml = _chain(sources)
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ TransformDate (formatDate) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- currentDate ----------------------------------------------------------
+    # No args - generates today's date
+    if fname == "currentDate":
+        func_xml = _func_open("currentDate") + "</brick>"
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- TransformDate (formatDate) -------------------------------------------
     # Parts: [src, const:iform, const:oform]
     if fname == "TransformDate":
         src_path = src_parts[0]["path"] if src_parts else ""
@@ -239,16 +256,91 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             )
             + "</brick>"
         )
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ mapWithDefault â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Parts: [src, const:default]  (key-value pairs not supported in XML â€” use Value Mapping)
+    # -- counter --------------------------------------------------------------
+    # Bindings for start and increment
+    if fname == "counter":
+        start = const_parts[0]["value"] if const_parts else "1"
+        incr  = const_parts[1]["value"] if len(const_parts) > 1 else "1"
+        func_xml = (
+            _func_open("counter")
+            + _bindings(("start", start), ("increment", incr))
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- FormatNum ------------------------------------------------------------
+    # Parts: [src, const:pattern]
+    if fname == "FormatNum":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        pattern  = const_parts[0]["value"] if const_parts else "0.00"
+        func_xml = (
+            _func_open("FormatNum")
+            + _arg(_src(src_path))
+            + _bindings(("format", pattern))
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- indexOf / lastIndexOf ------------------------------------------------
+    # Parts: [src, const:search, const:fromPos(optional)]
+    if fname in ("indexOf", "lastIndexOf"):
+        src_path = src_parts[0]["path"] if src_parts else ""
+        search   = const_parts[0]["value"] if const_parts else ""
+        from_pos = const_parts[1]["value"] if len(const_parts) > 1 else ""
+        binds: list[tuple[str, str]] = [("search", search)]
+        if from_pos:
+            binds.append(("from", from_pos))
+        func_xml = (
+            _func_open(fname)
+            + _arg(_src(src_path))
+            + _bindings(*binds)
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- endsWith / startsWith ------------------------------------------------
+    # Parts: [src, const:value]
+    if fname in ("endsWith", "startsWith"):
+        src_path = src_parts[0]["path"] if src_parts else ""
+        suffix   = const_parts[0]["value"] if const_parts else ""
+        func_xml = (
+            _func_open(fname)
+            + _arg(_src(src_path))
+            + _bindings(("value", suffix))
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- contains -------------------------------------------------------------
+    # Parts: [src, const:search]
+    if fname == "contains":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        search   = const_parts[0]["value"] if const_parts else ""
+        func_xml = (
+            _func_open("contains")
+            + _arg(_src(src_path))
+            + _bindings(("search", search))
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- sort / sortByKey -----------------------------------------------------
+    # Parts: [src, const:order(optional)]
+    if fname in ("sort", "sortByKey"):
+        src_path  = src_parts[0]["path"] if src_parts else ""
+        direction = const_parts[0]["value"] if const_parts else "ascending"
+        func_xml = (
+            _func_open(fname)
+            + _arg(_src(src_path))
+            + _bindings(("order", direction))
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- mapWithDefault -------------------------------------------------------
+    # Parts: [src, const:default]
     if fname == "mapWithDefault":
         src_path = src_parts[0]["path"] if src_parts else ""
         default  = const_parts[-1]["value"] if const_parts else ""
@@ -258,15 +350,9 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + _bindings(("default_value", default))
             + "</brick>"
         )
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ SplitByValue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- SplitByValue ---------------------------------------------------------
     # Parts: [src, const:delimiter]
     if fname == "SplitByValue":
         src_path  = src_parts[0]["path"] if src_parts else ""
@@ -277,15 +363,9 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + _bindings(("delimeter", delimiter))
             + "</brick>"
         )
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ replaceString (replaceAll) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- replaceString (replaceAll) -------------------------------------------
     # Parts: [src, const:search, const:replacement]
     if fname == "replaceString":
         src_path    = src_parts[0]["path"] if src_parts else ""
@@ -297,15 +377,9 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
             + _bindings(("search", search), ("replace", replacement))
             + "</brick>"
         )
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ substring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- substring ------------------------------------------------------------
     # Parts: [src, const:start, const:length]
     if fname == "substring":
         src_path = src_parts[0]["path"] if src_parts else ""
@@ -318,83 +392,61 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
                          if start.isdigit() and length.isdigit() else length))
             + "</brick>"
         )
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ useOneAsMany â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- useOneAsMany ---------------------------------------------------------
     # Parts: [src]  (context args added automatically)
     if fname == "useOneAsMany":
         src_path = src_parts[0]["path"] if src_parts else ""
         func_xml = _func_open("useOneAsMany") + _arg(_src(src_path)) + "</brick>"
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ Simple single-arg functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # toUpperCase, toLowerCase, trim, length, abs, round, ceil, floor,
-    # exists, removeContexts, collapseContexts, replaceValue, not, etc.
+    # -- Simple single-arg functions ------------------------------------------
+    # toUpperCase, toLowerCase, trim, length, abs, neg, sqrt, sqr, sign,
+    # round, ceil, floor, exists, removeContexts, collapseContexts,
+    # replaceValue, Not, createIf, copyValue
     _SIMPLE_ONE_ARG = {
-        "toUpperCase", "toLowerCase", "trim", "length", "abs", "round",
-        "ceil", "floor", "exists", "removeContexts", "collapseContexts",
-        "replaceValue", "Not", "createIf",
+        "toUpperCase", "toLowerCase", "trim", "length",
+        "abs", "neg", "sqrt", "sqr", "sign",
+        "round", "ceil", "floor",
+        "exists", "removeContexts", "collapseContexts",
+        "replaceValue", "Not", "createIf", "copyValue",
     }
     if fname in _SIMPLE_ONE_ARG:
         src_path = src_parts[0]["path"] if src_parts else dst_path
         func_xml = _func_open(fname) + _arg(_src(src_path)) + "</brick>"
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ Two-arg functions with optional bindings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Equals, notEquals, equalsS, And, Or, compare, endsWith, startsWith, indexOf
-    _TWO_ARG = {"Equals", "notEquals", "equalsS", "And", "Or", "compare",
-                "endsWith", "startsWith", "indexOf", "add", "subtract",
-                "multiply", "divide", "DateBefore", "DateAfter", "CompareDates"}
+    # -- Two-arg functions with optional bindings -----------------------------
+    # add, subtract, multiply, divide, power, less, greater, max, min,
+    # equalsA, Equals, notEquals, And, Or, compare, equalsS,
+    # DateBefore, DateAfter, CompareDates
+    _TWO_ARG = {
+        "Equals", "notEquals", "equalsS", "equalsA",
+        "And", "Or", "compare",
+        "add", "subtract", "multiply", "divide",
+        "power", "less", "greater", "max", "min",
+        "DateBefore", "DateAfter", "CompareDates",
+    }
     if fname in _TWO_ARG:
         args_xml = ""
         for pin_idx, p in enumerate(src_parts[:2]):
             args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
-        # any const parts become bindings
         bindings_xml = ""
         if const_parts:
             bindings_xml = _bindings(*[(f"value{i}", cp["value"]) for i, cp in enumerate(const_parts)])
         func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ if / ifWithoutElse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- if / ifWithoutElse ---------------------------------------------------
     if fname in ("if", "ifWithoutElse"):
         args_xml = ""
         for pin_idx, p in enumerate(src_parts[:3]):
             args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
         func_xml = _func_open(fname) + args_xml + "</brick>"
-        return (
-            f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-            f'<viewData x="200" y="40"/>'
-            f'<arg>{func_xml}</arg>'
-            f'<group/>'
-            f'</brick>'
-        )
+        return _wrap_dst(dst_path, func_xml)
 
-    # â”€â”€ Fallback: generic function with all src args â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # -- Fallback: generic function with all src args -------------------------
     args_xml = ""
     for pin_idx, p in enumerate(src_parts):
         args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
@@ -402,16 +454,10 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
     if const_parts:
         bindings_xml = _bindings(*[(f"param{i}", cp["value"]) for i, cp in enumerate(const_parts)])
     func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
-    return (
-        f'<brick gid="0" path="{_attr(dst_path)}" type="Dst">'
-        f'<viewData x="200" y="40"/>'
-        f'<arg>{func_xml}</arg>'
-        f'<group/>'
-        f'</brick>'
-    )
+    return _wrap_dst(dst_path, func_xml)
 
 
-# â”€â”€ lnkRole helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- lnkRole helper ----------------------------------------------------------
 
 def _lnk(role: str, xsd_filename: str, root_element: str) -> str:
     return (
@@ -432,7 +478,7 @@ def _concat_brick(dst_path: str, parts: list) -> str:
     return _build_func_brick(dst_path, "concat", parts)
 
 
-# â”€â”€ Public: build .mmap XML string â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Public: build .mmap XML string ------------------------------------------
 
 def build_mmap_xml(
     mapping_name: str,
@@ -554,7 +600,7 @@ def build_mmap_xml(
     )
 
 
-# â”€â”€ Public: build ZIP bundle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Public: build ZIP bundle ------------------------------------------------
 
 def build_mmap_zip(
     mapping_name: str,
@@ -572,7 +618,7 @@ def build_mmap_zip(
     Standard export format (no manifest):
       mapping/<name>.mmap  |  xsd/<source>.xsd  |  xsd/<target>.xsd
 
-    API import format (with manifest=True — required by MessageMappingDesigntimeArtifacts POST):
+    API import format (with manifest=True -- required by MessageMappingDesigntimeArtifacts POST):
       META-INF/MANIFEST.MF  |  .project  |  mapping/<name>.mmap  |  xsd/...
 
     SAP's API import requires the manifest even though its own export does not include it.
@@ -607,4 +653,3 @@ def build_mmap_zip(
             zf.writestr(f"wsdl/{target_xsd_name}", target_xsd.encode("utf-8"))
     buf.seek(0)
     return buf.read()
-

@@ -3,7 +3,7 @@ import {
   Shuffle, Loader2, Wand2, Zap, Upload, X, Plus, FileCode,
   Package, Cpu, BookOpen, ArrowRight, ChevronDown, ChevronUp,
   CheckCircle2, Clock, RefreshCw, Download, Eye, FileSpreadsheet,
-  AlertCircle,
+  AlertCircle, Sparkles, Lightbulb,
 } from 'lucide-react'
 import { mappingAPI } from '../api/client'
 import { IS_STATIC_HOST } from '../components/Layout'
@@ -579,7 +579,7 @@ function ZipPreviewStep({ sheetPreview, sheetMmapName, setSheetMmapName, sheetSr
 }
 
 export default function MessageMapping() {
-  const [tab, setTab] = useState<'schema' | 'sheet' | 'automap'>('schema')
+  const [tab, setTab] = useState<'schema' | 'sheet' | 'automap' | 'smart'>('schema')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState('')
   const [resultType, setResultType] = useState('groovy')
@@ -985,6 +985,54 @@ export default function MessageMapping() {
   const generateFromSchema = async () => { setLoading(true); try { const res = await mappingAPI.generate(schemaForm); setResult(res.data.result); setResultType(schemaForm.output_format) } finally { setLoading(false) } }
   const autoMap = async () => { setLoading(true); try { const res = await mappingAPI.automap(autoForm); setResult(res.data.result); setResultType('markdown') } finally { setLoading(false) } }
 
+  // Smart Generate state
+  const [smartSrcFile, setSmartSrcFile]   = useState<File | null>(null)
+  const [smartDesc, setSmartDesc]         = useState('')
+  const [smartIdea, setSmartIdea]         = useState('')
+  const [smartSrcName, setSmartSrcName]   = useState('MM_SmartMapping')
+  const [smartIdeaName, setSmartIdeaName] = useState('MM_IdeaMapping')
+  const [smartSrcLoading, setSmartSrcLoading] = useState(false)
+  const [smartIdeaLoading, setSmartIdeaLoading] = useState(false)
+  const [smartError, setSmartError]       = useState('')
+  const smartSrcRef = useRef<HTMLInputElement>(null)
+
+  const generateFromSourceXsd = async () => {
+    if (!smartSrcFile || !smartDesc.trim()) return
+    setSmartSrcLoading(true); setSmartError('')
+    try {
+      const text = await smartSrcFile.text()
+      const res = await mappingAPI.generateFromSource({
+        source_xsd: text,
+        source_xsd_name: smartSrcFile.name,
+        description: smartDesc,
+        mapping_name: smartSrcName || 'MM_SmartMapping',
+      })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
+      const a = document.createElement('a'); a.href = url; a.download = `${smartSrcName || 'MM_SmartMapping'}.zip`; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      const msg = e?.response?.data ? await new Response(e.response.data).text().then((t: string) => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
+      setSmartError(msg || 'Generation failed')
+    } finally { setSmartSrcLoading(false) }
+  }
+
+  const generateFromIdea = async () => {
+    if (!smartIdea.trim()) return
+    setSmartIdeaLoading(true); setSmartError('')
+    try {
+      const res = await mappingAPI.generateFromIdea({
+        idea: smartIdea,
+        mapping_name: smartIdeaName || 'MM_IdeaMapping',
+      })
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/zip' }))
+      const a = document.createElement('a'); a.href = url; a.download = `${smartIdeaName || 'MM_IdeaMapping'}.zip`; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      const msg = e?.response?.data ? await new Response(e.response.data).text().then((t: string) => { try { return JSON.parse(t).detail } catch { return t } }) : e?.message
+      setSmartError(msg || 'Generation failed')
+    } finally { setSmartIdeaLoading(false) }
+  }
+
   const readyCount  = Object.values(prebuilt).filter(p => p.status === 'ready').length
   const totalCount  = CATALOG_PAIRS.length
 
@@ -1007,6 +1055,9 @@ export default function MessageMapping() {
         </button>
         <button onClick={() => { setTab('automap'); setResult('') }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'automap' ? 'bg-sap-blue text-white' : 'text-gray-400 hover:text-white'}`}>
           <Zap size={13} className="inline mr-1.5" />Quick Field Automap
+        </button>
+        <button onClick={() => { setTab('smart'); setResult('') }} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === 'smart' ? 'bg-purple-700 text-white' : 'text-gray-400 hover:text-white'}`}>
+          <Sparkles size={13} className="inline mr-1.5" />Smart Generate
         </button>
       </div>
 
@@ -1717,6 +1768,174 @@ export default function MessageMapping() {
             {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
             {loading ? 'Mapping...' : 'Auto-Map Fields'}
           </button>
+        </div>
+      )}
+
+      {/* ── Smart Generate tab ─────────────────────────────────────────────── */}
+      {tab === 'smart' && (
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-purple-950/30 border border-purple-700/40">
+            <Sparkles size={22} className="text-purple-400 shrink-0" />
+            <div>
+              <p className="text-base font-bold text-white">Smart Mapping Generator</p>
+              <p className="text-xs text-gray-400 mt-0.5">AI generates source XSD, target XSD, and field mappings — from whatever you have</p>
+            </div>
+          </div>
+
+          {smartError && (
+            <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-4 py-3 text-sm text-red-300">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <span><strong>Error: </strong>{smartError}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+            {/* Mode 1: Have Source XSD + Description */}
+            <div className="card border border-blue-700/40 bg-blue-950/10 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-800/60 flex items-center justify-center shrink-0">
+                  <FileCode size={16} className="text-blue-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">I have a Source XSD</p>
+                  <p className="text-xs text-gray-400">AI generates the target XSD and mapping</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* Source XSD upload */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 block mb-1">Source XSD file</label>
+                  <button type="button" onClick={() => smartSrcRef.current?.click()}
+                    className={`w-full flex flex-col items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+                      ${smartSrcFile ? 'border-blue-600/60 bg-blue-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
+                    {smartSrcFile
+                      ? <><FileCode size={18} className="text-blue-400" /><span className="text-xs text-blue-300 font-medium truncate max-w-full px-2">{smartSrcFile.name}</span></>
+                      : <><Upload size={16} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
+                    }
+                  </button>
+                  <input ref={smartSrcRef} type="file" accept=".xsd,.xml" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSmartSrcFile(f); e.target.value = '' } }} />
+                  {smartSrcFile && (
+                    <button onClick={() => setSmartSrcFile(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1 mt-1">
+                      <X size={10} />Remove
+                    </button>
+                  )}
+                </div>
+
+                {/* Description of target */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 block mb-1">What should the target system receive?</label>
+                  <textarea
+                    className="textarea-field text-xs"
+                    rows={4}
+                    placeholder="e.g. A flat JSON-compatible XML for an external system that needs: order number, customer name, total amount in EUR, formatted date as YYYY-MM-DD, and item count."
+                    value={smartDesc}
+                    onChange={e => setSmartDesc(e.target.value)}
+                  />
+                </div>
+
+                {/* Mapping name */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-400 whitespace-nowrap shrink-0">Mapping name:</label>
+                  <input type="text" className="input-field text-xs py-1 px-2 flex-1"
+                    placeholder="MM_SmartMapping" value={smartSrcName}
+                    onChange={e => setSmartSrcName(e.target.value.replace(/\s+/g, '_'))} />
+                </div>
+
+                {IS_STATIC_HOST ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-amber-900/40 border border-amber-700/50 text-amber-300">
+                    <AlertCircle size={13} className="shrink-0" />
+                    Backend not available on GitHub Pages
+                  </div>
+                ) : (
+                  <button
+                    onClick={generateFromSourceXsd}
+                    disabled={smartSrcLoading || !smartSrcFile || !smartDesc.trim()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
+                    {smartSrcLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                    {smartSrcLoading ? 'AI is generating target XSD + mapping…' : 'Generate Mapping'}
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                AI creates a target XSD from your description, maps fields intelligently, and downloads a ready-to-import .mmap ZIP.
+              </p>
+            </div>
+
+            {/* Mode 2: Have an idea only */}
+            <div className="card border border-purple-700/40 bg-purple-950/10 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-purple-800/60 flex items-center justify-center shrink-0">
+                  <Lightbulb size={16} className="text-purple-300" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">I have an idea only</p>
+                  <p className="text-xs text-gray-400">AI creates everything from scratch</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {/* Idea textarea */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-400 block mb-1">Describe your integration</label>
+                  <textarea
+                    className="textarea-field text-xs"
+                    rows={7}
+                    placeholder={
+                      "e.g. Map a SAP S/4HANA Sales Order IDoc (SALESORD05) to a flat REST API payload for our logistics provider.\n\nThe target needs: order_id, customer_name, delivery_address, order_date in YYYY-MM-DD format, total_value in EUR, and a list of line items with material number, quantity and unit price."
+                    }
+                    value={smartIdea}
+                    onChange={e => setSmartIdea(e.target.value)}
+                  />
+                </div>
+
+                {/* Mapping name */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-400 whitespace-nowrap shrink-0">Mapping name:</label>
+                  <input type="text" className="input-field text-xs py-1 px-2 flex-1"
+                    placeholder="MM_IdeaMapping" value={smartIdeaName}
+                    onChange={e => setSmartIdeaName(e.target.value.replace(/\s+/g, '_'))} />
+                </div>
+
+                {IS_STATIC_HOST ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-amber-900/40 border border-amber-700/50 text-amber-300">
+                    <AlertCircle size={13} className="shrink-0" />
+                    Backend not available on GitHub Pages
+                  </div>
+                ) : (
+                  <button
+                    onClick={generateFromIdea}
+                    disabled={smartIdeaLoading || !smartIdea.trim()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-purple-600 hover:bg-purple-500 text-white transition-colors disabled:opacity-50">
+                    {smartIdeaLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                    {smartIdeaLoading ? 'AI is generating source XSD, target XSD + mapping…' : 'Generate Everything'}
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[10px] text-gray-600 leading-relaxed">
+                AI creates both XSD schemas and all field mappings from your description alone. Downloads a complete .mmap ZIP bundle.
+                This may take 20-60 seconds depending on complexity.
+              </p>
+            </div>
+          </div>
+
+          {/* Mode 1 reminder: Sheet Mapping */}
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-700 bg-gray-800/30">
+            <FileSpreadsheet size={18} className="text-gray-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white">I have both XSDs and a mapping sheet</p>
+              <p className="text-xs text-gray-400 mt-0.5">Use the Sheet Mapping tab for full control — upload XSDs + Excel sheet, preview, AI-derive rules, and generate.</p>
+            </div>
+            <button onClick={() => setTab('sheet')}
+              className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-700 hover:bg-gray-600 text-white transition-colors">
+              Go to Sheet Mapping <ArrowRight size={12} />
+            </button>
+          </div>
         </div>
       )}
 

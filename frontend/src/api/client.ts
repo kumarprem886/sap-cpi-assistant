@@ -100,6 +100,10 @@ export const mappingAPI = {
     form.append('mapping_name', mappingName)
     return api.post('/mapping/from-sheet', form, { responseType: 'blob' })
   },
+  generateFromSource: (data: object) =>
+    api.post('/mapping/generate-from-source', data, { responseType: 'blob' }),
+  generateFromIdea: (data: object) =>
+    api.post('/mapping/generate-from-idea', data, { responseType: 'blob' }),
 }
 
 export const groovyAPI = {

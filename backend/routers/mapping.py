@@ -391,83 +391,104 @@ async def preview_sheet(
 
 _DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
 
-Your job: read a functional description (written in plain English by a business analyst) and
-produce the correct SAP CPI Graphical Mapping expression. The user may write anything from a
-single word to a full sentence — understand their INTENT and produce the right expression.
+Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression.
 
-━━ AVAILABLE SAP CPI STANDARD FUNCTIONS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+== ALL SAP CPI STANDARD FUNCTIONS ==
 
 STRING:
-  toUpperCase((/field))                         → uppercase text
-  toLowerCase((/field))                         → lowercase text
-  trim((/field))                                → remove leading/trailing spaces
-  length((/field))                              → character count
-  substring((/field), startIndex, length)       → extract part of string (0-based)
-  (/field1)+SEPARATOR+(/field2)                 → join two fields with a separator
-  replaceAll((/field), searchText, replacement) → replace text in field
-  SplitByValue((/field), delimiter)             → split into multiple values
+  toUpperCase((/field))                            -> uppercase
+  toLowerCase((/field))                            -> lowercase
+  trim((/field))                                   -> remove whitespace
+  length((/field))                                 -> character count
+  substring((/field), startPos, length)            -> extract substring (0-based)
+  (/field1)+SEPARATOR+(/field2)                    -> join with separator (concat)
+  replaceAll((/field), searchText, replacement)    -> replace all occurrences
+  SplitByValue((/field), delimiter)                -> split into multiple values
+  indexOf((/field), searchText)                    -> position of first match
+  lastIndexOf((/field), searchText)                -> position of last match
+  endsWith((/field), suffix)                       -> boolean: ends with
+  startsWith((/field), prefix)                     -> boolean: starts with
+  compare((/field1), (/field2))                    -> lexicographic compare
+  equalsS((/field), value)                         -> string equality boolean
 
 DATE:
-  formatDate((/field), inputFormat, outputFormat)
-    — reformats date/time strings. Common formats: yyyyMMdd, yyyy-MM-dd, HHmmss, HH:mm:ss
-    — e.g. formatDate((/date), yyyyMMdd, yyyy-MM-dd)
+  formatDate((/field), inputFormat, outputFormat)  -> reformat date/time
+    Formats: yyyyMMdd, yyyy-MM-dd, HHmmss, HH:mm:ss, dd.MM.yyyy etc.
+  currentDate()                                    -> today's date (no source field)
+  DateBefore((/date1), (/date2))                   -> boolean: date1 before date2
+  DateAfter((/date1), (/date2))                    -> boolean: date1 after date2
+  CompareDates((/date1), (/date2))                 -> 1 if after, 0 if equal, -1 if before
 
-NUMERIC:
-  add((/field1), (/field2))       → add two field values
-  subtract((/field1), (/field2))  → subtract
-  multiply((/field1), (/field2))  → multiply
-  divide((/field1), (/field2))    → divide
+ARITHMETIC:
+  add((/field1), (/field2))                        -> numeric add
+  subtract((/field1), (/field2))                   -> subtract
+  multiply((/field1), (/field2))                   -> multiply
+  divide((/field1), (/field2))                     -> divide
+  abs((/field))                                    -> absolute value
+  neg((/field))                                    -> negate
+  sqrt((/field))                                   -> square root
+  round((/field))                                  -> round to integer
+  ceil((/field))                                   -> round up
+  floor((/field))                                  -> round down
+  power((/base), (/exponent))                      -> base^exponent
+  max((/field1), (/field2))                        -> maximum of two values
+  min((/field1), (/field2))                        -> minimum of two values
+  FormatNum((/field), pattern)                     -> format as number e.g. 0.00
 
 CONDITIONAL:
-  if((/boolField), valueIfTrue, valueIfFalse)
-  equals((/field), CONSTANT)      → returns true/false
-  exists((/field))                → true if field has a value
-  mapWithDefault((/field), defaultValue) → value or default if empty
+  if((/condition), valueIfTrue, valueIfFalse)      -> conditional
+  ifWithoutElse((/condition), valueIfTrue)         -> if without else
+  Equals((/field), VALUE)                          -> equality check
+  notEquals((/field), VALUE)                       -> inequality check
+  And((/bool1), (/bool2))                          -> logical AND
+  Or((/bool1), (/bool2))                           -> logical OR
+  Not((/bool))                                     -> logical NOT
+  contains((/field), searchText)                   -> boolean: contains text
 
-NODE FUNCTIONS:
-  useOneAsMany((/field))          → repeat single value for each occurrence of target
-  removeContexts((/field))        → flatten multi-value into single context
-  collapseContexts((/field))      → merge multiple values into one
+NODE:
+  useOneAsMany((/field))                           -> repeat value for each occurrence
+  mapWithDefault((/field), defaultValue)           -> pass value or default if empty
+  exists((/field))                                 -> boolean: field has value
+  SplitByValue((/field), delimiter)                -> split into multiple contexts
+  removeContexts((/field))                         -> flatten multi-value to list
+  collapseContexts((/field))                       -> merge multiple into one
+  createIf((/condition))                           -> create element if true
+  sort((/field))                                   -> sort values ascending
+  sort((/field), descending)                       -> sort values descending
+  copyValue((/field))                              -> copy value through
 
-━━ INTENT RECOGNITION EXAMPLES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+== INTENT RECOGNITION EXAMPLES ==
 
-Description → Expression (source field: "date", available fields: date, time, plant, qty)
+"uppercase" / "to upper" / "make uppercase"       -> toUpperCase((/fieldName))
+"lowercase"                                        -> toLowerCase((/fieldName))
+"trim" / "remove whitespace"                       -> trim((/fieldName))
+"length" / "character count"                       -> length((/fieldName))
+"first N characters"                               -> substring((/fieldName), 0, N)
+"extract chars from X to Y"                        -> substring((/fieldName), X, Y)
+"combine X and Y with hyphen"                      -> (/X)+- +(/Y)
+"join date and time with T"                        -> (/date)+T+(/time)
+"replace X with Y"                                 -> replaceAll((/field), X, Y)
+"remove dashes / hyphens"                          -> replaceAll((/field), -, )
+"split by comma"                                   -> SplitByValue((/field), ,)
+"format date YYYYMMDD to YYYY-MM-DD"               -> formatDate((/field), yyyyMMdd, yyyy-MM-dd)
+"today's date"                                    -> currentDate()
+"add two fields"                                   -> add((/field1), (/field2))
+"multiply"                                         -> multiply((/field1), (/field2))
+"format as 2 decimal places"                       -> FormatNum((/field), 0.00)
+"if field exists"                                  -> exists((/field))
+"default value if empty"                           -> mapWithDefault((/field), DEFAULT)
+"repeat for each line"                             -> useOneAsMany((/field))
+"sort ascending"                                   -> sort((/field))
+"direct copy" / "same value"                      -> ""
 
-"direct copy"                        → ""
-"copy as-is"                         → ""
-"same value"                         → ""
-"uppercase"                          → toUpperCase((/date))
-"make upper case"                    → toUpperCase((/date))
-"convert to uppercase"               → toUpperCase((/date))
-"lowercase"                          → toLowerCase((/date))
-"trim spaces"                        → trim((/date))
-"remove whitespace"                  → trim((/date))
-"format date yyyyMMdd to yyyy-MM-dd" → formatDate((/date), yyyyMMdd, yyyy-MM-dd)
-"reformat date from YYYYMMDD to ISO" → formatDate((/date), yyyyMMdd, yyyy-MM-dd)
-"combine date and time with T"       → (/date)+T+(/time)
-"join date and time using T between" → (/date)+T+(/time)
-"concatenate plant and date with -"  → (/plant)+- +(/date)
-"first 6 characters"                 → substring((/date), 0, 6)
-"extract first 4 chars"              → substring((/date), 0, 4)
-"remove dashes"                      → replaceAll((/date), -, )
-"replace space with underscore"      → replaceAll((/date), , _)
-"repeat for each line"               → useOneAsMany((/date))
-"use one value for all"              → useOneAsMany((/date))
-"default to N/A if empty"            → mapWithDefault((/date), N/A)
-"split by comma"                     → SplitByValue((/date), ,)
-"add qty to itself"                  → add((/qty), (/qty))
+== RULES ==
 
-━━ RULES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. ALWAYS use the actual source field names provided — never write (/field) as a literal
-2. Field names go in parentheses: (/fieldName) — use short name, not full XPath
-3. Separators and constants go WITHOUT parentheses: T, -, _, EUR, yyyyMMdd
-4. For direct copy (no transformation), return exactly: ""
-5. If description mentions multiple fields, look them up in the available source fields list
-6. If the operation genuinely cannot be done with standard functions (e.g. complex arithmetic
-   with hardcoded numbers like "divide by 2"), use the closest standard function and note it
-   OR return GROOVY: followed by a one-liner Groovy expression
-7. Return ONLY the expression string on one line — no explanation, no markdown, no quotes
+1. Use ACTUAL field names from source fields list -- never write (/field) literally
+2. Field references: (/FieldName) -- short name, NOT full XPath
+3. Constants go WITHOUT parentheses: T, -, _, EUR, yyyyMMdd, DEFAULT
+4. Direct copy -> return exactly: ""
+5. If description mentions multiple fields, look them up from available source fields
+6. Return ONLY the expression on one line -- no explanation, no markdown
 """
 
 
@@ -742,4 +763,224 @@ def generate_mmap_auto(req: MmapAutoRequest):
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
+# -- Generate from Source XSD + Description ----------------------------------
 
+class GenerateFromSourceRequest(BaseModel):
+    source_xsd: str
+    source_xsd_name: str = "source.xsd"
+    description: str
+    mapping_name: str = "MM_Mapping"
+
+
+@router.post("/generate-from-source")
+def generate_from_source(req: GenerateFromSourceRequest):
+    """
+    Given a source XSD and a description of what the target system expects,
+    generate: (1) a target XSD, (2) field mappings, (3) an mmap ZIP.
+    """
+    from services.xsd_parser import smart_extract_paths, leaf_paths
+    import json as _json
+
+    src_root, src_paths = smart_extract_paths(req.source_xsd)
+    src_leaves = leaf_paths(src_paths)[:40]
+
+    # Step 1: Generate target XSD
+    tgt_xsd_prompt = (
+        "You are an SAP CPI integration expert. Generate a valid XSD schema for the target system.\n\n"
+        "Source system XSD leaf fields:\n" + "\n".join(src_leaves) + "\n\n"
+        "Target system requirement:\n" + req.description + "\n\n"
+        "Generate a complete, valid XSD schema for the target system. Rules:\n"
+        "- Use xs: namespace prefix\n"
+        "- Create a clean, flat structure appropriate for the target\n"
+        "- Field names should be clear and descriptive\n"
+        "- Include xs:element with appropriate types (xs:string, xs:decimal, xs:dateTime, etc.)\n"
+        "- Return ONLY the XSD XML, no explanation, no markdown fences\n"
+    )
+
+    tgt_xsd_text = generate("Return only valid XSD XML.", tgt_xsd_prompt, max_tokens=3000)
+    if "```" in tgt_xsd_text:
+        tgt_xsd_text = tgt_xsd_text.split("```", 1)[-1]
+        tgt_xsd_text = tgt_xsd_text.rsplit("```", 1)[0]
+        if tgt_xsd_text.startswith("xml\n"):
+            tgt_xsd_text = tgt_xsd_text[4:]
+    tgt_xsd_text = tgt_xsd_text.strip()
+
+    # Step 2: Parse target XSD
+    try:
+        tgt_root, tgt_paths = smart_extract_paths(tgt_xsd_text)
+    except Exception:
+        tgt_root = "Root"
+        tgt_paths = []
+
+    # Step 3: Generate mappings
+    mapping_prompt = (
+        "Generate SAP CPI Graphical Message Mapping field mappings.\n\n"
+        "SOURCE XSD fields:\n" + "\n".join(src_paths[:60]) + "\n\n"
+        "TARGET XSD fields:\n" + "\n".join(tgt_paths[:60]) + "\n\n"
+        "Mapping goal: " + req.description + "\n\n"
+        "Use SAP CPI node function expressions where transformation is needed:\n"
+        "- toUpperCase((/field)), toLowerCase((/field)), trim((/field))\n"
+        "- formatDate((/field), inputFmt, outputFmt)\n"
+        "- (/field1)+SEPARATOR+(/field2) for concatenation\n"
+        "- replaceAll((/field), search, replacement)\n"
+        "- mapWithDefault((/field), defaultValue)\n\n"
+        'Return ONLY valid JSON (no markdown):\n'
+        '{"field_mappings": [{"source_path": "/S/F", "target_path": "/T/F", "rule": "", "note": ""}]}'
+    )
+
+    try:
+        raw = generate("Return ONLY valid JSON, no markdown.", mapping_prompt, max_tokens=4000)
+        raw = raw.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
+        data = _json.loads(raw)
+        fm_list = data.get("field_mappings", [])
+    except Exception:
+        fm_list = []
+
+    # Convert to mmap format
+    from services.sheet_mapper import _parse_rule
+    matched = []
+    for fm in fm_list:
+        src_p = fm.get("source_path", "")
+        tgt_p = fm.get("target_path", "")
+        rule  = fm.get("rule", "")
+        if not tgt_p:
+            continue
+        if rule:
+            try:
+                parsed = _parse_rule(rule, src_paths)
+                if parsed:
+                    func_name, parts = parsed
+                    matched.append({"target_path": tgt_p, "func": func_name, "parts": parts, "note": fm.get("note", "")})
+                    continue
+            except Exception:
+                pass
+        if src_p:
+            matched.append({"source_path": src_p, "target_path": tgt_p, "note": fm.get("note", "")})
+
+    safe_name    = req.mapping_name.replace(" ", "_") or "MM_Mapping"
+    tgt_xsd_name = "target.xsd"
+
+    mmap_xml  = build_mmap_xml(safe_name, req.source_xsd_name, src_root or "Source",
+                                tgt_xsd_name, tgt_root or "Target", matched)
+    zip_bytes = build_mmap_zip(safe_name, mmap_xml, req.source_xsd, tgt_xsd_text,
+                                req.source_xsd_name, tgt_xsd_name)
+
+    return StreamingResponse(
+        BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}.zip"',
+            "X-Generated-Target-XSD": tgt_xsd_text[:500],
+            "X-Mapping-Count": str(len(matched)),
+            "Access-Control-Expose-Headers": "X-Generated-Target-XSD,X-Mapping-Count",
+        },
+    )
+
+
+# -- Generate from Idea Only -------------------------------------------------
+
+class GenerateFromIdeaRequest(BaseModel):
+    idea: str
+    mapping_name: str = "MM_Mapping"
+
+
+@router.post("/generate-from-idea")
+def generate_from_idea(req: GenerateFromIdeaRequest):
+    """
+    Given only an idea/description, generate source XSD, target XSD,
+    field mappings and mmap ZIP entirely with AI.
+    """
+    import json as _json
+    from services.xsd_parser import smart_extract_paths
+    from services.sheet_mapper import _parse_rule
+
+    # Step 1: Generate both XSDs
+    both_xsd_prompt = (
+        "You are an SAP CPI integration architect. Given this integration requirement:\n\n"
+        "\"" + req.idea + "\"\n\n"
+        "Generate BOTH the source XSD and target XSD schemas.\n\n"
+        "Return ONLY valid JSON (no markdown):\n"
+        '{"source_xsd": "<?xml ...>...", "target_xsd": "<?xml ...>...", '
+        '"source_root": "RootName", "target_root": "RootName", "description": "..."}\n\n'
+        "Both XSDs must be valid XML/XSD. Use xs: namespace. Include all relevant fields."
+    )
+
+    raw = generate("Return ONLY valid JSON, no markdown fences.", both_xsd_prompt, max_tokens=6000)
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
+
+    try:
+        data = _json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail="AI did not return valid JSON for XSD generation")
+
+    src_xsd_text = data.get("source_xsd", "")
+    tgt_xsd_text = data.get("target_xsd", "")
+
+    if not src_xsd_text or not tgt_xsd_text:
+        raise HTTPException(status_code=422, detail="AI did not return both source and target XSD")
+
+    # Step 2: Parse XSDs
+    try:
+        src_root, src_paths = smart_extract_paths(src_xsd_text)
+    except Exception:
+        src_root, src_paths = "Source", []
+    try:
+        tgt_root, tgt_paths = smart_extract_paths(tgt_xsd_text)
+    except Exception:
+        tgt_root, tgt_paths = "Target", []
+
+    mapping_prompt = (
+        "Generate complete SAP CPI field mappings for: " + req.idea + "\n\n"
+        "SOURCE fields:\n" + "\n".join(src_paths[:50]) + "\n\n"
+        "TARGET fields:\n" + "\n".join(tgt_paths[:50]) + "\n\n"
+        "Map ALL target fields. Use SAP CPI node functions where needed.\n"
+        'Return ONLY JSON: {"field_mappings": [{"source_path": "...", "target_path": "...", "rule": "", "note": ""}]}'
+    )
+
+    try:
+        raw2 = generate("Return ONLY valid JSON.", mapping_prompt, max_tokens=4000)
+        raw2 = raw2.strip()
+        if raw2.startswith("```"):
+            raw2 = raw2.split("\n", 1)[-1].rsplit("```", 1)[0]
+        fm_list = _json.loads(raw2).get("field_mappings", [])
+    except Exception:
+        fm_list = []
+
+    matched = []
+    for fm in fm_list:
+        src_p = fm.get("source_path", "")
+        tgt_p = fm.get("target_path", "")
+        rule  = fm.get("rule", "")
+        if not tgt_p:
+            continue
+        if rule:
+            try:
+                parsed = _parse_rule(rule, src_paths)
+                if parsed:
+                    func_name, parts = parsed
+                    matched.append({"target_path": tgt_p, "func": func_name, "parts": parts, "note": fm.get("note", "")})
+                    continue
+            except Exception:
+                pass
+        if src_p:
+            matched.append({"source_path": src_p, "target_path": tgt_p, "note": fm.get("note", "")})
+
+    safe_name = req.mapping_name.replace(" ", "_") or "MM_Mapping"
+    mmap_xml  = build_mmap_xml(safe_name, "source.xsd", src_root or "Source",
+                                "target.xsd", tgt_root or "Target", matched)
+    zip_bytes = build_mmap_zip(safe_name, mmap_xml, src_xsd_text, tgt_xsd_text,
+                                "source.xsd", "target.xsd")
+
+    return StreamingResponse(
+        BytesIO(zip_bytes),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}.zip"',
+            "X-Mapping-Count": str(len(matched)),
+            "Access-Control-Expose-Headers": "X-Mapping-Count",
+        },
+    )
