@@ -431,6 +431,153 @@ function UploadToCpiButton({
   )
 }
 
+// ── Step 3: Generate with ZIP preview ────────────────────────────────────────
+
+function ZipPreviewStep({ sheetPreview, sheetMmapName, setSheetMmapName, sheetSrcMode, sheetSrcSchema, sheetSrcFile,
+  sheetTgtMode, sheetTgtSchema, sheetTgtFile, sheetFile, sheetLoading, sheetSrcReady, sheetTgtReady,
+  sheetSummary, sheetError, generateFromSheet, buildSheetFileFromPreview, resolveXsdFile, onBack }: any) {
+  const [zipPreview, setZipPreview] = React.useState<{ files: string[]; mmap_xml: string; matched: number } | null>(null)
+  const [previewLoading, setPreviewLoading] = React.useState(false)
+  const [showXml, setShowXml] = React.useState(false)
+  const [previewError, setPreviewError] = React.useState('')
+
+  const srcXsdName = sheetSrcMode === 'catalog' ? sheetSrcSchema : sheetSrcFile?.name || 'source.xsd'
+  const tgtXsdName = sheetTgtMode === 'catalog' ? sheetTgtSchema : sheetTgtFile?.name || 'target.xsd'
+
+  // Static file list preview (no backend call needed)
+  const staticFiles = [
+    `mapping/${sheetMmapName || 'MM_Mapping'}.mmap`,
+    `wsdl/${srcXsdName}`,
+    ...(tgtXsdName && tgtXsdName !== srcXsdName ? [`wsdl/${tgtXsdName}`] : []),
+  ]
+
+  const loadXmlPreview = async () => {
+    setPreviewLoading(true); setPreviewError('')
+    try {
+      const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
+      const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
+      if (!srcFile || !tgtFile) { setPreviewError('XSD files not ready'); return }
+      const sheet = sheetPreview ? buildSheetFileFromPreview() : sheetFile
+      if (!sheet) { setPreviewError('No mapping sheet'); return }
+      const r = await mappingAPI.previewZip(srcFile, tgtFile, sheet, sheetMmapName || 'MM_Mapping')
+      setZipPreview(r.data)
+      setShowXml(true)
+    } catch (e: any) {
+      setPreviewError(e?.response?.data?.detail || e?.message || 'Preview failed')
+    } finally { setPreviewLoading(false) }
+  }
+
+  return (
+    <div className="card space-y-5">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-blue-900/40 border border-blue-700/50 flex items-center justify-center">
+          <Package size={18} className="text-blue-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-white">Generate .mmap file</p>
+          <p className="text-xs text-gray-400">
+            {sheetPreview.matched} matched fields &nbsp;·&nbsp;
+            {sheetPreview.rows.filter((r: any) => r.ai_derived).length} AI-derived rules &nbsp;·&nbsp;
+            {sheetPreview.unmatched} unmatched (will be skipped)
+          </p>
+        </div>
+        <button onClick={onBack} className="ml-auto text-xs text-gray-500 hover:text-white">← Back to Preview</button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <label className="text-xs text-gray-400 whitespace-nowrap">Mapping name:</label>
+        <input type="text" className="input-field text-sm py-1 px-2 w-60"
+          placeholder="MM_SheetMapping" value={sheetMmapName}
+          onChange={e => setSheetMmapName(e.target.value.replace(/\s+/g, '_'))} />
+      </div>
+
+      {/* ZIP contents preview */}
+      <div className="rounded-xl border border-gray-700 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-gray-800/60">
+          <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
+            <FileCode size={13} className="text-blue-400" />
+            ZIP Contents
+          </div>
+          <button
+            onClick={showXml ? () => setShowXml(false) : loadXmlPreview}
+            disabled={previewLoading}
+            className="flex items-center gap-1.5 text-[10px] text-gray-400 hover:text-blue-300 transition-colors">
+            {previewLoading ? <Loader2 size={11} className="animate-spin" /> : null}
+            {showXml ? 'Hide .mmap XML ▲' : previewLoading ? 'Loading…' : 'Preview .mmap XML ▼'}
+          </button>
+        </div>
+
+        {/* File list */}
+        <div className="px-4 py-3 space-y-1.5 bg-gray-900/40">
+          {staticFiles.map(f => (
+            <div key={f} className="flex items-center gap-2 text-xs">
+              <span className={`font-mono ${f.endsWith('.mmap') ? 'text-blue-300' : 'text-gray-400'}`}>
+                {f.endsWith('.mmap') ? '📄' : '📋'} {f}
+              </span>
+              {f.endsWith('.mmap') && <span className="text-[9px] text-blue-700 bg-blue-900/20 px-1.5 py-0.5 rounded">mapping XML</span>}
+              {f.includes('/wsdl/') && <span className="text-[9px] text-gray-600 bg-gray-800 px-1.5 py-0.5 rounded">XSD schema</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* mmap XML preview */}
+        {previewError && (
+          <div className="px-4 py-2 text-xs text-red-400 bg-red-950/20 border-t border-gray-700">{previewError}</div>
+        )}
+        {showXml && zipPreview && (
+          <div className="border-t border-gray-700">
+            <pre className="text-[10px] font-mono text-gray-300 p-4 overflow-x-auto max-h-64 bg-gray-950/60 leading-relaxed whitespace-pre-wrap break-all">
+              {zipPreview.mmap_xml}
+            </pre>
+          </div>
+        )}
+      </div>
+
+      {IS_STATIC_HOST ? (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm bg-amber-900/40 border border-amber-700/50 text-amber-300">
+          <AlertCircle size={15} className="shrink-0" />
+          Backend not available on GitHub Pages — run locally to use this feature
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={generateFromSheet}
+            disabled={sheetLoading || !sheetSrcReady || !sheetTgtReady || (!sheetFile && !sheetPreview)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
+            {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            {sheetLoading ? 'Building .mmap…' : 'Download .mmap'}
+          </button>
+          <UploadToCpiButton
+            buildFile={async () => {
+              const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
+              const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
+              if (!srcFile || !tgtFile) throw new Error('XSD files not ready')
+              const sheet = sheetPreview ? buildSheetFileFromPreview() : sheetFile
+              if (!sheet) throw new Error('No mapping sheet')
+              const res = await mappingAPI.fromSheet(srcFile, tgtFile, sheet, sheetMmapName)
+              return new File([res.data], `${sheetMmapName}.zip`, { type: 'application/zip' })
+            }}
+            artifactType="messagemapping"
+            defaultName={sheetMmapName}
+          />
+        </div>
+      )}
+
+      {sheetSummary && !sheetError && (
+        <div className="flex items-center gap-2 rounded-lg bg-green-950/50 border border-green-700/50 px-3 py-2 text-xs text-green-300">
+          <CheckCircle2 size={13} className="shrink-0" />{sheetSummary} — .mmap downloaded.
+        </div>
+      )}
+      {sheetError && (
+        <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
+          <AlertCircle size={13} className="shrink-0 mt-0.5" />
+          <span><strong>Error: </strong>{sheetError}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function MessageMapping() {
   const [tab, setTab] = useState<'schema' | 'sheet' | 'automap'>('schema')
   const [loading, setLoading] = useState(false)
@@ -1535,73 +1682,20 @@ export default function MessageMapping() {
 
           {/* ── Step 3: Generate ─── */}
           {sheetStep === 'generate' && sheetPreview && (
-            <div className="card space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-900/40 border border-blue-700/50 flex items-center justify-center">
-                  <Package size={18} className="text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">Generate .mmap file</p>
-                  <p className="text-xs text-gray-400">
-                    {sheetPreview.matched} matched fields &nbsp;·&nbsp;
-                    {sheetPreview.rows.filter(r => r.ai_derived).length} AI-derived rules &nbsp;·&nbsp;
-                    {sheetPreview.unmatched} unmatched (will be skipped)
-                  </p>
-                </div>
-                <button onClick={() => setSheetStep('preview')} className="ml-auto text-xs text-gray-500 hover:text-white">← Back to Preview</button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <label className="text-xs text-gray-400 whitespace-nowrap">Mapping name:</label>
-                <input type="text" className="input-field text-sm py-1 px-2 w-60"
-                  placeholder="MM_SheetMapping"
-                  value={sheetMmapName}
-                  onChange={e => setSheetMmapName(e.target.value.replace(/\s+/g, '_'))} />
-              </div>
-
-              {IS_STATIC_HOST ? (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm bg-amber-900/40 border border-amber-700/50 text-amber-300">
-                  <AlertCircle size={15} className="shrink-0" />
-                  Backend not available on GitHub Pages — run locally to use this feature
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 flex-wrap">
-                  <button
-                    onClick={generateFromSheet}
-                    disabled={sheetLoading || !sheetSrcReady || !sheetTgtReady || (!sheetFile && !sheetPreview)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
-                    {sheetLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                    {sheetLoading ? 'Building .mmap…' : 'Download .mmap'}
-                  </button>
-                  <UploadToCpiButton
-                    buildFile={async () => {
-                      const srcFile = await resolveXsdFile(sheetSrcMode, sheetSrcSchema, sheetSrcFile)
-                      const tgtFile = await resolveXsdFile(sheetTgtMode, sheetTgtSchema, sheetTgtFile)
-                      if (!srcFile || !tgtFile) throw new Error('XSD files not ready')
-                      const sheet = sheetPreview ? buildSheetFileFromPreview() : sheetFile
-                      if (!sheet) throw new Error('No mapping sheet')
-                      const res = await mappingAPI.fromSheet(srcFile, tgtFile, sheet, sheetMmapName)
-                      return new File([res.data], `${sheetMmapName}.zip`, { type: 'application/zip' })
-                    }}
-                    artifactType="messagemapping"
-                    defaultName={sheetMmapName}
-                  />
-                </div>
-              )}
-
-              {sheetSummary && !sheetError && (
-                <div className="flex items-center gap-2 rounded-lg bg-green-950/50 border border-green-700/50 px-3 py-2 text-xs text-green-300">
-                  <CheckCircle2 size={13} className="shrink-0" />
-                  {sheetSummary} — .mmap downloaded.
-                </div>
-              )}
-              {sheetError && (
-                <div className="flex items-start gap-2 rounded-lg bg-red-950/50 border border-red-800 px-3 py-2 text-xs text-red-300">
-                  <AlertCircle size={13} className="shrink-0 mt-0.5" />
-                  <span><strong>Error: </strong>{sheetError}</span>
-                </div>
-              )}
-            </div>
+            <ZipPreviewStep
+              sheetPreview={sheetPreview}
+              sheetMmapName={sheetMmapName}
+              setSheetMmapName={setSheetMmapName}
+              sheetSrcMode={sheetSrcMode} sheetSrcSchema={sheetSrcSchema} sheetSrcFile={sheetSrcFile}
+              sheetTgtMode={sheetTgtMode} sheetTgtSchema={sheetTgtSchema} sheetTgtFile={sheetTgtFile}
+              sheetFile={sheetFile}
+              sheetLoading={sheetLoading} sheetSrcReady={sheetSrcReady} sheetTgtReady={sheetTgtReady}
+              sheetSummary={sheetSummary} sheetError={sheetError}
+              generateFromSheet={generateFromSheet}
+              buildSheetFileFromPreview={buildSheetFileFromPreview}
+              resolveXsdFile={resolveXsdFile}
+              onBack={() => setSheetStep('preview')}
+            />
           )}
         </div>
       )}

@@ -83,6 +83,14 @@ export const mappingAPI = {
     return api.post('/mapping/preview-sheet', form)
   },
   deriveRules: (rows: object[]) => api.post('/mapping/derive-rules', { rows }),
+  previewZip: (sourceXsd: File, targetXsd: File, mappingSheet: File, mappingName: string) => {
+    const form = new FormData()
+    form.append('source_xsd', sourceXsd)
+    form.append('target_xsd', targetXsd)
+    form.append('mapping_sheet', mappingSheet)
+    form.append('mapping_name', mappingName)
+    return api.post('/mapping/from-sheet-preview', form)
+  },
   prebuiltPreview: (pairId: string) => api.get(`/mapping/prebuilt/preview/${encodeURIComponent(pairId)}`),
   fromSheet: (sourceXsd: File, targetXsd: File, mappingSheet: File, mappingName: string) => {
     const form = new FormData()

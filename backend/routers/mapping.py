@@ -518,6 +518,69 @@ Return ONLY the expression on one line."""
     return {"rows": results}
 
 
+# ── ZIP preview — returns file list + mmap XML without downloading ────────────
+
+@router.post("/from-sheet-preview")
+async def preview_mmap_from_sheet(
+    source_xsd:    UploadFile = File(...),
+    target_xsd:    UploadFile = File(...),
+    mapping_sheet: UploadFile = File(...),
+    mapping_name:  str        = Form("MM_Mapping"),
+):
+    """
+    Same processing as /from-sheet but returns the mmap XML and file list
+    as JSON instead of streaming a ZIP download. Used by the frontend to
+    show a ZIP contents preview before the user downloads.
+    """
+    src_bytes   = await source_xsd.read()
+    tgt_bytes   = await target_xsd.read()
+    sheet_bytes = await mapping_sheet.read()
+
+    src_xsd_text = src_bytes.decode("utf-8", errors="replace")
+    tgt_xsd_text = tgt_bytes.decode("utf-8", errors="replace")
+
+    try:
+        src_root, src_paths = smart_extract_paths(src_xsd_text)
+        tgt_root, tgt_paths = smart_extract_paths(tgt_xsd_text)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse XSD: {exc}")
+
+    try:
+        matched, unmatched = sheet_to_field_mappings(
+            sheet_bytes, mapping_sheet.filename or "mapping.xlsx",
+            src_paths, tgt_paths,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse mapping sheet: {exc}")
+
+    safe_name    = mapping_name.replace(" ", "_") or "MM_Mapping"
+    src_xsd_name = source_xsd.filename or "source.xsd"
+    tgt_xsd_name = target_xsd.filename or "target.xsd"
+
+    mmap_xml = build_mmap_xml(
+        mapping_name    = safe_name,
+        source_xsd_name = src_xsd_name,
+        source_root     = src_root or "Source",
+        target_xsd_name = tgt_xsd_name,
+        target_root     = tgt_root or "Target",
+        field_mappings  = matched,
+    )
+
+    files = [f"mapping/{safe_name}.mmap"]
+    if src_xsd_name:
+        files.append(f"wsdl/{src_xsd_name}")
+    if tgt_xsd_name and tgt_xsd_name != src_xsd_name:
+        files.append(f"wsdl/{tgt_xsd_name}")
+
+    return {
+        "mmap_xml":  mmap_xml,
+        "files":     files,
+        "matched":   len(matched),
+        "unmatched": len(unmatched),
+        "mapping_name": safe_name,
+    }
+
+
 # ── Sheet-driven .mmap ────────────────────────────────────────────────────────
 
 @router.post("/from-sheet")
