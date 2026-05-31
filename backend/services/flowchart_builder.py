@@ -103,6 +103,24 @@ def _split_multi(s: str) -> list[str]:
     return parts or [s.strip()]
 
 
+def _is_relay_system(name: str) -> bool:
+    """True only if the system is a genuine middleware relay (not a final receiver)."""
+    n = name.lower()
+    return any(k in n for k in (
+        "pigma", "relay", "middleware", "hub", "bus",
+        "aem", "event mesh", "event grid", "kafka", "mq", "amqp",
+    ))
+
+
+def _proto_from_name(name: str) -> str:
+    """Infer the protocol label from a receiver system name, e.g. 'Manogna SFTP' → 'SFTP'."""
+    n = name.upper()
+    for proto in ("SFTP", "FTP", "SOAP", "HTTPS", "HTTP", "IDOC", "RFC", "AS2", "AMQP", "ODATA"):
+        if proto in n:
+            return proto
+    return ""
+
+
 # ── CPI step extraction ───────────────────────────────────────────────────────
 _KNOWN_STEPS = [
     "Content Modifier", "Message Mapping", "XSLT Mapping", "Groovy Script",
@@ -125,15 +143,54 @@ def _classify(label: str):
     return C_STEP_DEF, C_DARK
 
 def _extract_steps(data: dict) -> list[str]:
-    logic = data.get("integration_logic", "")
-    found = [k for k in _KNOWN_STEPS if k.lower() in logic.lower()]
-    if not found:
-        mt = data.get("mapping_type", "")
-        found = ["Content Modifier"]
-        if "groovy"  in mt.lower(): found.append("Groovy Script")
-        elif "xslt"  in mt.lower(): found.append("XSLT Mapping")
-        else:                        found.append("Message Mapping")
+    logic = (data.get("integration_logic", "") + " " +
+             data.get("processing_description", "") + " " +
+             data.get("iflow_description", "")).lower()
+    mt = data.get("mapping_type", "").lower()
+
+    found: list[str] = []
+
+    # Content Modifier — almost always present
+    if any(k in logic for k in ("content modifier", "set header", "set property",
+                                  "msgid", "timestamp", "enrich")):
+        found.append("Content Modifier")
+    elif "content modifier" not in found:
+        found.append("Content Modifier")   # always include as first step
+
+    # Script detection — check groovy BEFORE mapping so Groovy wins over Message Mapping
+    if any(k in logic for k in ("groovy", "script", "javascript",
+                                  "transform", "parse", "xslurper", "streamingmarkup")):
+        found.append("Groovy Script")
+    elif "groovy" in mt or "script" in mt:
+        found.append("Groovy Script")
+    elif any(k in logic for k in ("xslt", "stylesheet", "xsl transform")):
+        found.append("XSLT Mapping")
+    elif any(k in logic for k in ("message mapping", "graphical mapping",
+                                    "mmap", "field mapping")):
+        found.append("Message Mapping")
+    elif "xslt" in mt:
+        found.append("XSLT Mapping")
+    elif mt and mt not in ("none", ""):
+        found.append("Message Mapping")
+
+    # Router — detect content-based routing
+    if any(k in logic for k in ("router", "route", "routing", "gateway",
+                                  "branch", "condition", "receiver number",
+                                  "exclusive", "cbr")):
+        found.append("Router")
+
+    # Splitter / Aggregator
+    if any(k in logic for k in ("splitter", "split", "aggregate", "gather")):
+        found.append("Splitter")
+
+    # Exception / Error handling
+    if any(k in logic for k in ("exception", "error", "fault", "catch",
+                                  "subprocess", "error handler")):
         found.append("Exception Subprocess")
+    else:
+        found.append("Exception Subprocess")  # always shown in CPI best-practice
+
+    # De-duplicate, preserve order
     seen, out = set(), []
     for s in found:
         if s not in seen:
@@ -283,9 +340,13 @@ def generate_flowchart(data: dict) -> bytes:
     has_multi_targets = len(explicit_targets) > 1
 
     if has_multi_targets:
-        # post_cpi chain contains relay nodes; explicit_targets are final receivers
-        relay     = post_cpi          # e.g. ["PIGMA"]
-        receivers = explicit_targets  # e.g. ["Wiscon", "Andon", "Taybo", "Retmes"]
+        # Multiple final receivers detected.
+        # Only treat post_cpi items as relay/middleware if they are genuine relay
+        # systems (PIGMA, AEM, MQ, etc.).  Receiver systems (SFTP, HTTP, SOAP-named)
+        # must NOT be used as a relay — they fan out directly from CPI.
+        relay_nodes = [p for p in post_cpi if _is_relay_system(p)]
+        relay     = relay_nodes       # e.g. ["PIGMA"] — only real middleware
+        receivers = explicit_targets  # e.g. ["Manogna SFTP","Mrudula HTTP","Shaleni SOAP"]
     elif len(post_cpi) == 1:
         targets = _split_multi(post_cpi[0])
         if len(targets) > 1:
@@ -403,6 +464,8 @@ def generate_flowchart(data: dict) -> bytes:
         for i, rname in enumerate(receivers[:8]):   # cap at 8
             ry = top_y - i * (row_h + spacing)
             ry_mid = ry + row_h / 2
+            # Per-receiver protocol: try to infer from system name, fallback to global
+            recv_proto = _proto_from_name(rname) or tgt_proto
             # Horizontal jog: go right from fan point, then to receiver
             ax.annotate("",
                 xy=(recv_x, ry_mid),
@@ -414,9 +477,11 @@ def generate_flowchart(data: dict) -> bytes:
                 ),
                 zorder=3,
             )
-            if i == 0 and tgt_proto:
-                mx = (fan_x + recv_x) / 2
-                ax.text(mx, mid_y + 0.15, tgt_proto,
+            # Protocol label on every arrow — place at actual arrow midpoint
+            if recv_proto:
+                mx = (fan_x * 0.35 + recv_x * 0.65)   # 65% of the way along the arrow
+                my_label = (mid_y * 0.35 + ry_mid * 0.65) + 0.14  # slightly above midpoint
+                ax.text(mx, my_label, recv_proto,
                         ha="center", va="bottom", fontsize=6.5, color=C_GRAY,
                         bbox=dict(boxstyle="round,pad=0.12", fc=WHITE,
                                   ec=C_STEP_BDR, lw=0.7))
