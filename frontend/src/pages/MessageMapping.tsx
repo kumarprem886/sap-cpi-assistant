@@ -1263,18 +1263,24 @@ export default function MessageMapping() {
           {sheetStep === 'preview' && sheetPreview && (
             <div className="space-y-3">
               {/* Stats bar */}
+              {/* Stats computed live so they update as user fixes fields */}
+              {(() => {
+                const liveMatched   = sheetPreview.rows.filter(r => r.source_matched !== false && r.target_matched !== false && (r.source || r.target)).length
+                const liveUnmatched = sheetPreview.rows.filter(r => (r.source_matched === false || r.target_matched === false) && (r.source || r.target)).length
+                const needAI = sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length
+                return (
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-green-900/30 border border-green-700/50 text-green-300">
-                  <CheckCircle2 size={11} /> {sheetPreview.matched} matched
+                  <CheckCircle2 size={11} /> {liveMatched} matched
                 </span>
-                {sheetPreview.unmatched > 0 && (
+                {liveUnmatched > 0 && (
                   <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-red-900/30 border border-red-700/50 text-red-300">
-                    <AlertCircle size={11} /> {sheetPreview.unmatched} unmatched
+                    <AlertCircle size={11} /> {liveUnmatched} unmatched
                   </span>
                 )}
-                {sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length > 0 && (
+                {needAI > 0 && (
                   <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-purple-900/30 border border-purple-700/50 text-purple-300">
-                    <Wand2 size={11} /> {sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length} need AI derivation
+                    <Wand2 size={11} /> {needAI} need AI derivation
                   </span>
                 )}
                 <div className="ml-auto flex gap-2">
@@ -1284,7 +1290,7 @@ export default function MessageMapping() {
                   </button>
                   <button
                     onClick={deriveAllRules}
-                    disabled={derivingAll || sheetPreview.rows.filter(r => r.functional_rule && !r.technical_rule).length === 0}
+                    disabled={derivingAll || needAI === 0}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-purple-700 hover:bg-purple-600 text-white rounded-lg transition-colors disabled:opacity-50">
                     {derivingAll ? <Loader2 size={11} className="animate-spin" /> : <Wand2 size={11} />}
                     {derivingAll ? 'Deriving…' : 'AI Derive All Rules'}
@@ -1296,6 +1302,8 @@ export default function MessageMapping() {
                   </button>
                 </div>
               </div>
+                ) // end IIFE return
+              })()} {/* end IIFE */}
 
               {/* Preview — card-per-row layout (no horizontal scrolling) */}
               <div className="space-y-1.5 -mx-2">
@@ -1393,14 +1401,14 @@ export default function MessageMapping() {
                           {row.ai_derived && <span className="text-[9px] text-purple-400 shrink-0" title="AI derived">✨</span>}
                         </div>
 
-                        {/* Status */}
+                        {/* Status — computed live from source_matched + target_matched, not the static parse-time field */}
                         <div className="flex items-start justify-center pt-1">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                            row.status === 'matched'   ? 'text-green-400' :
-                            row.status === 'unmatched' ? 'text-red-400' : 'text-gray-600'
-                          }`}>
-                            {row.status === 'matched' ? '✓' : row.status === 'unmatched' ? '✗' : '—'}
-                          </span>
+                          {(srcOk && tgtOk)
+                            ? <span className="text-[10px] font-bold text-green-400">✓</span>
+                            : (row.source || row.target)
+                              ? <span className="text-[10px] font-bold text-red-400">✗</span>
+                              : <span className="text-[10px] font-bold text-gray-600">—</span>
+                          }
                         </div>
 
                         {/* Delete row */}
