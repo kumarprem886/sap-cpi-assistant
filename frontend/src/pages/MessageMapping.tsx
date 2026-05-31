@@ -171,8 +171,8 @@ function XsdSlot({
 }: {
   label: string
   accentClass: 'blue' | 'green'
-  mode: 'catalog' | 'upload'
-  onModeChange: (m: 'catalog' | 'upload') => void
+  mode: 'catalog' | 'upload' | 'paste'
+  onModeChange: (m: 'catalog' | 'upload' | 'paste') => void
   selectedSchema: string
   onSchemaChange: (v: string) => void
   uploadedFile: File | null
@@ -184,64 +184,69 @@ function XsdSlot({
   const odataSchemas = schemas.filter(s => s.kind === 'odata')
   const idocSchemas  = schemas.filter(s => s.kind === 'idoc')
 
+  // Paste mode state (local — converts to File on change)
+  const [pasteText, setPasteText] = React.useState('')
+  const [pasteDetected, setPasteDetected] = React.useState('')
+
+  const handlePaste = (text: string) => {
+    setPasteText(text)
+    if (!text.trim()) { onFileChange(null); setPasteDetected(''); return }
+    // Auto-detect type
+    const isXsd = text.includes('XMLSchema') || text.includes('xs:schema') || text.includes('xsd:schema')
+    const type  = isXsd ? 'XSD' : 'XML'
+    setPasteDetected(type)
+    // Wrap as a File so the rest of the pipeline handles it identically
+    const ext  = isXsd ? '.xsd' : '.xml'
+    const blob = new Blob([text], { type: 'text/xml' })
+    const file = new File([blob], `pasted${ext}`, { type: 'text/xml' })
+    onFileChange(file)
+  }
+
   return (
     <div className="space-y-2">
-      {/* Label + mode toggle */}
+      {/* Label + mode toggle — 3 tabs */}
       <div className="flex items-center justify-between">
         <label className="label mb-0">{label}</label>
         <div className="flex rounded-md overflow-hidden border border-gray-700 text-[10px] font-semibold">
-          <button onClick={() => onModeChange('catalog')}
-            className={`px-2 py-0.5 transition-colors ${mode === 'catalog' ? a.tabActive : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
-            Catalog
-          </button>
-          <button onClick={() => onModeChange('upload')}
-            className={`px-2 py-0.5 transition-colors ${mode === 'upload' ? a.tabActive : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
-            Upload
-          </button>
+          {(['catalog', 'upload', 'paste'] as const).map(m => (
+            <button key={m} onClick={() => onModeChange(m)}
+              className={`px-2 py-0.5 capitalize transition-colors ${mode === m ? a.tabActive : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
+              {m === 'paste' ? 'Paste XML' : m}
+            </button>
+          ))}
         </div>
       </div>
 
-      {mode === 'catalog' ? (
+      {/* Catalog mode */}
+      {mode === 'catalog' && (
         <div className={`rounded-lg border-2 ${selectedSchema ? a.border + ' ' + a.bg : 'border-gray-700 bg-gray-800/30'} p-2 space-y-1.5`}>
-          {/* OData group */}
           {odataSchemas.length > 0 && (
             <div>
-              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1">OData APIs</p>
-              <div className="grid grid-cols-1 gap-0.5 max-h-28 overflow-y-auto">
+              <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1">OData APIs (S/4HANA 2025FPS00)</p>
+              <div className="grid grid-cols-1 gap-0.5 max-h-36 overflow-y-auto">
                 {odataSchemas.map(s => (
                   <button key={s.filename} onClick={() => onSchemaChange(s.filename)}
-                    className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${
-                      selectedSchema === s.filename
-                        ? `${a.tabActive} font-semibold`
-                        : `text-gray-400 hover:text-white hover:bg-gray-700`
-                    }`}>
+                    className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${selectedSchema === s.filename ? `${a.tabActive} font-semibold` : `text-gray-400 hover:text-white hover:bg-gray-700`}`}>
                     {s.stem}
                   </button>
                 ))}
               </div>
             </div>
           )}
-          {/* IDoc group */}
           {idocSchemas.length > 0 && (
             <div>
               <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mb-1 mt-1">IDoc Types</p>
-              <div className="grid grid-cols-1 gap-0.5 max-h-28 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-0.5 max-h-36 overflow-y-auto">
                 {idocSchemas.map(s => (
                   <button key={s.filename} onClick={() => onSchemaChange(s.filename)}
-                    className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${
-                      selectedSchema === s.filename
-                        ? `${a.tabActive} font-semibold`
-                        : `text-gray-400 hover:text-white hover:bg-gray-700`
-                    }`}>
+                    className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${selectedSchema === s.filename ? `${a.tabActive} font-semibold` : `text-gray-400 hover:text-white hover:bg-gray-700`}`}>
                     {s.stem}
                   </button>
                 ))}
               </div>
             </div>
           )}
-          {schemas.length === 0 && (
-            <p className="text-xs text-gray-600 text-center py-3">Loading schemas…</p>
-          )}
+          {schemas.length === 0 && <p className="text-xs text-gray-600 text-center py-3">Loading schemas…</p>}
           {selectedSchema && (
             <div className={`flex items-center gap-1 mt-1 pt-1 border-t border-gray-700/50 ${a.text} text-[10px]`}>
               <CheckCircle2 size={10} className="shrink-0" />
@@ -250,24 +255,51 @@ function XsdSlot({
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {/* Upload mode */}
+      {mode === 'upload' && (
         <>
           <button type="button" onClick={() => fileRef.current?.click()}
-            className={`w-full flex flex-col items-center justify-center gap-2 h-28 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+            className={`w-full flex flex-col items-center justify-center gap-2 h-24 rounded-lg border-2 border-dashed transition-colors cursor-pointer
               ${uploadedFile ? a.border + ' ' + a.bg : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
             {uploadedFile
-              ? <><FileCode size={20} className={a.text} /><span className={`text-xs font-medium truncate max-w-full px-2 ${a.text}`}>{uploadedFile.name}</span></>
-              : <><Upload size={18} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
+              ? <><FileCode size={18} className={a.text} /><span className={`text-xs font-medium truncate max-w-full px-2 ${a.text}`}>{uploadedFile.name}</span></>
+              : <><Upload size={16} className="text-gray-500" /><span className="text-xs text-gray-500">Upload .xsd or .xml</span></>
             }
           </button>
           <input ref={fileRef} type="file" accept=".xsd,.xml" className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) { onFileChange(f); e.target.value = '' } }} />
           {uploadedFile && (
-            <button onClick={() => onFileChange(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1">
-              <X size={10} />Remove
-            </button>
+            <button onClick={() => onFileChange(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Remove</button>
           )}
         </>
+      )}
+
+      {/* Paste mode — accepts raw XML or XSD */}
+      {mode === 'paste' && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-500">Paste XSD schema or sample XML — auto-detected</p>
+            {pasteDetected && (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${pasteDetected === 'XSD' ? 'bg-orange-900/40 text-orange-300' : 'bg-blue-900/40 text-blue-300'}`}>
+                {pasteDetected} detected
+              </span>
+            )}
+          </div>
+          <textarea
+            value={pasteText}
+            onChange={e => handlePaste(e.target.value)}
+            placeholder={'Paste your XSD or XML here…\n\nExamples:\n<?xml version="1.0"?>\n<xs:schema ...> (XSD)\n\nor\n\n<MATMAS05><IDOC>... (XML)'}
+            rows={7}
+            className={`w-full bg-gray-900/60 border rounded-lg px-3 py-2 text-xs font-mono text-gray-200 outline-none transition-colors resize-none placeholder:text-gray-600
+              ${uploadedFile && pasteText ? (a.border.replace('border-', 'border ') + ' ' + a.bg) : 'border-gray-700 focus:border-blue-600'}`}
+          />
+          {pasteText && (
+            <button onClick={() => { setPasteText(''); setPasteDetected(''); onFileChange(null) }}
+              className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1"><X size={10} />Clear</button>
+          )}
+        </div>
       )}
     </div>
   )
@@ -747,8 +779,8 @@ export default function MessageMapping() {
 
   // XSD catalog selection for sheet mapping
   const [catalogSchemas, setCatalogSchemas] = useState<Array<{filename: string; stem: string; kind: string}>>([])
-  const [sheetSrcMode,   setSheetSrcMode]   = useState<'catalog' | 'upload'>('catalog')
-  const [sheetTgtMode,   setSheetTgtMode]   = useState<'catalog' | 'upload'>('catalog')
+  const [sheetSrcMode,   setSheetSrcMode]   = useState<'catalog' | 'upload' | 'paste'>('catalog')
+  const [sheetTgtMode,   setSheetTgtMode]   = useState<'catalog' | 'upload' | 'paste'>('catalog')
   const [sheetSrcSchema, setSheetSrcSchema] = useState('')
   const [sheetTgtSchema, setSheetTgtSchema] = useState('')
 
@@ -761,11 +793,11 @@ export default function MessageMapping() {
 
   // Resolve XSD: return uploaded File or fetch from catalog and wrap as File
   const resolveXsdFile = async (
-    mode: 'catalog' | 'upload',
+    mode: 'catalog' | 'upload' | 'paste',
     catalogFilename: string,
     uploadedFile: File | null
   ): Promise<File | null> => {
-    if (mode === 'upload') return uploadedFile
+    if (mode === 'upload' || mode === 'paste') return uploadedFile   // paste wraps text as File
     if (!catalogFilename) return null
     const r = await mappingAPI.schema(catalogFilename)
     const blob = new Blob([r.data.content], { type: 'text/xml' })
