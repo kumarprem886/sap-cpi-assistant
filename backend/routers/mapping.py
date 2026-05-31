@@ -389,17 +389,7 @@ async def preview_sheet(
 
 # ── AI Rule Derivation ────────────────────────────────────────────────────────
 
-def _build_derive_system() -> str:
-    cs = _CHEATSHEET
-    return f"""You are an SAP CPI Graphical Message Mapping expert.
-Reference cheat sheet (use correct fname values from Section 5):
-{cs[cs.find('## 5. ALL NODE FUNCTIONS'):cs.find('## 6. PATH FORMAT')]}
-
-Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression."""
-
-_DERIVE_SYSTEM = _build_derive_system()
-
-_DERIVE_SYSTEM_LEGACY = """You are an SAP CPI Graphical Message Mapping expert.
+_DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
 
 Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression.
 
@@ -784,6 +774,18 @@ def _load_cheatsheet() -> str:
         return ""
 
 _CHEATSHEET = _load_cheatsheet()
+
+# Enhance _DERIVE_SYSTEM with cheat sheet node function reference now that cheatsheet is loaded
+if _CHEATSHEET:
+    _sec5_start = _CHEATSHEET.find("## 5. ALL NODE FUNCTIONS")
+    _sec5_end   = _CHEATSHEET.find("## 6. PATH FORMAT")
+    if _sec5_start >= 0 and _sec5_end > _sec5_start:
+        _DERIVE_SYSTEM = (
+            "You are an SAP CPI Graphical Message Mapping expert.\n\n"
+            "REFERENCE — correct fname values (MUST use these exactly):\n"
+            + _CHEATSHEET[_sec5_start:_sec5_end]
+            + "\nConvert any plain-English functional description into the correct SAP CPI expression."
+        )
 
 _XSD_GEN_RULES = """
 CRITICAL XSD RULES for SAP CPI compatibility:
