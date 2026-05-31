@@ -12,14 +12,17 @@ Format reverse-engineered from real CPI mmap exports:
                   </brick>
 
 Confirmed fname values (from real CPI exports):
-  String  : toUpperCase, toLowerCase, trim, length, substring, concat, replaceString,
-            equalsS, indexOf, lastIndexOf, endsWith, startsWith, compare, contains, copyValue
-  Date    : TransformDate, currentDate, DateBefore, DateAfter, CompareDates
-  Numeric : add, subtract, multiply, divide, abs, neg, sqrt, sqr, sign, round, ceil, floor,
-            power, less, greater, max, min, equalsA, counter, FormatNum
-  Boolean : if, ifWithoutElse, Equals, notEquals, Not, And, Or
-  Node    : useOneAsMany, SplitByValue, removeContexts, collapseContexts,
-            createIf, exists, mapWithDefault, sort, sortByKey, replaceValue, formatByExample
+  String   : toUpperCase, toLowerCase, trim, length, substring, concat, replaceString,
+             equalsS, indexOf, lastIndexOf, endsWith, startsWith, compare, contains, copyValue
+  Date     : TransformDate, currentDate, DateBefore, DateAfter, CompareDates
+  Numeric  : add, subtract, multiply, divide, abs, neg, inv, sqrt, sqr, sign, round, ceil, floor,
+             power, less, greater, max, min, equalsA, counter, FormatNum
+  Boolean  : if, ifWithoutElse, ifS, ifSWithoutElse, Equals, notEquals, isNil, Not, And, Or
+  Constant : constant, copyValue, xsi:nil
+  Convert  : fixValues, valuemap
+  Node     : useOneAsMany, SplitByValue, removeContexts, collapseContexts,
+             createIf, exists, mapWithDefault, sort, sortByKey, replaceValue, formatByExample,
+             getHeader, getProperty
 
 ZIP bundle structure matches real CPI exports:
   xsd/<source_xsd_name>       - source XSD
@@ -90,18 +93,34 @@ _FNAME_MAP: dict[str, str] = {
     "equalsA":       "equalsA",
     "counter":       "counter",
     "FormatNum":     "FormatNum",
+    # Arithmetic - additional user-facing aliases
+    "absolute":     "abs",       # user might write "absolute"
+    "square":       "sqr",       # user might write "square"
+    "inv":          "inv",       # 1/x inverse
+    "lesser":       "less",      # user might write "lesser"
+    "formatNumber": "FormatNum", # user alias
     # Boolean
-    "if":            "if",
-    "ifWithoutElse": "ifWithoutElse",
-    "equals":        "Equals",          # user alias -> real name (capital E)
-    "Equals":        "Equals",
-    "notEquals":     "notEquals",
-    "Not":           "Not",
-    "not":           "Not",
-    "And":           "And",
-    "and":           "And",
-    "Or":            "Or",
-    "or":            "Or",
+    "if":                 "if",
+    "ifWithoutElse":      "ifWithoutElse",
+    "ifS":                "ifS",             # if with string condition
+    "ifSWithoutElse":     "ifSWithoutElse",  # ifS without else
+    "isNil":              "isNil",           # check if value is xsi:nil
+    "equals":             "Equals",          # user alias -> real name (capital E)
+    "Equals":             "Equals",
+    "notEquals":          "notEquals",
+    "Not":                "Not",
+    "not":                "Not",
+    "And":                "And",
+    "and":                "And",
+    "Or":                 "Or",
+    "or":                 "Or",
+    # Constant
+    "constant":  "constant",  # fixed constant value
+    "xsi:nil":   "xsi:nil",   # set xsi:nil=true
+    "xsiNil":    "xsi:nil",   # user alias
+    # Conversion
+    "fixValues":    "fixValues",  # fixed value lookup table
+    "valueMapping": "valuemap",   # value mapping table
     # Node
     "useOneAsMany":     "useOneAsMany",
     "splitByValue":     "SplitByValue",  # user alias -> real name (capital S)
@@ -116,6 +135,8 @@ _FNAME_MAP: dict[str, str] = {
     "replaceValue":     "replaceValue",
     "formatByExample":  "formatByExample",
     "UseOneAsMany":     "useOneAsMany",  # alternate capitalisation
+    "getHeader":        "getHeader",    # get message header by name
+    "getProperty":      "getProperty",  # get integration property
     # Statistics (operate on ALL values in a context queue — no Groovy needed!)
     "sum":              "sum",           # sum of all values in queue
     "average":          "average",       # average of all values
@@ -411,11 +432,12 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
     # -- Simple single-arg functions ------------------------------------------
     # toUpperCase, toLowerCase, trim, length, abs, neg, sqrt, sqr, sign,
     # round, ceil, floor, exists, removeContexts, collapseContexts,
-    # replaceValue, Not, createIf, copyValue
+    # replaceValue, Not, createIf, copyValue, inv, isNil
     _SIMPLE_ONE_ARG = {
         "toUpperCase", "toLowerCase", "trim", "length",
         "abs", "neg", "sqrt", "sqr", "sign",
         "round", "ceil", "floor",
+        "inv", "isNil",
         "exists", "removeContexts", "collapseContexts",
         "replaceValue", "Not", "createIf", "copyValue",
         # Statistics — operate on ALL values in the queue (context-aware)
@@ -447,12 +469,59 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         func_xml = _func_open(fname) + args_xml + bindings_xml + "</brick>"
         return _wrap_dst(dst_path, func_xml)
 
-    # -- if / ifWithoutElse ---------------------------------------------------
-    if fname in ("if", "ifWithoutElse"):
+    # -- if / ifWithoutElse / ifS / ifSWithoutElse ----------------------------
+    if fname in ("if", "ifWithoutElse", "ifS", "ifSWithoutElse"):
         args_xml = ""
         for pin_idx, p in enumerate(src_parts[:3]):
             args_xml += _arg(_src(p["path"]), pin=pin_idx if pin_idx > 0 else None)
         func_xml = _func_open(fname) + args_xml + "</brick>"
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- constant -------------------------------------------------------------
+    # Emits a fixed value with no source arg — value stored in constValue binding
+    if fname == "constant":
+        val = const_parts[0]["value"] if const_parts else ""
+        func_xml = _func_open("constant") + _bindings(("constValue", val)) + "</brick>"
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- xsi:nil --------------------------------------------------------------
+    # Special nil brick — marks the target element as xsi:nil="true"
+    if fname == "xsi:nil":
+        func_xml = _func_open("xsi:nil") + "</brick>"
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- getHeader ------------------------------------------------------------
+    # Reads a named message header (no source field, header name as binding)
+    if fname == "getHeader":
+        header_name = const_parts[0]["value"] if const_parts else ""
+        func_xml = _func_open("getHeader") + _bindings(("headerName", header_name)) + "</brick>"
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- getProperty ----------------------------------------------------------
+    # Reads a named integration property (no source field, prop name as binding)
+    if fname == "getProperty":
+        prop_name = const_parts[0]["value"] if const_parts else ""
+        func_xml = _func_open("getProperty") + _bindings(("propName", prop_name)) + "</brick>"
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- fixValues ------------------------------------------------------------
+    # Fixed value lookup table (key→value pairs defined in the brick)
+    if fname == "fixValues":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        default  = const_parts[-1]["value"] if const_parts else ""
+        func_xml = (
+            _func_open("fixValues")
+            + _arg(_src(src_path))
+            + _bindings(("default", default))
+            + "</brick>"
+        )
+        return _wrap_dst(dst_path, func_xml)
+
+    # -- valuemap -------------------------------------------------------------
+    # Value Mapping table lookup (CPI Value Mapping artifact)
+    if fname == "valuemap":
+        src_path = src_parts[0]["path"] if src_parts else ""
+        func_xml = _func_open("valuemap") + _arg(_src(src_path)) + "</brick>"
         return _wrap_dst(dst_path, func_xml)
 
     # -- Fallback: generic function with all src args -------------------------

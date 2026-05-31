@@ -393,18 +393,32 @@ _DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
 
 Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression.
 
-== CONTEXT & STATISTICS — CRITICAL KNOWLEDGE ==
-SAP CPI uses a CONTEXT concept for repeating elements:
-- When source has maxOccurs="unbounded", each occurrence is a separate value in the queue
-- Statistics functions process the ENTIRE queue and return ONE result:
-  * sum((/f))     → SUM of all occurrences (use for "total quantity", "sum of amounts")
-  * average((/f)) → average of all values
-  * count((/f))   → how many occurrences exist
-  * first((/f))   → first occurrence value
-  * last((/f))    → last occurrence value
-  * index((/f))   → 0-based index of current occurrence
-- DO NOT suggest Groovy UDF for sum/average/count — use the Statistics functions!
-- useOneAsMany((/f)) → repeat ONE value for EACH target occurrence (opposite of sum)
+== CONTEXT — MOST IMPORTANT ==
+Context = how many times a value occurs at a given XML hierarchy level.
+- N→1 (aggregate): sum(), average(), count() — Statistics functions collapse N values to 1
+- 1→N (expand): useOneAsMany() — repeat one value for multiple targets
+- N→N (same level): direct copy or transformation functions
+- N→1 (collapse text): collapseContexts()
+
+== STATISTICS FUNCTIONS (for aggregation — NO Groovy needed) ==
+sum((/repeating/field))     → SUM of all occurrences (total quantity, total amount)
+average((/f))               → average of all values
+count((/f))                 → count of occurrences
+first((/f))                 → first occurrence value
+last((/f))                  → last occurrence value
+index((/f))                 → sequential index 0, 1, 2, 3 ...
+
+== FUNCTIONS ADDED TO COMPLETE THE OFFICIAL SAP CPI LIBRARY ==
+inv((/f))                   → 1/x inverse (Arithmetic)
+ifS((/f), val, y, n)        → if field string-equals val then y else n (Boolean)
+ifSWithoutElse((/f), val, y) → ifS without else branch (Boolean)
+isNil((/f))                 → true if value is xsi:nil (Boolean)
+constant(VALUE)             → emit a fixed constant value with no source field (Constant)
+xsi:nil                     → emit xsi:nil="true" for the target element (Constant)
+getHeader(NAME)             → get message header value by name (Node)
+getProperty(NAME)           → get integration property by name (Node)
+fixValues((/f))             → fixed value lookup table key→value (Conversion)
+valueMapping((/f))          → Value Mapping artifact table lookup (Conversion)
 
 == ALL SAP CPI STANDARD FUNCTIONS ==
 
@@ -423,9 +437,10 @@ STRING:
   startsWith((/field), prefix)                     -> boolean: starts with
   compare((/field1), (/field2))                    -> lexicographic compare
   equalsS((/field), value)                         -> string equality boolean
+  contains((/field), searchText)                   -> boolean: contains text
 
 DATE:
-  formatDate((/field), inputFormat, outputFormat)  -> reformat date/time
+  formatDate((/field), inputFormat, outputFormat)  -> reformat date/time (fname: TransformDate)
     Formats: yyyyMMdd, yyyy-MM-dd, HHmmss, HH:mm:ss, dd.MM.yyyy etc.
   currentDate()                                    -> today's date (no source field)
   DateBefore((/date1), (/date2))                   -> boolean: date1 before date2
@@ -437,31 +452,57 @@ ARITHMETIC:
   subtract((/field1), (/field2))                   -> subtract
   multiply((/field1), (/field2))                   -> multiply
   divide((/field1), (/field2))                     -> divide
-  abs((/field))                                    -> absolute value
+  abs((/field))                                    -> absolute value (fname: abs)
   neg((/field))                                    -> negate
+  inv((/field))                                    -> inverse 1/x
   sqrt((/field))                                   -> square root
+  square((/field))                                 -> square x^2 (fname: sqr)
+  sign((/field))                                   -> sign: 1, 0, or -1
   round((/field))                                  -> round to integer
   ceil((/field))                                   -> round up
   floor((/field))                                  -> round down
   power((/base), (/exponent))                      -> base^exponent
+  lesser((/field1), (/field2))                     -> true if field1 < field2 (fname: less)
+  greater((/field1), (/field2))                    -> true if field1 > field2
   max((/field1), (/field2))                        -> maximum of two values
   min((/field1), (/field2))                        -> minimum of two values
   FormatNum((/field), pattern)                     -> format as number e.g. 0.00
 
-CONDITIONAL:
-  if((/condition), valueIfTrue, valueIfFalse)      -> conditional
+CONDITIONAL / BOOLEAN:
+  if((/condition), valueIfTrue, valueIfFalse)      -> conditional (3 args)
+  ifS((/field), compareVal, valueIfTrue, valueIfFalse) -> if string-equals compareVal
   ifWithoutElse((/condition), valueIfTrue)         -> if without else
-  Equals((/field), VALUE)                          -> equality check
+  ifSWithoutElse((/field), compareVal, valueIfTrue) -> ifS without else
+  Equals((/field), VALUE)                          -> equality check (fname: Equals)
   notEquals((/field), VALUE)                       -> inequality check
   And((/bool1), (/bool2))                          -> logical AND
   Or((/bool1), (/bool2))                           -> logical OR
   Not((/bool))                                     -> logical NOT
-  contains((/field), searchText)                   -> boolean: contains text
+  isNil((/field))                                  -> true if field is xsi:nil
+
+CONSTANT:
+  constant(VALUE)                                  -> fixed constant with no source input
+  copyValue((/field))                              -> copy value as-is
+  xsi:nil                                          -> set target element to xsi:nil="true"
+
+CONVERSION:
+  fixValues((/field))                              -> fixed value lookup table
+  valueMapping((/field))                           -> CPI Value Mapping table lookup
+
+STATISTICS (aggregate — NO Groovy needed!):
+  sum((/field))                                    -> SUM of all occurrences
+  average((/field))                                -> average of all values
+  count((/field))                                  -> count of occurrences
+  index((/field))                                  -> 0-based index of current
+  first((/field))                                  -> first value in queue
+  last((/field))                                   -> last value in queue
 
 NODE:
   useOneAsMany((/field))                           -> repeat value for each occurrence
   mapWithDefault((/field), defaultValue)           -> pass value or default if empty
   exists((/field))                                 -> boolean: field has value
+  getHeader(NAME)                                  -> get named message header
+  getProperty(NAME)                                -> get named integration property
   SplitByValue((/field), delimiter)                -> split into multiple contexts
   removeContexts((/field))                         -> flatten multi-value to list
   collapseContexts((/field))                       -> merge multiple into one
@@ -493,6 +534,13 @@ NODE:
 "repeat for each line"                             -> useOneAsMany((/field))
 "sort ascending"                                   -> sort((/field))
 "direct copy" / "same value"                      -> ""
+"sum all quantities"                               -> sum((/path/to/Quantity))
+"count items"                                      -> count((/path/to/Item))
+"if equals some value"                             -> ifS((/field), someValue, resultIfTrue, resultIfFalse)
+"get header"                                       -> getHeader(HEADER_NAME)
+"get property"                                     -> getProperty(PROPERTY_NAME)
+"1 divided by field" / "inverse"                   -> inv((/field))
+"set to nil"                                       -> xsi:nil
 
 == RULES ==
 
