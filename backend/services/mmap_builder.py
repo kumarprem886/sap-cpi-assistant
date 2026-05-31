@@ -423,10 +423,24 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         return _wrap_dst(dst_path, func_xml)
 
     # -- useOneAsMany ---------------------------------------------------------
-    # Parts: [src]  (context args added automatically)
+    # CONFIRMED from real CPI export: requires exactly 3 source args:
+    #   arg 0       = the single value to repeat (1..1 field)
+    #   arg pin="1" = the REPEATING PARENT element (defines HOW MANY times)
+    #   arg pin="2" = any FIELD INSIDE the repeating context (hooks cardinality)
+    #
+    # Rule syntax: useOneAsMany((/Header/MatNum), (/PlantData/Plant), (/PlantData/Plant/Code))
+    # Without args pin=1 and pin=2, CPI shows empty input slots and cannot determine context.
     if fname == "useOneAsMany":
-        src_path = src_parts[0]["path"] if src_parts else ""
-        func_xml = _func_open("useOneAsMany") + _arg(_src(src_path)) + "</brick>"
+        value_src   = src_parts[0]["path"] if len(src_parts) > 0 else ""
+        context_src = src_parts[1]["path"] if len(src_parts) > 1 else ""
+        context_fld = src_parts[2]["path"] if len(src_parts) > 2 else ""
+        func_xml = (
+            _func_open("useOneAsMany")
+            + _arg(_src(value_src))
+            + (f'<arg pin="1">{_src(context_src)}</arg>' if context_src else "")
+            + (f'<arg pin="2">{_src(context_fld)}</arg>'  if context_fld else "")
+            + "</brick>"
+        )
         return _wrap_dst(dst_path, func_xml)
 
     # -- Simple single-arg functions ------------------------------------------
@@ -630,18 +644,28 @@ def build_mmap_xml(
         """Best-guess source parent from a source path (go up one level)."""
         return _parent(src_path) if src_path else ""
 
-    # Build index: tgt_path → src_path for all existing direct mappings
+    # Build index: tgt_path → src_path for ALL mappings (direct AND function)
+    # For function bricks, use the primary source from parts[0] if available
+    def _primary_src(fm: dict) -> str:
+        if fm.get("source_path"):
+            return fm["source_path"].strip()
+        parts = fm.get("parts") or []
+        for p in parts:
+            if p.get("type") == "src":
+                return p.get("path", "").strip()
+        return ""
+
     existing_tgt: dict[str, str] = {
-        fm.get("target_path", "").strip(): fm.get("source_path", "").strip()
+        fm.get("target_path", "").strip(): _primary_src(fm)
         for fm in field_mappings
-        if fm.get("target_path") and fm.get("source_path") and not fm.get("parts") and not fm.get("func")
+        if fm.get("target_path")
     }
 
     # Collect all ancestor paths that need to be mapped
     parents_needed: dict[str, str] = {}  # tgt_parent → src_parent
     for fm in list(field_mappings):
         tgt_path = fm.get("target_path", "").strip()
-        src_path = fm.get("source_path", "").strip()
+        src_path = _primary_src(fm)  # works for both direct and function bricks
         if not tgt_path:
             continue
         # Walk up the target path adding parent mappings if not already present

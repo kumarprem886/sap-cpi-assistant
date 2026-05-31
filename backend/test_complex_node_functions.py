@@ -178,10 +178,11 @@ MAPPINGS = [
      "note": "index: 0-based sequential"},
 
     # 9. useOneAsMany — repeat material number for each plant line
+    # REQUIRES 3 args: value, context parent, context field
     {"source_path": "/MaterialMaster/Header/MaterialNumber",
      "target_path": "/ProductOutput/PlantLines/PlantLine/MaterialRef",
-     "rule": "useOneAsMany((/MaterialMaster/Header/MaterialNumber))",
-     "note": "useOneAsMany: 1 material → N plant lines"},
+     "rule": "useOneAsMany((/MaterialMaster/Header/MaterialNumber), (/MaterialMaster/PlantData/Plant), (/MaterialMaster/PlantData/Plant/PlantCode))",
+     "note": "useOneAsMany: 1 material → N plant lines (with context args)"},
 
     # 10. concat — combine PlantCode + StorageLocation
     {"source_path": "/MaterialMaster/PlantData/Plant/PlantCode",
@@ -296,8 +297,9 @@ checks = [
     ("useOneAsMany",                 "useOneAsMany"       in func_bricks),
     ("concat (+ shorthand)",         "concat"             in func_bricks),
     ("mapWithDefault",               "mapWithDefault"     in func_bricks),
-    ("No first()/last() used",       "first" not in func_bricks and "last" not in func_bricks),
-    ("Correct brick count (16)",     len(dst_bricks) == 16),
+    ("No first()/last() used",           "first" not in func_bricks and "last" not in func_bricks),
+    ("AlternativeUomList parent exists", "/ProductOutput/AlternativeUomList" in dst_bricks),
+    ("useOneAsMany has context args",    bool(re.search(r'fname="useOneAsMany".*?pin="1"', mmap_xml, re.DOTALL))),
     ("delimeter binding in concat",  'name="delimeter"'  in mmap_xml),
     ("iform/oform in TransformDate", 'name="iform"'      in mmap_xml),
     ("default_value in mapWithDef",  'name="default_value"' in mmap_xml),
