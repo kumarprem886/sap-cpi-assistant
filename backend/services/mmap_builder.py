@@ -480,6 +480,51 @@ def _concat_brick(dst_path: str, parts: list) -> str:
 
 # -- Public: build .mmap XML string ------------------------------------------
 
+def _build_udf_storage(udfs: list[dict]) -> str:
+    """Build the <functionstorage> section with embedded Groovy UDFs."""
+    if not udfs:
+        return (
+            '<functionstorage version="XI7.1">'
+            '<key><key typeID=""><elem></elem><elem></elem></key></key>'
+            '<classname></classname><package></package><imports/>'
+            '<globals><javaText/></globals>'
+            '<init><functionmodel><signature cacheType="0"/>'
+            '<name></name><key></key><tab></tab><title></title><uiTitle></uiTitle>'
+            '<implementation type="udf"><javaText/></implementation>'
+            '</functionmodel></init>'
+            '<cleanup><javaText/></cleanup><usedjars/>'
+            '</functionstorage>'
+        )
+
+    # Build functionmodel entries for each UDF
+    models = ""
+    for udf in udfs:
+        code = escape(udf.get("code", ""))
+        models += (
+            f'<functionmodel>'
+            f'<signature cacheType="{udf.get("cacheType", "0")}"/>'
+            f'<name>{escape(udf["name"])}</name>'
+            f'<key/><tab/>'
+            f'<title>{escape(udf.get("title", udf["name"]))}</title>'
+            f'<uiTitle>{escape(udf["name"])}</uiTitle>'
+            f'<implementation type="udf">'
+            f'<javaText>{code}</javaText>'
+            f'</implementation>'
+            f'</functionmodel>'
+        )
+
+    return (
+        '<functionstorage version="XI7.1">'
+        '<key><key typeID=""><elem></elem><elem></elem></key></key>'
+        '<classname>UserDefinedFunctions</classname>'
+        '<package></package><imports/>'
+        '<globals><javaText/></globals>'
+        f'<init>{models}</init>'
+        '<cleanup><javaText/></cleanup><usedjars/>'
+        '</functionstorage>'
+    )
+
+
 def build_mmap_xml(
     mapping_name: str,
     source_xsd_name: str,
@@ -487,6 +532,7 @@ def build_mmap_xml(
     target_xsd_name: str,
     target_root: str,
     field_mappings: list,
+    udfs: list | None = None,
     **_,
 ) -> str:
     ts_ms = int(time.time() * 1000)
@@ -500,16 +546,39 @@ def build_mmap_xml(
             continue
         parts = fm.get("parts")
         func  = fm.get("func", "")
+        fns   = fm.get("fns", "dflt")   # "dflt" for standard, "usernamespace" for UDFs
         src   = fm.get("source_path", "").strip()
 
         if parts and func:
-            bricks_parts.append(_build_func_brick(tgt, func, parts))
+            if fns == "usernamespace":
+                # UDF brick — uses fns="usernamespace" and Groovy function name
+                src_parts_udf = [p for p in parts if p.get("type") == "src"]
+                args_xml = ""
+                for i, p in enumerate(src_parts_udf):
+                    pin_attr = f' pin="{i}"' if i > 0 else ""
+                    args_xml += f'<arg{pin_attr}>{_src(p["path"])}</arg>'
+                udf_brick = (
+                    f'<brick fname="{_attr(func)}" fns="usernamespace" type="Func">'
+                    f'<viewData x="125" y="30"/>'
+                    f'{args_xml}'
+                    f'</brick>'
+                )
+                bricks_parts.append(
+                    f'<brick gid="0" path="{_attr(tgt)}" type="Dst">'
+                    f'<viewData x="200" y="40"/>'
+                    f'<arg>{udf_brick}</arg>'
+                    f'<group/>'
+                    f'</brick>'
+                )
+            else:
+                bricks_parts.append(_build_func_brick(tgt, func, parts))
         elif src:
             bricks_parts.append(_brick_direct(src, tgt))
 
-    bricks   = "".join(bricks_parts)
-    src_lnk  = _lnk("SOURCE_IFR_MESS", source_xsd_name, source_root)
-    tgt_lnk  = _lnk("TARGET_IFR_MESS", target_xsd_name, target_root)
+    bricks       = "".join(bricks_parts)
+    udf_storage  = _build_udf_storage(udfs or [])
+    src_lnk      = _lnk("SOURCE_IFR_MESS", source_xsd_name, source_root)
+    tgt_lnk      = _lnk("TARGET_IFR_MESS", target_xsd_name, target_root)
 
     return (
         '<?xml version="1.0" encoding="utf-8"?>'
@@ -550,22 +619,7 @@ def build_mmap_xml(
         '<project version="XI7.1">'
         '<libstorage>'
         '<entry name="usernamespace">'
-        '<functionstorage version="XI7.1">'
-        '<key><key typeID=""><elem></elem><elem></elem></key></key>'
-        '<classname></classname>'
-        '<package></package>'
-        '<imports/>'
-        '<globals><javaText/></globals>'
-        '<init>'
-        '<functionmodel>'
-        '<signature cacheType="0"/>'
-        '<name></name><key></key><tab></tab><title></title><uiTitle></uiTitle>'
-        '<implementation type="udf"><javaText/></implementation>'
-        '</functionmodel>'
-        '</init>'
-        '<cleanup><javaText/></cleanup>'
-        '<usedjars/>'
-        '</functionstorage>'
+        + udf_storage +
         '</entry>'
         '</libstorage>'
         f'<transformation>{bricks}</transformation>'

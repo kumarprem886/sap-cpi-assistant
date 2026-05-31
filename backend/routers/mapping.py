@@ -924,45 +924,96 @@ class GenerateFromIdeaRequest(BaseModel):
 @router.post("/generate-from-idea")
 def generate_from_idea(req: GenerateFromIdeaRequest):
     """
-    Given only an idea/description, generate source XSD, target XSD,
-    field mappings and mmap ZIP entirely with AI.
+    Given only an idea/description, intelligently generate source XSD, target XSD,
+    field mappings (with UDFs for aggregations) and mmap ZIP.
+
+    Smart features:
+    - Detects SAP standard entities (SalesOrder, Material, PurchaseOrder…) and uses
+      the bundled catalog XSDs instead of generating new ones
+    - Detects aggregate operations (sum, total, count) and generates proper Groovy UDFs
     """
     import json as _json
     from services.xsd_parser import smart_extract_paths
-    from services.sheet_mapper import _parse_rule
 
-    # Step 1: Generate both XSDs
-    both_xsd_prompt = (
-        "You are an SAP CPI integration architect. Given this integration requirement:\n\n"
-        "\"" + req.idea + "\"\n\n"
-        f"{_XSD_GEN_RULES}\n\n"
-        "Generate BOTH the source XSD and target XSD schemas that match this integration.\n\n"
-        "Return ONLY valid JSON (no markdown):\n"
-        '{"source_xsd": "<?xml version=\\"1.0\\"?>...(complete XSD no targetNamespace)...", '
-        '"target_xsd": "<?xml version=\\"1.0\\"?>...(complete XSD no targetNamespace)...", '
-        '"source_root": "RootElementName", "target_root": "RootElementName", '
-        '"description": "What this mapping does"}\n\n'
-        "CRITICAL: Both XSDs must use xs: namespace, no targetNamespace, simple xs:element root.\n"
-        "REFERENCE:\n" + _CHEATSHEET[:2000]
-    )
+    idea_lower = req.idea.lower()
 
-    raw = generate("Return ONLY valid JSON, no markdown fences.", both_xsd_prompt, max_tokens=6000)
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
+    # ── 1. Detect catalog XSD matches ─────────────────────────────────────────
+    _ENTITY_MAP = {
+        ("sales order", "salesorder", "vbak", "salesdocument", "a_salesorder"):
+            ("A_SalesOrder.xsd", "SalesOrder"),
+        ("purchase order", "purchaseorder", "ekko", "purchdoc", "a_purchaseorder"):
+            ("A_PurchaseOrder.xsd", "PurchaseOrder"),
+        ("material", "product", "matnr", "matmas", "a_product"):
+            ("A_Product.xsd", "Product"),
+        ("business partner", "customer", "debmas", "a_businesspartner"):
+            ("A_BusinessPartner.xsd", "BusinessPartner"),
+        ("supplier", "vendor", "cremas", "a_supplier"):
+            ("A_Supplier.xsd", "Supplier"),
+        ("invoice", "billing", "invoic", "a_supplierinvoice"):
+            ("A_SupplierInvoice.xsd", "SupplierInvoice"),
+        ("delivery", "desadv", "a_outbounddelivery"):
+            ("A_OutboundDelivery.xsd", "OutboundDelivery"),
+        ("goods movement", "wmmbxy", "material document", "a_materialdocument"):
+            ("A_MaterialDocument.xsd", "MaterialDocument"),
+        ("production order", "loipro"):
+            ("A_ProductionOrder.xsd", "ProductionOrder"),
+        ("cost center", "a_costcenter"):
+            ("A_CostCenter.xsd", "CostCenter"),
+    }
 
-    try:
+    def _detect_xsd(text: str) -> tuple[str, str] | None:
+        for keywords, (filename, root) in _ENTITY_MAP.items():
+            if any(k in text for k in keywords):
+                xsd_path = _RESOURCES / filename
+                if xsd_path.exists():
+                    return xsd_path.read_text(encoding="utf-8"), filename
+        return None
+
+    src_detected = _detect_xsd(idea_lower)
+    src_xsd_text = src_detected[0] if src_detected else ""
+    src_xsd_name = src_detected[1] if src_detected else "source.xsd"
+
+    # ── 2. Detect aggregate operations ────────────────────────────────────────
+    _AGGREGATE_KEYWORDS = {"sum", "total", "aggregate", "count", "average", "summ", "add all",
+                           "accumulate", "sumof", "sum of", "total of"}
+    needs_aggregate = any(kw in idea_lower for kw in _AGGREGATE_KEYWORDS)
+
+    # ── 3. Generate XSDs (only those not found in catalog) ────────────────────
+    if src_xsd_text:
+        # Source found in catalog — only need to generate target
+        src_root, src_paths = smart_extract_paths(src_xsd_text)
+        src_leaves = [p for p in src_paths if not any(p.rsplit("/", 1)[-1] == seg
+                      for seg in [q.split("/")[-1] for q in src_paths if q != p and p in q])][:50]
+
+        tgt_prompt = (
+            "Generate a target XSD for this integration goal:\n\n"
+            f'"{req.idea}"\n\n'
+            f"{_XSD_GEN_RULES}\n\n"
+            "Source system fields (for reference):\n" + "\n".join(src_leaves[:30]) + "\n\n"
+            "Return ONLY valid XML (the complete XSD, no markdown, no targetNamespace)."
+        )
+        tgt_xsd_text = generate("Return ONLY valid XSD XML.", tgt_prompt, max_tokens=3000).strip()
+        if tgt_xsd_text.startswith("```"):
+            tgt_xsd_text = tgt_xsd_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+    else:
+        # Neither found — generate both
+        both_prompt = (
+            "You are an SAP CPI integration architect. Integration requirement:\n\n"
+            f'"{req.idea}"\n\n'
+            f"{_XSD_GEN_RULES}\n\n"
+            "Return ONLY valid JSON (no markdown):\n"
+            '{"source_xsd": "<?xml version=\\"1.0\\"?>...", "target_xsd": "<?xml version=\\"1.0\\"?>...", '
+            '"source_root": "Name", "target_root": "Name"}\n\n'
+            "CRITICAL: No targetNamespace. Simple xs:element root.\n"
+            + _CHEATSHEET[_CHEATSHEET.find("## 2. XSD FORMAT"):_CHEATSHEET.find("## 3.")]
+        )
+        raw = generate("Return ONLY valid JSON.", both_prompt, max_tokens=6000).strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0]
         data = _json.loads(raw)
-    except Exception:
-        raise HTTPException(status_code=422, detail="AI did not return valid JSON for XSD generation")
+        src_xsd_text = data.get("source_xsd", "")
+        tgt_xsd_text = data.get("target_xsd", "")
 
-    src_xsd_text = data.get("source_xsd", "")
-    tgt_xsd_text = data.get("target_xsd", "")
-
-    if not src_xsd_text or not tgt_xsd_text:
-        raise HTTPException(status_code=422, detail="AI did not return both source and target XSD")
-
-    # Step 2: Parse XSDs
     try:
         src_root, src_paths = smart_extract_paths(src_xsd_text)
     except Exception:
@@ -972,47 +1023,108 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     except Exception:
         tgt_root, tgt_paths = "Target", []
 
-    mapping_prompt = (
-        "Generate complete SAP CPI field mappings for: " + req.idea + "\n\n"
-        "SOURCE fields:\n" + "\n".join(src_paths[:50]) + "\n\n"
-        "TARGET fields:\n" + "\n".join(tgt_paths[:50]) + "\n\n"
-        "Map ALL target fields. Use SAP CPI node functions where needed.\n"
-        'Return ONLY JSON: {"field_mappings": [{"source_path": "...", "target_path": "...", "rule": "", "note": ""}]}'
+    # ── 4. Generate field mappings (with aggregate awareness) ─────────────────
+    aggregate_note = ""
+    if needs_aggregate:
+        aggregate_note = """
+AGGREGATION DETECTED: The user wants SUM/TOTAL/COUNT of repeating values.
+For aggregate fields (like TotalQuantity = sum of all Item/Quantity):
+  - Use rule: "GROOVY:sumAll" to indicate a Groovy UDF is needed
+  - The source_path should be the repeating field (e.g. /SalesOrder/Items/Item/Quantity)
+  - The note should say "UDF: sum all values of this repeating field"
+"""
+
+    map_prompt = (
+        "Generate SAP CPI field mappings for: " + req.idea + "\n\n"
+        + aggregate_note
+        + "SOURCE fields available:\n" + "\n".join(src_paths[:60]) + "\n\n"
+        "TARGET fields to map:\n" + "\n".join(tgt_paths[:60]) + "\n\n"
+        "Rules:\n"
+        "1. Map EVERY target field to the best source field\n"
+        "2. For direct copy: rule = \"\"\n"
+        "3. For transformations: use SAP CPI expressions (toUpperCase, formatDate, etc.)\n"
+        "4. For SUM/AGGREGATE: rule = \"GROOVY:sumAll\", source_path = repeating field path\n"
+        "5. Map container/parent elements too (e.g. /SalesOrder → /OrderSummary)\n"
+        + _CHEATSHEET[_CHEATSHEET.find("## 7. COMMON"):_CHEATSHEET.find("## 8.")] + "\n"
+        'Return ONLY JSON: {"field_mappings": [{"source_path": "...", "target_path": "...", "rule": "", "note": "..."}]}'
     )
 
+    raw2 = generate("Return ONLY valid JSON.", map_prompt, max_tokens=4000).strip()
+    if raw2.startswith("```"):
+        raw2 = raw2.split("\n", 1)[-1].rsplit("```", 1)[0]
     try:
-        raw2 = generate("Return ONLY valid JSON.", mapping_prompt, max_tokens=4000)
-        raw2 = raw2.strip()
-        if raw2.startswith("```"):
-            raw2 = raw2.split("\n", 1)[-1].rsplit("```", 1)[0]
         fm_list = _json.loads(raw2).get("field_mappings", [])
     except Exception:
         fm_list = []
 
+    # ── 5. Build matched list and UDF registry ────────────────────────────────
+    from services.sheet_mapper import _parse_rule
+
+    udfs: list[dict] = []  # collect UDFs to inject into mmap
+
+    _GROOVY_SUM_UDF = {
+        "name": "sumAll",
+        "title": "Sum All Values",
+        "description": "Sums all numeric values in a repeating queue (for aggregate mappings)",
+        "cacheType": "2",   # 2 = all values at once
+        "code": (
+            'double total = 0.0;\n'
+            'for (String v : arg1) {\n'
+            '    if (v != null && !v.trim().isEmpty()) {\n'
+            '        try { total += Double.parseDouble(v.trim()); } catch (Exception e) {}\n'
+            '    }\n'
+            '}\n'
+            'result.addValue(String.valueOf(total));'
+        ),
+    }
+
     matched = []
+    udf_needed: set[str] = set()
+
     for fm in fm_list:
         src_p = fm.get("source_path", "")
         tgt_p = fm.get("target_path", "")
         rule  = fm.get("rule", "")
         if not tgt_p:
             continue
+
+        # Handle Groovy UDF rules (aggregate/sum)
+        if rule and rule.startswith("GROOVY:"):
+            udf_name = rule[7:].strip()
+            udf_needed.add(udf_name)
+            matched.append({
+                "target_path": tgt_p,
+                "func": udf_name,
+                "fns": "usernamespace",        # UDF namespace
+                "parts": [{"type": "src", "path": src_p}] if src_p else [],
+                "note": fm.get("note", f"Groovy UDF: {udf_name}"),
+            })
+            continue
+
         if rule:
             try:
                 parsed = _parse_rule(rule, src_paths)
                 if parsed:
                     func_name, parts = parsed
-                    matched.append({"target_path": tgt_p, "func": func_name, "parts": parts, "note": fm.get("note", "")})
+                    matched.append({"target_path": tgt_p, "func": func_name, "parts": parts,
+                                    "note": fm.get("note", "")})
                     continue
             except Exception:
                 pass
         if src_p:
             matched.append({"source_path": src_p, "target_path": tgt_p, "note": fm.get("note", "")})
 
+    # Collect UDF definitions to embed in the mmap
+    udfs_to_embed = []
+    if "sumAll" in udf_needed:
+        udfs_to_embed.append(_GROOVY_SUM_UDF)
+
     safe_name = req.mapping_name.replace(" ", "_") or "MM_Mapping"
-    mmap_xml  = build_mmap_xml(safe_name, "source.xsd", src_root or "Source",
-                                "target.xsd", tgt_root or "Target", matched)
+    mmap_xml  = build_mmap_xml(safe_name, src_xsd_name, src_root or "Source",
+                                "target.xsd", tgt_root or "Target", matched,
+                                udfs=udfs_to_embed)
     zip_bytes = build_mmap_zip(safe_name, mmap_xml, src_xsd_text, tgt_xsd_text,
-                                "source.xsd", "target.xsd")
+                                src_xsd_name, "target.xsd")
 
     return StreamingResponse(
         BytesIO(zip_bytes),
@@ -1020,6 +1132,7 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
         headers={
             "Content-Disposition": f'attachment; filename="{safe_name}.zip"',
             "X-Mapping-Count": str(len(matched)),
-            "Access-Control-Expose-Headers": "X-Mapping-Count",
+            "X-Source-XSD": src_xsd_name,
+            "Access-Control-Expose-Headers": "X-Mapping-Count,X-Source-XSD",
         },
     )
