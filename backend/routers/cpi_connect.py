@@ -761,8 +761,58 @@ async def import_zip_file(
     }
 
     # ── POST (create) ─────────────────────────────────────────────────────────
-    # Per official SAP spec: POST to flat /MessageMappingDesigntimeArtifacts
-    # (not the package-scoped navigation path — that is GET only per spec)
+    # MessageMappingDesigntimeArtifact has m:HasStream="true" in the EDMX.
+    # Strategy: create the entity metadata first (no ArtifactContent),
+    # then upload the ZIP via PUT $value as a raw media stream.
+    # This avoids the "Not a Message mapping resource" validation error
+    # that occurs when sending base64 ZIP in the JSON body for non-iFlow types.
+    is_stream_type = artifact_type.lower() in ("messagemapping", "valuemapping", "scriptcollection")
+
+    if is_stream_type:
+        # Step 1: create empty artifact (metadata only)
+        meta_body = {k: v for k, v in body.items() if k != "ArtifactContent"}
+        resp = httpx.post(
+            f"{base}/{entity}",
+            headers=write_headers, auth=_auth(), json=meta_body, timeout=60,
+        )
+        if resp.status_code in (200, 201):
+            # Step 2: upload ZIP as raw binary stream to $value endpoint
+            stream_headers = {
+                **_headers(),
+                "Content-Type": "application/octet-stream",
+                "X-CSRF-Token": write_headers.get("X-CSRF-Token", ""),
+            }
+            put_url = f"{base}/{entity}(Id='{art_id}',Version='active')/$value"
+            stream_resp = httpx.put(
+                put_url, headers=stream_headers, auth=_auth(),
+                content=zip_bytes, timeout=120,
+            )
+            if stream_resp.status_code in (200, 201, 202, 204):
+                return {"status": "imported", "id": art_id, "name": art_name,
+                        "package": package_id, "type": artifact_type}
+            # stream upload failed — still return partial success
+            return {"status": "imported_meta_only", "id": art_id, "name": art_name,
+                    "package": package_id, "type": artifact_type,
+                    "warning": f"Metadata created but content upload failed: {stream_resp.text[:200]}"}
+        # Fall through to standard JSON body approach if metadata-only POST fails
+        if resp.status_code == 409:
+            # Already exists — update via PUT $value
+            stream_headers = {
+                **_headers(),
+                "Content-Type": "application/octet-stream",
+                "X-CSRF-Token": write_headers.get("X-CSRF-Token", ""),
+            }
+            put_url = f"{base}/{entity}(Id='{art_id}',Version='active')/$value"
+            stream_resp = httpx.put(put_url, headers=stream_headers, auth=_auth(),
+                                    content=zip_bytes, timeout=120)
+            if stream_resp.status_code in (200, 201, 202, 204):
+                return {"status": "updated", "id": art_id, "name": art_name,
+                        "package": package_id, "type": artifact_type}
+        # If stream approach failed entirely, try standard JSON approach below
+        if resp.status_code not in (400, 401, 403, 404, 409, 500):
+            raise HTTPException(resp.status_code, f"Import failed: {resp.text[:500]}")
+
+    # ── Standard JSON body approach (iFlow + fallback) ────────────────────────
     resp = httpx.post(
         f"{base}/{entity}",
         headers=write_headers, auth=_auth(), json=body, timeout=60,
