@@ -72,6 +72,7 @@ _FNAME_MAP: dict[str, str] = {
     "DateBefore":    "DateBefore",
     "DateAfter":     "DateAfter",
     "CompareDates":  "CompareDates",
+    "compareDates":  "CompareDates",  # lowercase alias
     # Numeric
     "add":           "add",
     "subtract":      "subtract",
@@ -695,7 +696,7 @@ def build_mmap_xml(
         fns   = fm.get("fns", "dflt")   # "dflt" for standard, "usernamespace" for UDFs
         src   = fm.get("source_path", "").strip()
 
-        if parts and func:
+        if func and parts is not None:   # includes no-arg functions like currentDate()
             if fns == "usernamespace":
                 # UDF brick — uses fns="usernamespace" and Groovy function name
                 src_parts_udf = [p for p in parts if p.get("type") == "src"]

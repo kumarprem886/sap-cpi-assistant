@@ -366,11 +366,14 @@ def _parse_rule(rule: str, src_paths: list[str]) -> tuple[str, list[dict]] | Non
 
     rule = rule.strip()
 
-    # ── Syntax 2: funcName(arg1, arg2, ...) ─────────────────────────────
-    func_m = re.match(r"^([A-Za-z][A-Za-z0-9_]*)\s*\((.+)\)\s*$", rule, re.DOTALL)
+    # ── Syntax 2: funcName(arg1, arg2, ...) — including no-arg e.g. currentDate()
+    func_m = re.match(r"^([A-Za-z][A-Za-z0-9_:]*)\s*\((.*)\)\s*$", rule, re.DOTALL)
     if func_m:
         func_name = func_m.group(1)
-        args_str  = func_m.group(2)
+        args_str  = func_m.group(2).strip()
+        if not args_str:
+            # No-arg function like currentDate() — no source fields needed
+            return (func_name, [])
         raw_args  = _split_func_args(args_str)
         parts     = [_resolve_arg(a, src_paths) for a in raw_args]
         # A function with a single source arg and no "Function" nature
