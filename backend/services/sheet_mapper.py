@@ -316,12 +316,16 @@ def _resolve_arg(token: str, src_paths: list[str]) -> dict:
     """Convert one rule argument token into a {"type", "path"/"value"} dict."""
     token = token.strip()
     # XPath reference: (/path/to/field)  or  /path/to/field
+    # Must have at least one word character after the leading / to be a valid field path
+    # (prevents single-char delimiters like "/" or "-" from being mistaken for paths)
     m = re.match(r"^\(?(/[^)]*?)\)?$", token)
     if m:
         xpath      = m.group(1).strip().rstrip(")")
-        field_name = xpath.rsplit("/", 1)[-1]
-        resolved   = _match_field(field_name, src_paths) or xpath
-        return {"type": "src", "path": resolved}
+        # Reject bare single-char paths like "/" — treat as constant separator
+        if xpath and re.search(r'\w', xpath):
+            field_name = xpath.rsplit("/", 1)[-1]
+            resolved   = _match_field(field_name, src_paths) or xpath
+            return {"type": "src", "path": resolved}
     # Strip surrounding quotes from constants so "T" → T and "_" → _
     # (users often write separators with quotes; quotes break XML attributes)
     if len(token) >= 2 and token[0] == token[-1] and token[0] in ('"', "'"):
