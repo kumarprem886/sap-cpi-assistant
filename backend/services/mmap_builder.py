@@ -137,13 +137,13 @@ _FNAME_MAP: dict[str, str] = {
     "UseOneAsMany":     "useOneAsMany",  # alternate capitalisation
     "getHeader":        "getHeader",    # get message header by name
     "getProperty":      "getProperty",  # get integration property
-    # Statistics (operate on ALL values in a context queue — no Groovy needed!)
-    "sum":              "sum",           # sum of all values in queue
-    "average":          "average",       # average of all values
-    "count":            "count",         # count of occurrences
-    "index":            "index",         # index of current occurrence (0-based)
-    "first":            "first",         # first value in queue
-    "last":             "last",          # last value in queue
+    # Statistics (operate on ALL values in a context queue — only 4 functions)
+    # Official SAP CPI Statistics: sum, average, count, index ONLY
+    # first() and last() do NOT exist in SAP CPI standard functions
+    "sum":     "sum",      # sum of all values in queue
+    "average": "average",  # average of all values
+    "count":   "count",    # count of occurrences
+    "index":   "index",    # 0-based index of current occurrence
 }
 
 
@@ -440,8 +440,8 @@ def _build_func_brick(dst_path: str, func_name: str, parts: list) -> str:
         "inv", "isNil",
         "exists", "removeContexts", "collapseContexts",
         "replaceValue", "Not", "createIf", "copyValue",
-        # Statistics — operate on ALL values in the queue (context-aware)
-        "sum", "average", "count", "index", "first", "last",
+        # Statistics — SAP CPI official 4 only: sum, average, count, index
+        "sum", "average", "count", "index",
     }
     if fname in _SIMPLE_ONE_ARG:
         src_path = src_parts[0]["path"] if src_parts else dst_path

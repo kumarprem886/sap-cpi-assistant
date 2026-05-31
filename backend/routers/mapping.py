@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/mapping", tags=["mapping"])
 _RESOURCES = Path(__file__).parent.parent.parent / "resources"
 
 
-# ── Schema Catalog ────────────────────────────────────────────────────────────
+# â”€â”€ Schema Catalog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/catalog")
 def get_catalog():
@@ -54,7 +54,7 @@ def get_schema(filename: str):
     return {"filename": filename, "content": fpath.read_text(encoding="utf-8")}
 
 
-# ── Pre-built Mapping Endpoints ───────────────────────────────────────────────
+# â”€â”€ Pre-built Mapping Endpoints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/prebuilt/status")
 def get_prebuilt_status():
@@ -91,7 +91,7 @@ def generate_all_prebuilt(background_tasks: BackgroundTasks):
             from services.prebuilt_mapper import load_prebuilt
             existing = load_prebuilt(pair["id"])
             if existing and existing.get("total_fields", 0) > 0:
-                print(f"[prebuilt] {pair['id']} already ready ({existing['total_fields']} fields) — skipping")
+                print(f"[prebuilt] {pair['id']} already ready ({existing['total_fields']} fields) â€” skipping")
                 continue
             if i > 0:
                 time.sleep(_PAIR_DELAY)
@@ -99,7 +99,7 @@ def generate_all_prebuilt(background_tasks: BackgroundTasks):
                 print(f"[prebuilt] generating {pair['id']} ...")
                 mapping = generate_mapping_for_pair(pair, verbose=True)
                 save_prebuilt(mapping)
-                print(f"[prebuilt] {pair['id']} done — {mapping['total_fields']} fields")
+                print(f"[prebuilt] {pair['id']} done â€” {mapping['total_fields']} fields")
             except Exception as e:
                 print(f"[prebuilt] ERROR {pair['id']}: {e}")
 
@@ -146,7 +146,7 @@ MAPPING_SYSTEM = """Generate SAP CPI message mappings.
 For Groovy output: use com.sap.gateway.ip.core.customdev.util.Message and proper SAP CPI imports.
 For XSLT output: generate valid XSLT 2.0 that works in SAP CPI.
 For graphical mapping description: describe each field mapping with source path, target path, and any function/conversion needed.
-Output ONLY the code — no explanation outside of comments."""
+Output ONLY the code â€” no explanation outside of comments."""
 
 
 @router.post("/generate")
@@ -172,7 +172,7 @@ Output Format: {req.output_format}
     return {"result": result, "type": req.output_format}
 
 
-# ── .mmap Generator ──────────────────────────────────────────────────────────
+# â”€â”€ .mmap Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class MmapRequest(BaseModel):
     source_xsd: str
@@ -227,7 +227,7 @@ Rules:
 - source_root / target_root: the top-level XML element name (from <xs:element name="..."> at root).
 - Paths MUST start with /RootElement/ and use bare element names exactly as in the XSD.
 - Include container (parent) elements as their own entries (e.g. /Order/Header -> /PO/Header).
-- Include ALL mappable field pairs — be thorough. Omit fields with no match.
+- Include ALL mappable field pairs â€” be thorough. Omit fields with no match.
 - No namespace prefixes in paths.
 """
     data = _ask_json(prompt)
@@ -270,7 +270,7 @@ Rules:
     )
 
 
-# ── Template Download ─────────────────────────────────────────────────────────
+# â”€â”€ Template Download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.get("/template")
 def download_template():
@@ -284,7 +284,7 @@ def download_template():
     )
 
 
-# ── Sheet Preview (parse + XSD resolve, no .mmap) ────────────────────────────
+# â”€â”€ Sheet Preview (parse + XSD resolve, no .mmap) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.post("/preview-sheet")
 async def preview_sheet(
@@ -387,38 +387,36 @@ async def preview_sheet(
     }
 
 
-# ── AI Rule Derivation ────────────────────────────────────────────────────────
+# â”€â”€ AI Rule Derivation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _DERIVE_SYSTEM = """You are an SAP CPI Graphical Message Mapping expert.
 
 Convert any plain-English functional description into the correct SAP CPI Graphical Mapping expression.
 
-== CONTEXT — MOST IMPORTANT ==
+== CONTEXT â€” MOST IMPORTANT ==
 Context = how many times a value occurs at a given XML hierarchy level.
-- N→1 (aggregate): sum(), average(), count() — Statistics functions collapse N values to 1
-- 1→N (expand): useOneAsMany() — repeat one value for multiple targets
-- N→N (same level): direct copy or transformation functions
-- N→1 (collapse text): collapseContexts()
+- Nâ†’1 (aggregate): sum(), average(), count() â€” Statistics functions collapse N values to 1
+- 1â†’N (expand): useOneAsMany() â€” repeat one value for multiple targets
+- Nâ†’N (same level): direct copy or transformation functions
+- Nâ†’1 (collapse text): collapseContexts()
 
-== STATISTICS FUNCTIONS (for aggregation — NO Groovy needed) ==
-sum((/repeating/field))     → SUM of all occurrences (total quantity, total amount)
-average((/f))               → average of all values
-count((/f))                 → count of occurrences
-first((/f))                 → first occurrence value
-last((/f))                  → last occurrence value
-index((/f))                 → sequential index 0, 1, 2, 3 ...
+== STATISTICS FUNCTIONS (for aggregation â€” NO Groovy needed) ==
+sum((/repeating/field))     â†’ SUM of all occurrences (total quantity, total amount)
+average((/f))               â†’ average of all values
+count((/f))                 â†’ count of occurrences
+index((/f))                 â†’ sequential index 0, 1, 2, 3 ...
 
 == FUNCTIONS ADDED TO COMPLETE THE OFFICIAL SAP CPI LIBRARY ==
-inv((/f))                   → 1/x inverse (Arithmetic)
-ifS((/f), val, y, n)        → if field string-equals val then y else n (Boolean)
-ifSWithoutElse((/f), val, y) → ifS without else branch (Boolean)
-isNil((/f))                 → true if value is xsi:nil (Boolean)
-constant(VALUE)             → emit a fixed constant value with no source field (Constant)
-xsi:nil                     → emit xsi:nil="true" for the target element (Constant)
-getHeader(NAME)             → get message header value by name (Node)
-getProperty(NAME)           → get integration property by name (Node)
-fixValues((/f))             → fixed value lookup table key→value (Conversion)
-valueMapping((/f))          → Value Mapping artifact table lookup (Conversion)
+inv((/f))                   â†’ 1/x inverse (Arithmetic)
+ifS((/f), val, y, n)        â†’ if field string-equals val then y else n (Boolean)
+ifSWithoutElse((/f), val, y) â†’ ifS without else branch (Boolean)
+isNil((/f))                 â†’ true if value is xsi:nil (Boolean)
+constant(VALUE)             â†’ emit a fixed constant value with no source field (Constant)
+xsi:nil                     â†’ emit xsi:nil="true" for the target element (Constant)
+getHeader(NAME)             â†’ get message header value by name (Node)
+getProperty(NAME)           â†’ get integration property by name (Node)
+fixValues((/f))             â†’ fixed value lookup table keyâ†’value (Conversion)
+valueMapping((/f))          â†’ Value Mapping artifact table lookup (Conversion)
 
 == ALL SAP CPI STANDARD FUNCTIONS ==
 
@@ -489,12 +487,11 @@ CONVERSION:
   fixValues((/field))                              -> fixed value lookup table
   valueMapping((/field))                           -> CPI Value Mapping table lookup
 
-STATISTICS (aggregate — NO Groovy needed!):
+STATISTICS (aggregate â€” NO Groovy needed!):
   sum((/field))                                    -> SUM of all occurrences
   average((/field))                                -> average of all values
   count((/field))                                  -> count of occurrences
   index((/field))                                  -> 0-based index of current
-  first((/field))                                  -> first value in queue
   last((/field))                                   -> last value in queue
 
 NODE:
@@ -563,7 +560,7 @@ def derive_rules(req: DeriveRuleRequest):
     For each row with a functional_rule but no technical_rule,
     use AI to understand the user's intent and derive the correct
     SAP CPI Graphical Mapping expression. Works with any free-form
-    English description — not just formal syntax.
+    English description â€” not just formal syntax.
     """
     results = []
     for row in req.rows:
@@ -576,7 +573,7 @@ def derive_rules(req: DeriveRuleRequest):
             all_src = (row.get("available_source_fields") or "").strip()
 
             prompt = f"""MAPPING ROW:
-Source field: {src or "(not specified — infer from description)"}
+Source field: {src or "(not specified â€” infer from description)"}
 Target field: {tgt or "(not specified)"}
 All available source fields: {all_src or "(unknown)"}
 
@@ -584,7 +581,7 @@ WHAT THE USER WROTE (functional description):
 "{func_rule}"
 
 Understand what the user wants to do and produce the correct SAP CPI Graphical Mapping expression.
-Use the actual source field name(s) — not generic placeholders.
+Use the actual source field name(s) â€” not generic placeholders.
 Return ONLY the expression on one line."""
 
             try:
@@ -600,7 +597,7 @@ Return ONLY the expression on one line."""
     return {"rows": results}
 
 
-# ── ZIP preview — returns file list + mmap XML without downloading ────────────
+# â”€â”€ ZIP preview â€” returns file list + mmap XML without downloading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.post("/from-sheet-preview")
 async def preview_mmap_from_sheet(
@@ -663,7 +660,7 @@ async def preview_mmap_from_sheet(
     }
 
 
-# ── Sheet-driven .mmap ────────────────────────────────────────────────────────
+# â”€â”€ Sheet-driven .mmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @router.post("/from-sheet")
 async def generate_mmap_from_sheet(
@@ -746,7 +743,7 @@ async def generate_mmap_from_sheet(
     )
 
 
-# ── AutoMap ───────────────────────────────────────────────────────────────────
+# â”€â”€ AutoMap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class AutoMapRequest(BaseModel):
     source_fields: str
@@ -775,7 +772,7 @@ Then generate the corresponding Groovy script for SAP CPI to implement these map
     return {"result": result, "type": "automap"}
 
 
-# ── Local XSD Auto-Map (no AI API call) ──────────────────────────────────────
+# â”€â”€ Local XSD Auto-Map (no AI API call) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class MmapAutoRequest(BaseModel):
     source_xsd: str
@@ -792,7 +789,7 @@ def generate_mmap_auto(req: MmapAutoRequest):
     match every target field to the best source field using name-similarity scoring,
     and return a ZIP bundle in SAP CPI's urn:sap-com:xi .mmap format.
 
-    Every single target path is guaranteed to appear in the output — nothing is skipped.
+    Every single target path is guaranteed to appear in the output â€” nothing is skipped.
     """
     src_root, tgt_root, mappings = auto_map(req.source_xsd, req.target_xsd)
 
@@ -827,7 +824,7 @@ def generate_mmap_auto(req: MmapAutoRequest):
 # -- Cheat sheet loader -------------------------------------------------------
 
 def _load_cheatsheet() -> str:
-    """Load the CPI mapping cheat sheet — used in all AI generation prompts."""
+    """Load the CPI mapping cheat sheet â€” used in all AI generation prompts."""
     try:
         cs_path = Path(__file__).parent.parent.parent / "resources" / "cpi_mapping_cheatsheet.md"
         return cs_path.read_text(encoding="utf-8")
@@ -843,14 +840,14 @@ if _CHEATSHEET:
     if _sec5_start >= 0 and _sec5_end > _sec5_start:
         _DERIVE_SYSTEM = (
             "You are an SAP CPI Graphical Message Mapping expert.\n\n"
-            "REFERENCE — correct fname values (MUST use these exactly):\n"
+            "REFERENCE â€” correct fname values (MUST use these exactly):\n"
             + _CHEATSHEET[_sec5_start:_sec5_end]
             + "\nConvert any plain-English functional description into the correct SAP CPI expression."
         )
 
 _XSD_GEN_RULES = """
 CRITICAL XSD RULES for SAP CPI compatibility:
-1. DO NOT add targetNamespace attribute — causes CPI path resolution errors
+1. DO NOT add targetNamespace attribute â€” causes CPI path resolution errors
 2. DO NOT add xmlns:tns or elementFormDefault="qualified" with namespace
 3. Root xs:element name must be a simple CamelCase noun (e.g. Order, Product, Material)
 4. Use minOccurs="0" on most elements for flexibility
@@ -878,7 +875,7 @@ def generate_from_source(req: GenerateFromSourceRequest):
     import json as _json
 
     src_root, src_paths = smart_extract_paths(req.source_xsd)
-    src_leaves = leaf_paths(src_paths)  # ALL leaf paths — no truncation
+    src_leaves = leaf_paths(src_paths)  # ALL leaf paths â€” no truncation
 
     # Step 1: Generate target XSD
     tgt_xsd_prompt = (
@@ -910,18 +907,18 @@ def generate_from_source(req: GenerateFromSourceRequest):
         tgt_root = "Root"
         tgt_paths = []
 
-    # Step 3: Generate mappings — send ALL paths, no truncation
+    # Step 3: Generate mappings â€” send ALL paths, no truncation
     mapping_prompt = (
         "Generate SAP CPI Graphical Message Mapping field mappings.\n\n"
         "CRITICAL: Map ROOT element first, then ALL parent containers, then leaf fields.\n"
-        "Use ONLY paths from the SOURCE XSD list below — do NOT invent paths.\n\n"
+        "Use ONLY paths from the SOURCE XSD list below â€” do NOT invent paths.\n\n"
         "SOURCE XSD fields (ALL available):\n" + "\n".join(src_paths) + "\n\n"
         "TARGET XSD fields:\n" + "\n".join(tgt_paths) + "\n\n"
         "Mapping goal: " + req.description + "\n\n"
         "SAP CPI expressions:\n"
-        "- sum((/repeating/field)) — sum ALL occurrences of repeating field\n"
+        "- sum((/repeating/field)) â€” sum ALL occurrences of repeating field\n"
         "- toUpperCase((/field)), formatDate((/field), iFmt, oFmt)\n"
-        "- (/f1)+SEP+(/f2) for concatenation, useOneAsMany((/f)) to repeat 1→N\n\n"
+        "- (/f1)+SEP+(/f2) for concatenation, useOneAsMany((/f)) to repeat 1â†’N\n\n"
         'Return ONLY valid JSON (no markdown):\n'
         '{"field_mappings": [{"source_path": "/S/F", "target_path": "/T/F", "rule": "", "note": ""}]}'
     )
@@ -991,7 +988,7 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     field mappings (with UDFs for aggregations) and mmap ZIP.
 
     Smart features:
-    - Detects SAP standard entities (SalesOrder, Material, PurchaseOrder…) and uses
+    - Detects SAP standard entities (SalesOrder, Material, PurchaseOrderâ€¦) and uses
       the bundled catalog XSDs instead of generating new ones
     - Detects aggregate operations (sum, total, count) and generates proper Groovy UDFs
     """
@@ -1000,7 +997,7 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
 
     idea_lower = req.idea.lower()
 
-    # ── 1. Detect catalog XSD matches ─────────────────────────────────────────
+    # â”€â”€ 1. Detect catalog XSD matches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     _ENTITY_MAP = {
         ("sales order", "salesorder", "vbak", "salesdocument", "a_salesorder"):
             ("A_SalesOrder.xsd", "SalesOrder"),
@@ -1036,14 +1033,14 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     src_xsd_text = src_detected[0] if src_detected else ""
     src_xsd_name = src_detected[1] if src_detected else "source.xsd"
 
-    # ── 2. Detect aggregate operations ────────────────────────────────────────
+    # â”€â”€ 2. Detect aggregate operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     _AGGREGATE_KEYWORDS = {"sum", "total", "aggregate", "count", "average", "summ", "add all",
                            "accumulate", "sumof", "sum of", "total of"}
     needs_aggregate = any(kw in idea_lower for kw in _AGGREGATE_KEYWORDS)
 
-    # ── 3. Generate XSDs (only those not found in catalog) ────────────────────
+    # â”€â”€ 3. Generate XSDs (only those not found in catalog) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if src_xsd_text:
-        # Source found in catalog — only need to generate target
+        # Source found in catalog â€” only need to generate target
         src_root, src_paths = smart_extract_paths(src_xsd_text)
         src_leaves = [p for p in src_paths if not any(p.rsplit("/", 1)[-1] == seg
                       for seg in [q.split("/")[-1] for q in src_paths if q != p and p in q])][:50]
@@ -1059,7 +1056,7 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
         if tgt_xsd_text.startswith("```"):
             tgt_xsd_text = tgt_xsd_text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
     else:
-        # Neither found — generate both
+        # Neither found â€” generate both
         both_prompt = (
             "You are an SAP CPI integration architect. Integration requirement:\n\n"
             f'"{req.idea}"\n\n'
@@ -1086,7 +1083,7 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
     except Exception:
         tgt_root, tgt_paths = "Target", []
 
-    # ── 3b. Ask AI to identify the RIGHT fields before mapping ────────────────
+    # â”€â”€ 3b. Ask AI to identify the RIGHT fields before mapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # This prevents hallucination of wrong field paths by first confirming
     # which paths in the XSD correspond to what the user described.
     field_intelligence_prompt = (
@@ -1096,9 +1093,9 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
         + "\n".join(src_paths)  # ALL paths, not truncated
         + "\n\nFor each concept the user mentioned, identify the EXACT source field path.\n"
         "Examples:\n"
-        "  'item quantity' in SalesOrder → /A_SalesOrder/SalesOrderItem/RequestedQuantity\n"
-        "  'order date' → /A_SalesOrder/SalesOrder/CreationDate\n"
-        "  'sold to party' → /A_SalesOrder/SalesOrder/SoldToParty\n\n"
+        "  'item quantity' in SalesOrder â†’ /A_SalesOrder/SalesOrderItem/RequestedQuantity\n"
+        "  'order date' â†’ /A_SalesOrder/SalesOrder/CreationDate\n"
+        "  'sold to party' â†’ /A_SalesOrder/SalesOrder/SoldToParty\n\n"
         "Return JSON: {\"identified_fields\": ["
         "{\"concept\": \"item quantity\", \"source_path\": \"/A_SalesOrder/SalesOrderItem/RequestedQuantity\", \"is_repeating\": true}, ...]}"
     )
@@ -1117,45 +1114,45 @@ def generate_from_idea(req: GenerateFromIdeaRequest):
         field_hints = "\nIDENTIFIED FIELD MAPPINGS (use these exact paths):\n"
         for f in identified_fields:
             field_hints += (
-                f"  Concept '{f.get('concept')}' → source: {f.get('source_path')}"
+                f"  Concept '{f.get('concept')}' â†’ source: {f.get('source_path')}"
                 f"{' (REPEATING - use sum() or count())' if f.get('is_repeating') else ''}\n"
             )
 
-    # ── 4. Generate field mappings (with aggregate awareness) ─────────────────
+    # â”€â”€ 4. Generate field mappings (with aggregate awareness) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     aggregate_note = ""
     if needs_aggregate:
         aggregate_note = """
 AGGREGATION DETECTED: The user wants SUM/TOTAL/COUNT of repeating values.
-SAP CPI has BUILT-IN Statistics functions for this — NO Groovy UDF needed!
+SAP CPI has BUILT-IN Statistics functions for this â€” NO Groovy UDF needed!
 
 For sum of a repeating field (e.g. TotalQuantity = sum of all Item/Quantity):
-  - rule: "sum((/SalesOrder/Items/Item/Quantity))"  ← use the repeating source path
+  - rule: "sum((/SalesOrder/Items/Item/Quantity))"  â† use the repeating source path
   - The sum() function takes ALL occurrences and returns one total value
-  - NEVER use GROOVY: for sum/average/count — use the Statistics functions
+  - NEVER use GROOVY: for sum/average/count â€” use the Statistics functions
 
 Other Statistics functions:
-  - sum((/field))     → total of all values
-  - average((/field)) → average
-  - count((/field))   → how many occurrences
-  - first((/field))   → first value only
-  - last((/field))    → last value only
+  - sum((/field))     â†’ total of all values
+  - average((/field)) â†’ average
+  - count((/field))   â†’ how many occurrences
+  - first((/field))   â†’ first value only
+  - last((/field))    â†’ last value only
 """
 
     map_prompt = (
         "Generate SAP CPI field mappings for: " + req.idea + "\n\n"
         + aggregate_note
         + field_hints
-        + "SOURCE fields (ALL available — use ONLY paths from this list):\n"
+        + "SOURCE fields (ALL available â€” use ONLY paths from this list):\n"
         + "\n".join(src_paths)  # Send ALL paths, not truncated
         + "\n\nTARGET fields to map:\n" + "\n".join(tgt_paths) + "\n\n"
         "CRITICAL PARENT MAPPING RULE:\n"
         "SAP CPI requires EVERY ancestor element to be explicitly mapped.\n"
         "If you map /OrderSummary/TotalQuantity, you MUST ALSO map /OrderSummary.\n"
         "If you map /Header/HeaderType/RunDate, you MUST ALSO map /Header AND /Header/HeaderType.\n"
-        "WITHOUT parent mappings, child mappings DO NOT WORK — CPI has no structural context.\n"
+        "WITHOUT parent mappings, child mappings DO NOT WORK â€” CPI has no structural context.\n"
         "ALWAYS start with root-to-root mapping, then work down level by level.\n\n"
         "Rules:\n"
-        "1. FIRST: map root element (e.g. /SalesOrder → /OrderSummary)\n"
+        "1. FIRST: map root element (e.g. /SalesOrder â†’ /OrderSummary)\n"
         "2. THEN: map every intermediate container before its children\n"
         "3. THEN: map all leaf fields\n"
         "4. For direct copy: rule = \"\"\n"
@@ -1163,7 +1160,7 @@ Other Statistics functions:
         "6. For transformations: use SAP CPI expressions (toUpperCase, formatDate, etc.)\n"
         "7. useOneAsMany for 1-value that must repeat for N target occurrences\n\n"
         "Example structure with parent mappings:\n"
-        "  {src: /SalesOrder, tgt: /OrderSummary, rule: ''}          ← ROOT first\n"
+        "  {src: /SalesOrder, tgt: /OrderSummary, rule: ''}          â† ROOT first\n"
         "  {src: /SalesOrder/OrderID, tgt: /OrderSummary/SalesOrder, rule: ''}\n"
         "  {src: /SalesOrder/Items/Item/Quantity, tgt: /OrderSummary/TotalQuantity, rule: 'sum((/SalesOrder/Items/Item/Quantity))'}\n\n"
         + _CHEATSHEET[_CHEATSHEET.find("## 7. COMMON"):_CHEATSHEET.find("## 8.")] + "\n"
@@ -1178,7 +1175,7 @@ Other Statistics functions:
     except Exception:
         fm_list = []
 
-    # ── 5. Build matched list and UDF registry ────────────────────────────────
+    # â”€â”€ 5. Build matched list and UDF registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     from services.sheet_mapper import _parse_rule
 
     udfs: list[dict] = []  # collect UDFs to inject into mmap
@@ -1241,3 +1238,4 @@ Other Statistics functions:
             "Access-Control-Expose-Headers": "X-Mapping-Count,X-Source-XSD",
         },
     )
+

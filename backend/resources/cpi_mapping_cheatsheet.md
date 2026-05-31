@@ -180,6 +180,8 @@ Date format tokens: `yyyyMMdd`, `yyyy-MM-dd`, `dd.MM.yyyy`, `HHmmss`, `HH:mm:ss`
 | formatByExample | formatByExample((/format), (/data)) | Apply format pattern from example | none |
 
 ### 2.7 STATISTICS (Aggregate — operate on the ENTIRE context queue)
+**ONLY 4 official SAP CPI Statistics functions: sum, average, count, index**
+**first() and last() do NOT exist — do NOT use them**
 
 | fname | User writes | Description | Context effect |
 |-------|-------------|-------------|---------------|
