@@ -284,15 +284,21 @@ function UploadToCpiButton({
   artifactType: string
   defaultName: string
 }) {
-  const [open, setOpen]       = React.useState(false)
-  const [packages, setPkgs]   = React.useState<Array<{id: string; name: string}>>([])
-  const [pkg, setPkg]         = React.useState('')
-  const [uploading, setUp]    = React.useState(false)
-  const [msg, setMsg]         = React.useState('')
-  const [loadingPkgs, setLP]  = React.useState(false)
+  const [step, setStep]          = React.useState<'pick' | 'preview' | 'done'>('pick')
+  const [open, setOpen]          = React.useState(false)
+  const [packages, setPkgs]      = React.useState<Array<{id: string; name: string}>>([])
+  const [pkg, setPkg]            = React.useState('')
+  const [loadingPkgs, setLP]     = React.useState(false)
+  const [buildingPreview, setBP] = React.useState(false)
+  const [uploading, setUp]       = React.useState(false)
+  const [msg, setMsg]            = React.useState('')
+  const [previewUrl, setPreviewUrl]   = React.useState('')
+  const [previewBody, setPreviewBody] = React.useState('')
+  const [previewFile, setPreviewFile] = React.useState<File | null>(null)
+  const [jsonError, setJsonError]     = React.useState('')
 
   const openModal = async () => {
-    setOpen(true); setMsg(''); setLP(true)
+    setOpen(true); setStep('pick'); setMsg(''); setLP(true)
     try {
       const r = await cpiAPI.packages()
       setPkgs(r.data.value || r.data || [])
@@ -300,18 +306,39 @@ function UploadToCpiButton({
     finally { setLP(false) }
   }
 
-  const doUpload = async () => {
+  const goPreview = async () => {
     if (!pkg) { setMsg('Please select a package'); return }
-    setUp(true); setMsg('')
+    setBP(true); setMsg('')
     try {
       const file = await buildFile()
-      await cpiAPI.importZip(file, pkg, artifactType, '', defaultName)
+      setPreviewFile(file)
+      const r = await cpiAPI.previewImport(file, pkg, artifactType)
+      setPreviewUrl(r.data.cpi_url)
+      setPreviewBody(JSON.stringify(r.data.body, null, 2))
+      setJsonError('')
+      setStep('preview')
+    } catch (e: any) {
+      setMsg('Preview failed: ' + (e?.response?.data?.detail || e?.message))
+    } finally { setBP(false) }
+  }
+
+  const confirmUpload = async () => {
+    let edited: Record<string, string>
+    try { edited = JSON.parse(previewBody); setJsonError('') }
+    catch { setJsonError('Invalid JSON — fix before uploading'); return }
+    if (!previewFile) return
+    setUp(true); setMsg('')
+    try {
+      await cpiAPI.importZip(previewFile, edited.PackageId ?? pkg, artifactType, edited.Id, edited.Name)
       setMsg('✓ Uploaded successfully!')
-      setTimeout(() => setOpen(false), 1500)
+      setStep('done')
+      setTimeout(() => { setOpen(false); setStep('pick') }, 1800)
     } catch (e: any) {
       setMsg('Error: ' + (e?.response?.data?.detail || e?.message || 'Upload failed'))
     } finally { setUp(false) }
   }
+
+  const close = () => { setOpen(false); setStep('pick'); setMsg(''); setJsonError('') }
 
   return (
     <>
@@ -321,34 +348,81 @@ function UploadToCpiButton({
       </button>
 
       {open && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-white font-semibold">Upload to CPI</h3>
-              <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white"><X size={16} /></button>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={close}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
+              <div>
+                <h3 className="text-white font-semibold">Upload to CPI</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {step === 'pick' ? 'Select target package' : step === 'preview' ? 'Review and edit request before sending' : 'Done'}
+                </p>
+              </div>
+              <button onClick={close} className="text-gray-500 hover:text-white"><X size={16} /></button>
             </div>
-            <p className="text-xs text-gray-400">
-              Artifact: <span className="text-white font-mono">{defaultName}</span>
-              &nbsp;·&nbsp;Type: <span className="text-white">{artifactType === 'messagemapping' ? 'Message Mapping' : artifactType}</span>
-            </p>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Target Package</label>
-              {loadingPkgs
-                ? <div className="text-xs text-gray-500 py-2">Loading packages…</div>
-                : <select className="input-field w-full text-sm" value={pkg} onChange={e => setPkg(e.target.value)}>
-                    <option value="">Select a package…</option>
-                    {packages.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-              }
-            </div>
-            {msg && <p className={`text-xs px-3 py-2 rounded-lg ${msg.startsWith('✓') ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>{msg}</p>}
-            <div className="flex gap-2 pt-1">
-              <button onClick={doUpload} disabled={uploading || !pkg}
-                className="flex items-center gap-2 px-4 py-2 text-sm bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg font-medium transition-colors">
-                {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                {uploading ? 'Uploading…' : 'Upload'}
-              </button>
-              <button onClick={() => setOpen(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-white">Cancel</button>
+
+            <div className="p-5 space-y-4">
+              {step === 'pick' && (
+                <>
+                  <p className="text-xs text-gray-400">
+                    Artifact: <span className="text-white font-mono">{defaultName}</span>
+                    &nbsp;·&nbsp;Type: <span className="text-white">{artifactType === 'messagemapping' ? 'Message Mapping' : artifactType}</span>
+                  </p>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Target Package</label>
+                    {loadingPkgs
+                      ? <div className="text-xs text-gray-500 py-2">Loading packages…</div>
+                      : <select className="input-field w-full text-sm" value={pkg} onChange={e => setPkg(e.target.value)}>
+                          <option value="">Select a package…</option>
+                          {packages.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>}
+                  </div>
+                  {msg && <p className="text-xs text-red-300 bg-red-900/30 px-3 py-2 rounded-lg">{msg}</p>}
+                  <div className="flex gap-2">
+                    <button onClick={goPreview} disabled={buildingPreview || !pkg}
+                      className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg font-medium transition-colors">
+                      {buildingPreview ? <Loader2 size={14} className="animate-spin" /> : null}
+                      {buildingPreview ? 'Building…' : 'Preview Request →'}
+                    </button>
+                    <button onClick={close} className="px-4 py-2 text-sm text-gray-500 hover:text-white">Cancel</button>
+                  </div>
+                </>
+              )}
+
+              {step === 'preview' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5">Endpoint</label>
+                    <div className="flex items-center gap-2 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2">
+                      <span className="text-xs font-bold text-green-400 shrink-0">POST</span>
+                      <span className="text-xs font-mono text-gray-300 break-all">{previewUrl}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-semibold text-gray-400">Request Body (JSON — editable)</label>
+                      <span className="text-[10px] text-gray-600">ArtifactContent = ZIP sent at confirm</span>
+                    </div>
+                    <textarea value={previewBody} onChange={e => { setPreviewBody(e.target.value); setJsonError('') }}
+                      rows={8} className="w-full bg-gray-800 border border-gray-700 focus:border-blue-500 rounded-lg px-3 py-2.5 text-xs font-mono text-gray-200 outline-none resize-none" />
+                    {jsonError && <p className="text-xs text-red-400 mt-1">{jsonError}</p>}
+                  </div>
+                  {msg && <p className={`text-xs px-3 py-2 rounded-lg ${msg.startsWith('✓') ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>{msg}</p>}
+                  <div className="flex gap-2">
+                    <button onClick={confirmUpload} disabled={uploading}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors">
+                      {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {uploading ? 'Uploading…' : 'Confirm Send'}
+                    </button>
+                    <button onClick={() => setStep('pick')} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white">← Back</button>
+                  </div>
+                </>
+              )}
+
+              {step === 'done' && (
+                <div className="flex items-center gap-3 py-4 text-green-300">
+                  <CheckCircle2 size={20} /><span className="font-medium">Uploaded successfully!</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
