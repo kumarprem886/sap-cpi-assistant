@@ -419,7 +419,7 @@ def _lnk(role: str, xsd_filename: str, root_element: str) -> str:
         f'<lnk rMode="R">'
         f'<key typeID="xsd" version="1.1">'
         f'<elem>{_attr(xsd_filename)}</elem>'
-        f'<elem>src/main/resources/xsd</elem>'
+        f'<elem>src/main/resources/wsdl</elem>'
         f'<elem>{_attr(root_element)}</elem>'
         f'</key>'
         f'</lnk>'
@@ -602,9 +602,9 @@ def build_mmap_zip(
 
         zf.writestr(f"mapping/{mapping_name}.mmap", mmap_xml.encode("utf-8"))
         if source_xsd:
-            zf.writestr(f"xsd/{source_xsd_name}", source_xsd.encode("utf-8"))
+            zf.writestr(f"wsdl/{source_xsd_name}", source_xsd.encode("utf-8"))
         if target_xsd and target_xsd_name != source_xsd_name:
-            zf.writestr(f"xsd/{target_xsd_name}", target_xsd.encode("utf-8"))
+            zf.writestr(f"wsdl/{target_xsd_name}", target_xsd.encode("utf-8"))
     buf.seek(0)
     return buf.read()
 
