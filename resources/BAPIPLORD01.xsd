@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="BAPIPLORD01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BAPIPLORD_HDR" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PLANNED_ORDER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ORDER_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATERIAL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MRP_CONTROLLER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PRODUCTION_VERSION" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TOTAL_PLANNED_QTY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BASE_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BASIC_START_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BASIC_END_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="OPENING_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STORAGE_LOCATION" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SALES_ORDER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SALES_ORDER_ITEM" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BAPIPLORD_COMP" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PLANNED_ORDER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COMPONENT_NUMBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATERIAL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="REQUIREMENT_QUANTITY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BASE_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STORAGE_LOCATION" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BATCH" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

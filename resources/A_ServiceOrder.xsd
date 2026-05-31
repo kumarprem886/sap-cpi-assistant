@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_ServiceOrder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ServiceOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ServiceOrderType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Language" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ServiceOrderStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ServiceOrderDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SoldToParty" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShipToParty" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="RequestedServiceStartDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="RequestedServiceEndDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PurchaseOrderByCustomer" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PricingDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TransactionCurrency" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="NetAmount" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ServiceDocumentPriority" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ReferenceServiceContract" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesOrganization" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DistributionChannel" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OrganizationDivision" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="RespPersonnelNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ServiceOrderIsReleased" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_ServiceOrderItem" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ServiceOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ServiceOrderItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ServiceItemDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Quantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="BaseUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="NetAmount" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="LOIPRO01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MANDT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCREL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STATUS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DIRECT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="OUTMOD" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CREDAT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CRETIM" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1AFKOL" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="AUFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="AUART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="AUTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WERKS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLGRP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GAMNG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GMEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GSTRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GLTRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FTRMS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FTRME" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STATUS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VERID" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOSTL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CHARG" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1AFPOL" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="AUFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="POSNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GAMNG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BAUTL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BDATU" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KDAUF" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CHARG" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1AFVOL" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="AUFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VORNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LTXA1" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ARBID" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ARBPL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WERKS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VGW01" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VGW02" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GMNGA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GMEIN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

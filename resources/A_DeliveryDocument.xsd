@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_DeliveryDocument">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="DeliveryDocument" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryDocumentType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShippingPoint" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SoldToParty" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShipToParty" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Payer" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BillToParty" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TransactionCurrency" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryDocumentBySupplier" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ActualDeliveryRoute" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShippingType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SpecialProcessingCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryBlockReason" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TotalGrossWeight" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TotalNetWeight" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderGrossWeightUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderVolume" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderVolumeUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LoadingDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GoodsIssueOrReceiptSlipNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OverallGoodsMovementStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_DeliveryDocumentItem" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="DeliveryDocument" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="DeliveryDocumentItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Material" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ActualDeliveryQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="DeliveryQuantityUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Plant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="StorageLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="BatchNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="SalesOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="SalesOrderItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="NetAmount" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

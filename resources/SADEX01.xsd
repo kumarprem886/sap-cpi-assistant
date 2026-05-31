@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="SADEX01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1MSEG" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WERKS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BWART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MENGE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CHARG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BKTXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="EXBWR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOSTL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PRCTR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="AUFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KUNNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LIFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KDAUF" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KDPOS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GSBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VKORG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SGTXT" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

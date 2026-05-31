@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="MBGMCR01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BP2017_GM_HEAD_01" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PSTNG_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOC_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="REF_DOC_NO" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="HEADER_TXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VER_GR_GI_SLIP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GM_CODE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BILL_OF_LADING" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VER_GR_GI_SLIP_X" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BP2017_GM_ITEM1_01" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="MATERIAL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STGE_LOC" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MOVE_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BATCH" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ENTRY_QNT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ENTRY_UOM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ORDERID" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COSTCENTER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VENDOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PO_NUMBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PO_ITEM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ITEM_TEXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PROFIT_SEGM" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

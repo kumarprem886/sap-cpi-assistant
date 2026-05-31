@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="FIDCCP02">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1FIHEA" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="BLART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BLDAT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BUDAT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BUKRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MONAT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WAERS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BKTXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="XBLNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BELNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GJAHR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="USNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TCODE" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1FIPOS" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="BUZEI" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="HKONT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GSBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOSTL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PRCTR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="AUFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MWSKZ" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WRBTR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DMBTR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TXBHW" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BSCHL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LIFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KUNNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SGTXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PROJK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FKBER" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

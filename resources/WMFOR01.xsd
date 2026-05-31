@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="WMFOR01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1LTAP" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TANUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGPLA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="NLTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="NLPLA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WERKS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CHARG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="NLQTV" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BDATU" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BEDAT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TRART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LETYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ANFME" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ALTME" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TBNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STATUS" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

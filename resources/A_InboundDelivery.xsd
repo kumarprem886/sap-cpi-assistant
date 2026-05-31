@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_InboundDelivery">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="InboundDelivery" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryDocumentType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryIsCompleted" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GoodsIssueTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderGrossWeight" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderNetWeight" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderVolume" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HeaderWeightUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IncotermsClassification" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsDeliveryForSingleWarehouse" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LoadingDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Payer" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlannedGoodsReceiptDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ReceivingPlant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShipmentCompletionStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Supplier" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DocumentDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ExternalIdentification" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TransportationPlanningStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OverallGoodsMovementStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_DeliveryDocumentItem" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="InboundDelivery" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="DeliveryDocumentItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Material" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ActualDeliveryQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="DeliveryQuantityUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Plant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="StorageLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="BatchNumber" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="PurchaseOrderItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

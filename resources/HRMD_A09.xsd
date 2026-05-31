@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="HRMD_A09">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1PERAS" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PERNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="INFTY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SUBTY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="OBJPS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SPRPS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ENDDA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BEGDA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SEQNR" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1P0001" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="KOKRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BUKRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BUNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WERKS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BTRTL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ABKRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MITLG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VDSK1" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ORGEH" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOSTL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STELL" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1P0002" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="NANOS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VORNA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RUFNM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MIDNM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="NACHN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SPRSL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GBDAT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GBORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GESCH" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FAMST" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="NATIO" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1P0006" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="ANSSA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STRAS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ORT01" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PSTLZ" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LAND1" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STATE" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

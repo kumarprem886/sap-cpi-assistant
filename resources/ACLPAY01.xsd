@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="ACLPAY01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BP_PAY_HDR" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="COMP_CODE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PSTNG_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOC_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOC_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="REF_DOC_NO" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="HEADER_TXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CURRENCY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="AMOUNT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="HOUSE_BANK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PARTNER_BK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PYMT_METH" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BPART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VALUEDATE" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BP_PAY_ITEM" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="COMP_CODE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOC_NO" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FISCAL_YR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ITEM_NO" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BLINE_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PYMT_AMT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DISC_AMT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="REASON_CODE" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

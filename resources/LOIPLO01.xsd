@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="LOIPLO01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1PLKOL" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PLNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WERKS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLGRP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PSMNG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BSMNG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FTRMS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GLTRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STATUS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VERID" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KDAUF" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KDPOS" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1PLPOL" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PLNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="POSNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PBMNG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLWRK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LGORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BDATU" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

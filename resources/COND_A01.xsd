@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="COND_A01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1KOMG" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="KAPPL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KSCHL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DATAB" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DATBI" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KVEWE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOTABNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KFRST" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1KONP" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="KNUMH" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOPOS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KSCHL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KBETR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KONWA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KPEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KMEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WAERS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KMQUA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KZBZG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KRECH" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LKOND" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1KONV" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="KNUMV" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KPOSN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STUNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ZAEHK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KSCHL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KVSL1" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KBETR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WAERS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KWERT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KPEIN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

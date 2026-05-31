@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="BAPISHIP01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BAPISHIPHD" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="SHIPMENT_NUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SHIP_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SHIP_POINT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ACTUAL_WEIGHT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="GROSS_WEIGHT_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ACTUAL_VOLUME" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VOLUME_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SHIP_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LOADING_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANNED_ROUTE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TRANSPORTATION_ROUTE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CARRIER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEANS_OF_TRANSPORT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SHIPMENT_STATUS" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BAPISHIPLG" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="LEG_INDICATOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="START_LOC_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="START_LOC" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="END_LOC_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="END_LOC" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CARRIER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DEPART_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ARRIVE_DATE" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

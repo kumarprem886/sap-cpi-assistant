@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="PRICAT01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1WP_HEAD" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="LIFNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VKORG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VTWEG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SPART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WAERS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="EKGRP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="EIKTO" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATKL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINH" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1WP_PRICE" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="KSCHL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KBETR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KONWA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KPEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KMEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DATAB" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DATBI" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PREIS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MEINS" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1WP_COND" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="KSCHL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KBETR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KONWA" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KPEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KMEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KOEIN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KRECH" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

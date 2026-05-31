@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_PlannedOrder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PlannedOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlannedOrderType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Material" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Plant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MRPController" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlannedOrderProfile" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TotalQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlannedQuantityInBaseUnit" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BaseUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OpenQuantityInBaseUnit" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProductionStartDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProductionEndDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="StorageLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ScheduledBasicEndDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ScheduledBasicStartDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProductionVersion" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlannedOrderIsConvertible" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesOrderItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_PlannedOrderCapacity" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="PlannedOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="CapacityRequirementItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="WorkCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="RequiredCapacityLoad" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="RequiredCapacityLoadUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_PaymentAdvice">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="PaymentAdvice" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PaymentAdviceAccountType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CompanyCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PaymentAdviceType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PaymentMethod" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DocumentCurrency" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PaymentAmount" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HouseBank" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="HouseBankAccount" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PayingCompanyCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PostingDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AssignmentReference" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DocumentText" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SAPClearingDocument" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BusinessPartner" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PaymentReference" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BankTransactionCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ValueDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_PaymentAdviceItem" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="PaymentAdvice" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="PaymentAdviceItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="CompanyCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="AccountingDocument" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="FiscalYear" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="AmountInPaymentCurrency" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="CashDiscountAmountInPaytCrcy" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

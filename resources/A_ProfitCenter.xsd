@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_ProfitCenter">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ControllingArea" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProfitCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ValidityEndDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ValidityStartDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProfitCtrHierarchyGroup" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CompanyCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProfitCenterName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Department" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProfitCenterStandardHierarchy" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Person" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FormOfAddress" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Country" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TaxJurisdiction" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Currency" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProfitCenterIsBlocked" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SegmentReportingInternalCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Language" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_ProfitCenterText" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ControllingArea" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ProfitCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Language" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ProfitCenterName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="ProfitCenterDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

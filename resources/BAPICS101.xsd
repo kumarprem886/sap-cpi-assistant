@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="BAPICS101">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BAPIBOM_HDR" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="MATERIAL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BOM_USAGE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BASE_QUANTITY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BASE_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VALID_FROM_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ENGINEERING_CHANGE_NO" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DELETION_IND" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BOM_STATUS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BOM_CATEGORY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BOM_NUMBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ALTERNATIVE" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BAPIBOM_ITEM" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="ITEM_CATEGORY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COMPONENT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COMP_QUANTITY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COMP_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="POSITION" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ITEM_ID" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="OPERATION_NUMBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SUBITEM_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VALID_FROM_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DELETION_IND" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SCRAP_FACTOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STGE_LOC" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="FIXED_QUANTITY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BATCH" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

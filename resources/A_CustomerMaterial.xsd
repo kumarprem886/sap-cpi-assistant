@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_CustomerMaterial">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Customer" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Material" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesOrganization" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DistributionChannel" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CustomerMaterialName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CustomerMaterialItemUsage" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlantName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DivisionName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="UnitOfMeasure" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryPlant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveryPriority" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaximumPartialDeliveryCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="UnderdelivTolrtdLmtRatioInPct" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OverdelivTolrtdLmtRatioInPct" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CustomerMaterialDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="StorageLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShippingPoint" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

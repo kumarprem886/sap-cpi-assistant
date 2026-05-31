@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_GLAccountInChartOfAccounts">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ChartOfAccounts" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GLAccount" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintenanceStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GLAccountType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsBalanceSheetAccount" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsProfitLossAccount" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsReconciliationAccount" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsBusinessPartnerGLAccount" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsCashAccount" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsMonetaryAccount" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GLAccountName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LongText" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsUsedForReconciliation" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FinancialAccountType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PartnerCompany" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsBatchInputOnly" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="IsMarkedForDeletion" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GLAccountGroup" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AccountSuffix" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Language" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_GLAccountText" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="ChartOfAccounts" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="GLAccount" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Language" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="GLAccountName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="GLAccountLongName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

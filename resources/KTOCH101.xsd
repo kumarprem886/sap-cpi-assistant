@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="KTOCH101">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BPORDCHGHEADER" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="VBELN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="AUART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BUKRS" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VKORG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VTWEG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SPART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="KUNNR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BSTKD" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="BSTDK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VSART" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ZTERM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="INCO1" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="INCO2" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="WAERK" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VGBEL" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BPORDCHGITEM" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="ITM_NUMBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATERIAL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="TARGET_QTY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COND_VALUE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ROUTE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="REQ_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SALES_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="STORE_LOC" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="ITEM_DEL_IND" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

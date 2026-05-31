@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:element name="REQOTE01">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="IDOC" minOccurs="1" maxOccurs="unbounded">
+          <xsd:complexType>
+            <xsd:sequence>
+              <xsd:element name="EDI_DC40" minOccurs="0" maxOccurs="1">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="TABNAM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOCNUM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="IDOCTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MESTYP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SNDPRN" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="RCVPRN" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BPMEPOHEADER" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PO_NUMBER" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOC_TYPE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PURCH_ORG" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PUR_GROUP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="VENDOR" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="CURRENCY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="COMP_CODE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DOC_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="QUOTATION" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="QUOT_DEADLINE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="LANGU" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+              <xsd:element name="E1BPMEPOITEM" minOccurs="0" maxOccurs="unbounded">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="PO_ITEM" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MATERIAL" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="SHORT_TEXT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PLANT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="QUANTITY" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="NET_PRICE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="DELIVERY_DATE" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="MAT_GRP" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PO_UNIT" type="xsd:string" minOccurs="0"/>
+                    <xsd:element name="PRICE_UNIT" type="xsd:string" minOccurs="0"/>
+                  </xsd:sequence>
+                </xsd:complexType>
+              </xsd:element>
+            </xsd:sequence>
+          </xsd:complexType>
+        </xsd:element>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

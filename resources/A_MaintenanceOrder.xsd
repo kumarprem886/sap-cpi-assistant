@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_MaintenanceOrder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="MaintenanceOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintenanceOrderType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OrderStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintOrdIsMarkedForDeletion" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FunctionalLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Equipment" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TechObjIsPhysicallyComplete" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Plant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MainWorkCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MainWorkCenterPlant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlanningPlant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintOrdBasicStartDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintOrdBasicEndDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintOrdPerformedInExtSystem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="NotificationNo" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OrderDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Priority" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CostCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="WBSElement" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BusinessArea" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MaintenanceActivityType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_MaintenanceOrderItem" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="MaintenanceOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="MaintenanceOrderItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="Material" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="RequiredQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="BaseUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

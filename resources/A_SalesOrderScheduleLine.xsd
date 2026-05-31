@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_SalesOrderScheduleLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="SalesOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesOrderItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ScheduleLine" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="RequestedDeliveryDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ScheduleLineOrderQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ConfirmedDeliveryDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesOrderScheduleLineDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DeliveredQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="OpenDeliveredQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="EarliestDelivDateForSchedLine" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PlantName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="StorageLocation" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Route" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ShippingType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SalesUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ConfdOrderQtyByMatlAvailCheck" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

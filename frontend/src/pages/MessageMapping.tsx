@@ -987,6 +987,8 @@ export default function MessageMapping() {
 
   // Smart Generate state
   const [smartSrcFile, setSmartSrcFile]   = useState<File | null>(null)
+  const [smartSrcMode, setSmartSrcMode]   = useState<'catalog' | 'upload'>('catalog')
+  const [smartSrcSchema, setSmartSrcSchema] = useState('')
   const [smartDesc, setSmartDesc]         = useState('')
   const [smartIdea, setSmartIdea]         = useState('')
   const [smartSrcName, setSmartSrcName]   = useState('MM_SmartMapping')
@@ -996,14 +998,25 @@ export default function MessageMapping() {
   const [smartError, setSmartError]       = useState('')
   const smartSrcRef = useRef<HTMLInputElement>(null)
 
+  const smartSrcReady = smartSrcMode === 'catalog' ? !!smartSrcSchema : !!smartSrcFile
+
   const generateFromSourceXsd = async () => {
-    if (!smartSrcFile || !smartDesc.trim()) return
+    if (!smartSrcReady || !smartDesc.trim()) return
     setSmartSrcLoading(true); setSmartError('')
     try {
-      const text = await smartSrcFile.text()
+      let xsdText = ''
+      let xsdName = 'source.xsd'
+      if (smartSrcMode === 'catalog' && smartSrcSchema) {
+        const r = await mappingAPI.schema(smartSrcSchema)
+        xsdText = r.data.content
+        xsdName = smartSrcSchema
+      } else if (smartSrcFile) {
+        xsdText = await smartSrcFile.text()
+        xsdName = smartSrcFile.name
+      }
       const res = await mappingAPI.generateFromSource({
-        source_xsd: text,
-        source_xsd_name: smartSrcFile.name,
+        source_xsd: xsdText,
+        source_xsd_name: xsdName,
         description: smartDesc,
         mapping_name: smartSrcName || 'MM_SmartMapping',
       })
@@ -1805,23 +1818,69 @@ export default function MessageMapping() {
               </div>
 
               <div className="space-y-3">
-                {/* Source XSD upload */}
+                {/* Source XSD: catalog or upload */}
                 <div>
-                  <label className="text-xs font-semibold text-gray-400 block mb-1">Source XSD file</label>
-                  <button type="button" onClick={() => smartSrcRef.current?.click()}
-                    className={`w-full flex flex-col items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed transition-colors cursor-pointer
-                      ${smartSrcFile ? 'border-blue-600/60 bg-blue-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
-                    {smartSrcFile
-                      ? <><FileCode size={18} className="text-blue-400" /><span className="text-xs text-blue-300 font-medium truncate max-w-full px-2">{smartSrcFile.name}</span></>
-                      : <><Upload size={16} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
-                    }
-                  </button>
-                  <input ref={smartSrcRef} type="file" accept=".xsd,.xml" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) { setSmartSrcFile(f); e.target.value = '' } }} />
-                  {smartSrcFile && (
-                    <button onClick={() => setSmartSrcFile(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1 mt-1">
-                      <X size={10} />Remove
-                    </button>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-gray-400">Source XSD</label>
+                    <div className="flex rounded-md overflow-hidden border border-gray-700 text-[10px] font-semibold">
+                      <button onClick={() => setSmartSrcMode('catalog')}
+                        className={`px-2 py-0.5 transition-colors ${smartSrcMode === 'catalog' ? 'bg-blue-700 text-white' : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
+                        Catalog
+                      </button>
+                      <button onClick={() => setSmartSrcMode('upload')}
+                        className={`px-2 py-0.5 transition-colors ${smartSrcMode === 'upload' ? 'bg-blue-700 text-white' : 'bg-gray-800 text-gray-500 hover:text-gray-300'}`}>
+                        Upload
+                      </button>
+                    </div>
+                  </div>
+
+                  {smartSrcMode === 'catalog' ? (
+                    <div className={`rounded-lg border-2 ${smartSrcSchema ? 'border-blue-600/60 bg-blue-900/10' : 'border-gray-700 bg-gray-800/30'} p-2 space-y-1.5`}>
+                      <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">SAP OData APIs (S/4HANA 2025FPS00)</p>
+                      <div className="grid grid-cols-1 gap-0.5 max-h-24 overflow-y-auto">
+                        {catalogSchemas.filter(s => s.kind === 'odata').map(s => (
+                          <button key={s.filename} onClick={() => setSmartSrcSchema(s.filename)}
+                            className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${smartSrcSchema === s.filename ? 'bg-blue-700 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}>
+                            {s.stem}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[9px] font-semibold text-gray-500 uppercase tracking-wider mt-1">SAP IDoc Types</p>
+                      <div className="grid grid-cols-1 gap-0.5 max-h-24 overflow-y-auto">
+                        {catalogSchemas.filter(s => s.kind === 'idoc').map(s => (
+                          <button key={s.filename} onClick={() => setSmartSrcSchema(s.filename)}
+                            className={`text-left text-[10px] px-2 py-1 rounded transition-colors truncate ${smartSrcSchema === s.filename ? 'bg-blue-700 text-white font-semibold' : 'text-gray-400 hover:text-white hover:bg-gray-700'}`}>
+                            {s.stem}
+                          </button>
+                        ))}
+                      </div>
+                      {catalogSchemas.length === 0 && <p className="text-xs text-gray-600 text-center py-2">Loading schemas…</p>}
+                      {smartSrcSchema && (
+                        <div className="flex items-center gap-1 mt-1 pt-1 border-t border-gray-700/50 text-blue-400 text-[10px]">
+                          <CheckCircle2 size={10} className="shrink-0" />
+                          <span className="truncate font-medium">{smartSrcSchema}</span>
+                          <button onClick={() => setSmartSrcSchema('')} className="ml-auto text-gray-600 hover:text-red-400 shrink-0"><X size={9} /></button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => smartSrcRef.current?.click()}
+                        className={`w-full flex flex-col items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed transition-colors cursor-pointer
+                          ${smartSrcFile ? 'border-blue-600/60 bg-blue-900/10' : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'}`}>
+                        {smartSrcFile
+                          ? <><FileCode size={18} className="text-blue-400" /><span className="text-xs text-blue-300 font-medium truncate max-w-full px-2">{smartSrcFile.name}</span></>
+                          : <><Upload size={16} className="text-gray-500" /><span className="text-xs text-gray-500">Click to upload .xsd</span></>
+                        }
+                      </button>
+                      <input ref={smartSrcRef} type="file" accept=".xsd,.xml" className="hidden"
+                        onChange={e => { const f = e.target.files?.[0]; if (f) { setSmartSrcFile(f); e.target.value = '' } }} />
+                      {smartSrcFile && (
+                        <button onClick={() => setSmartSrcFile(null)} className="text-xs text-gray-500 hover:text-red-400 flex items-center gap-1 mt-1">
+                          <X size={10} />Remove
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -1853,7 +1912,7 @@ export default function MessageMapping() {
                 ) : (
                   <button
                     onClick={generateFromSourceXsd}
-                    disabled={smartSrcLoading || !smartSrcFile || !smartDesc.trim()}
+                    disabled={smartSrcLoading || !smartSrcReady || !smartDesc.trim()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50">
                     {smartSrcLoading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                     {smartSrcLoading ? 'AI is generating target XSD + mapping…' : 'Generate Mapping'}

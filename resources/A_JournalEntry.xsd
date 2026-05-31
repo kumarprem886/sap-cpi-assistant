@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_JournalEntry">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="LedgerGLLineItem" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Ledger" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CompanyCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FiscalYear" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AccountingDocument" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FiscalPeriod" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GLAccount" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BusinessArea" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LedgerFiscalYear" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AccountingDocumentCategory" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="GLAccountName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="MasterFixedAsset" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FixedAsset" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="BusinessPartner" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CostCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ProfitCenter" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="WBSElement" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Amount" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AmountInCompanyCodeCurrency" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="CompanyCodeCurrency" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TransactionCurrency" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PostingDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DocumentDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="AccountingDocumentType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="DebitCreditCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="FunctionalArea" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="TaxCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

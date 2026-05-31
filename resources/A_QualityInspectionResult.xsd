@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="A_QualityInspectionResult">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="InspectionLot" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotOrigin" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotType" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Material" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Plant" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Batch" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SampleSize" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="SampleSizeUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspLotCreationDate" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspLotActualQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspLotActualUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotResult" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="ResultRecordingStatus" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="UsageDecisionCode" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotIsDeleted" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspLotHasDefectData" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotQuantity" type="xs:decimal" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="InspectionLotUnit" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="PurchaseOrder" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="Supplier" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="LastChangeDateTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="to_InspectionLotCharacteristic" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="results" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="InspectionLot" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="InspectionLotCharacteristic" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="CharacteristicShortText" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="InspectionLotSample" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="InspectionValuationResult" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
