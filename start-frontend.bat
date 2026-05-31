@@ -2,22 +2,27 @@
 echo Starting SAP CPI Assistant Frontend...
 cd /d "%~dp0frontend"
 
-SET NODE_PATH=C:\nodejs
-SET PATH=%NODE_PATH%;%PATH%
-
-IF NOT EXIST "%NODE_PATH%\node.exe" (
-    echo.
-    echo ERROR: Node.js not found at C:\nodejs
-    echo Please re-run the Node.js installation.
-    echo.
-    pause
-    exit /b 1
+:: ── Check Node.js ─────────────────────────────────────────────────────────────
+where node >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERROR: Node.js not found.
+    echo Install Node.js 20+ from https://nodejs.org/ and make sure it is in PATH.
+    pause & exit /b 1
 )
 
-IF NOT EXIST "node_modules" (
-    echo Installing dependencies...
-    "%NODE_PATH%\npm.cmd" install
+:: ── Install dependencies if node_modules missing ──────────────────────────────
+if not exist "node_modules" (
+    echo Installing Node.js dependencies (first time)...
+    npm install
+    if %errorlevel% neq 0 (
+        echo ERROR: npm install failed.
+        pause & exit /b 1
+    )
 )
 
-"%NODE_PATH%\npm.cmd" run dev
+echo.
+echo Frontend running at http://localhost:5173
+echo.
+
+npm run dev
 pause

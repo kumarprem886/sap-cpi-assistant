@@ -107,50 +107,87 @@ Understanding which parts of the app are deterministic Python code vs live AI ca
 
 ## Prerequisites
 
-| Tool | Version | Link |
-|------|---------|------|
-| Python | 3.10+ | [python.org](https://www.python.org/downloads/) |
-| Node.js | 20+ | [nodejs.org](https://nodejs.org/) |
-| At least one AI provider key or Ollama | — | See [AI Provider Configuration](#ai-provider-configuration) |
-| SAP BTP Account *(for CPI Connect)* | — | [hanatrial.ondemand.com](https://account.hanatrial.ondemand.com) |
+Install these before cloning:
 
-> **Windows tip:** If `python` is not recognised, use `py` instead — it invokes the Python Launcher which finds your installation automatically.
+| Tool | Version | Notes | Link |
+|------|---------|-------|------|
+| **Python** | 3.10+ | Tick **"Add Python to PATH"** during install | [python.org](https://www.python.org/downloads/) |
+| **Node.js** | 20+ | LTS version recommended | [nodejs.org](https://nodejs.org/) |
+| **Git** | any | To clone the repository | [git-scm.com](https://git-scm.com/) |
+| **AI provider key** | — | Or use Ollama (free, local) | See [AI Provider Configuration](#ai-provider-configuration) |
+| **SAP BTP account** | — | Only needed for CPI Connect | [hanatrial.ondemand.com](https://account.hanatrial.ondemand.com) |
+
+> **Windows:** If `python` is not recognised, use `py` — the Python Launcher finds your installation automatically.
 
 ---
 
 ## Quick Start
 
-### Option A — One-click (Windows)
+### Step 1 — Clone the repository
 
-Double-click **`start.bat`** in the project root. It will:
-1. Open a terminal running the FastAPI backend on port 8000
-2. Open a second terminal running the Vite frontend on port 5173
-3. Launch your browser at **http://localhost:5173**
-
-### Option B — Manual (any OS)
-
-**Terminal 1 — Backend**
 ```bash
-cd backend
-pip install -r requirements.txt     # first time only
-py -m uvicorn main:app --reload --port 8000
+git clone https://github.com/kumarprem886/sap-cpi-assistant.git
+cd sap-cpi-assistant
 ```
-- API base: **http://localhost:8000**
-- Swagger UI: **http://localhost:8000/docs**
 
-**Terminal 2 — Frontend**
+### Step 2 — Configure AI provider
+
 ```bash
+# Copy the example config
+cp backend/.env.example backend/.env      # Mac/Linux
+copy backend\.env.example backend\.env    # Windows
+```
+
+Open `backend/.env` and uncomment the AI provider block you want to use.  
+**Fastest start:** Groq (free, no install) or Ollama (free, local, no key).  
+See [AI Provider Configuration](#ai-provider-configuration) for all 8 options.
+
+### Step 3 — Start the app
+
+**Option A — One-click (Windows)**
+
+Double-click **`start.bat`**. It automatically:
+- Detects your Python and Node.js installations
+- Installs all dependencies on first run
+- Creates `backend/.env` from `.env.example` if it doesn't exist
+- Starts backend on port 8000 and frontend on port 5173
+- Opens your browser at **http://localhost:5173**
+
+**Option B — Manual (Windows / Mac / Linux)**
+
+Open two terminals:
+
+```bash
+# Terminal 1 — Backend
+cd backend
+pip install -r requirements.txt      # first time only
+py -m uvicorn main:app --reload --port 8000
+# Mac/Linux: python -m uvicorn main:app --reload --port 8000
+```
+
+```bash
+# Terminal 2 — Frontend
 cd frontend
-npm install                         # first time only
+npm install                           # first time only
 npm run dev
 ```
-- App: **http://localhost:5173**
+
+| URL | What |
+|-----|------|
+| **http://localhost:5173** | The app |
+| **http://localhost:8000/docs** | Swagger API docs |
+
+### What happens on first run
+
+- `backend/data/app.db` is created automatically (SQLite database)
+- Default admin account is created (see below)
+- No manual database setup needed
 
 ---
 
 ## Default Login
 
-The app requires login. On first startup the database is created automatically with a default admin account:
+The app requires login. The database and default admin account are created **automatically** on first backend startup — no setup needed.
 
 | Field | Value |
 |-------|-------|
@@ -848,19 +885,30 @@ sap-cpi-assistant/
 
 ## Troubleshooting
 
+### Fresh clone — app won't start at all
+1. Verify Python is installed and in PATH: `py --version` (Windows) or `python3 --version`
+2. Verify Node.js is installed and in PATH: `node --version` and `npm --version`
+3. Make sure `backend/.env` exists — copy from `backend/.env.example` if not
+4. Run `pip install -r backend/requirements.txt` manually to see any install errors
+5. Run `npm install` inside the `frontend/` folder to see any install errors
+
 ### Cannot log in
 - Default credentials: `admin@cpi.local` / `admin123`
-- If you changed the password and forgot it, delete `backend/data/app.db` — the database is recreated with the default admin on next startup
+- If the login page does not appear, the frontend is not running — check Terminal 2
+- If login fails with "server error", the backend is not running — check Terminal 1 (port 8000)
+- If you changed the password and forgot it: delete `backend/data/app.db` — recreated with default admin on next backend start
 
 ### Backend won't start
-- Ensure Python 3.10+: `py --version`
-- Install dependencies: `cd backend && pip install -r requirements.txt`
-- Check port 8000 is free
+- Verify Python: `py --version` — must be 3.10 or higher
+- Install dependencies: `cd backend && py -m pip install -r requirements.txt`
+- Check `backend/.env` exists (copy from `.env.example` if missing)
+- Check port 8000 is not in use by another process
 
 ### Frontend won't start
-- Ensure Node.js 20+: `node --version`
+- Verify Node.js: `node --version` — must be 20 or higher
 - Install dependencies: `cd frontend && npm install`
-- Check port 5173 is free
+- Check port 5173 is not in use
+- If you see `vite: not found` run `npm install` again inside `frontend/`
 
 ### AI generation returns errors
 - **Groq 429:** Free tier rate limit hit. Wait a few seconds and retry, or switch to a smaller model
