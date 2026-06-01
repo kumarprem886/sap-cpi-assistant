@@ -21,3 +21,30 @@ def get_db():
 def init_db():
     from models.user import User  # noqa: F401 — registers model with Base
     Base.metadata.create_all(bind=engine)
+    _seed_default_admin()
+
+
+def _seed_default_admin():
+    """Create the default admin account if no users exist yet."""
+    from models.user import User
+    from services.auth_service import hash_password
+
+    db = SessionLocal()
+    try:
+        if db.query(User).count() == 0:
+            admin = User(
+                email="admin@cpi.local",
+                username="admin",
+                full_name="Administrator",
+                hashed_password=hash_password("admin123"),
+                role="admin",
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+            print("[startup] Default admin created: admin@cpi.local / admin123")
+            print("[startup] Change the password after first login!")
+    except Exception as e:
+        print(f"[startup] Could not seed default admin: {e}")
+    finally:
+        db.close()
