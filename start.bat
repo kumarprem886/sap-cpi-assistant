@@ -1,111 +1,81 @@
 @echo off
 title SAP CPI Assistant
-setlocal
-
 echo.
 echo  ========================================================
-echo    SAP CPI Assistant — Starting up
+echo    SAP CPI Assistant - Starting up...
 echo  ========================================================
 echo.
 
-:: ── Detect Python (py launcher preferred, fallback to python) ─────────────────
+:: Check Python
 where py >nul 2>&1
-if %errorlevel% equ 0 (
-    set PYCMD=py
-    goto :python_ok
-)
+if not errorlevel 1 goto :have_py
 where python >nul 2>&1
-if %errorlevel% equ 0 (
-    set PYCMD=python
-    goto :python_ok
-)
-echo  ERROR: Python not found.
-echo  Install Python 3.10+ from https://python.org/downloads/
-echo  During install: tick "Add Python to PATH"
-echo.
-pause
-exit /b 1
-:python_ok
-echo  [OK] Python  (%PYCMD%)
+if not errorlevel 1 goto :have_py
+echo  ERROR: Python not found. Install from https://python.org
+pause & exit /b 1
+:have_py
 
-:: ── Detect Node.js ────────────────────────────────────────────────────────────
+:: Check Node
 where node >nul 2>&1
-if %errorlevel% neq 0 (
-    echo  ERROR: Node.js not found.
-    echo  Install Node.js 20+ from https://nodejs.org/
-    echo.
-    pause
-    exit /b 1
+if errorlevel 1 (
+    echo  ERROR: Node.js not found. Install from https://nodejs.org
+    pause & exit /b 1
 )
-echo  [OK] Node.js (node + npm)
 
-:: ── Create .env from template if missing ─────────────────────────────────────
+:: Create .env if missing
 if not exist "%~dp0backend\.env" (
     if exist "%~dp0backend\.env.example" (
         copy /Y "%~dp0backend\.env.example" "%~dp0backend\.env" >nul
-        echo  [OK] Created backend\.env from .env.example
-        echo.
-        echo  NOTE: The app defaults to Ollama (local AI, free).
-        echo        To use a cloud AI provider, open backend\.env
-        echo        and set your API key. See README.md for options.
-        echo.
+        echo  Created backend\.env - add your AI API key to use AI features
     )
 )
 
-:: ── Install Python dependencies (first time or if requirements changed) ───────
-echo  Checking Python dependencies...
-%PYCMD% -m pip install -r "%~dp0backend\requirements.txt" -q --disable-pip-version-check
-if %errorlevel% neq 0 (
-    echo  ERROR: pip install failed. Run manually:
-    echo    cd backend
-    echo    py -m pip install -r requirements.txt
-    pause
-    exit /b 1
+:: Install Python deps only if uvicorn is missing
+py -c "import uvicorn" >nul 2>&1
+if errorlevel 1 (
+    echo  Installing Python packages - this takes a minute on first run...
+    py -m pip install -r "%~dp0backend\requirements.txt" -q
+    if errorlevel 1 (
+        echo  ERROR: pip install failed
+        pause & exit /b 1
+    )
 )
-echo  [OK] Python dependencies ready
+echo  [OK] Backend ready
 
-:: ── Install frontend dependencies if node_modules missing ────────────────────
+:: Install Node deps only if missing
 if not exist "%~dp0frontend\node_modules" (
-    echo  Installing Node.js dependencies (first time, takes 1-2 minutes)...
+    echo  Installing Node packages - this takes a minute on first run...
     cd /d "%~dp0frontend"
     npm install
-    if %errorlevel% neq 0 (
-        echo  ERROR: npm install failed.
-        pause
-        exit /b 1
+    cd /d "%~dp0"
+    if errorlevel 1 (
+        echo  ERROR: npm install failed
+        pause & exit /b 1
     )
-    echo  [OK] Node.js dependencies installed
-) else (
-    echo  [OK] Node.js dependencies ready
 )
+echo  [OK] Frontend ready
 
-:: ── Start Backend ─────────────────────────────────────────────────────────────
+:: Start servers
 echo.
-echo  Starting Backend  (http://localhost:8000) ...
-start "SAP CPI - Backend" cmd /k "cd /d %~dp0backend && %PYCMD% -m uvicorn main:app --reload --port 8000"
+echo  Starting backend...
+start "SAP CPI - Backend" cmd /k "cd /d %~dp0backend && py -m uvicorn main:app --reload --port 8000"
 
-:: ── Start Frontend ────────────────────────────────────────────────────────────
-echo  Starting Frontend (http://localhost:5173) ...
+echo  Starting frontend...
 start "SAP CPI - Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 
-:: ── Wait then open browser ────────────────────────────────────────────────────
+:: Wait and open browser
 echo.
-echo  Waiting for servers to initialise...
-timeout /t 6 /nobreak >nul
+echo  Waiting for servers (5 sec)...
+timeout /t 5 /nobreak >nul
 
-echo  Opening browser...
-start "" "http://localhost:5173"
+start "" http://localhost:5173
 
 echo.
 echo  ========================================================
-echo    SAP CPI Assistant is running!
-echo.
-echo    App      : http://localhost:5173
-echo    API      : http://localhost:8000
-echo    API Docs : http://localhost:8000/docs
-echo.
-echo    Default login:  admin@cpi.local  /  admin123
+echo    App:      http://localhost:5173
+echo    API:      http://localhost:8000
+echo    Login:    admin@cpi.local / admin123
 echo  ========================================================
 echo.
-echo  Close the two terminal windows to stop the servers.
-echo.
+echo  Close Backend + Frontend windows to stop the app.
+pause
