@@ -16,7 +16,7 @@ import UserManagement from './pages/UserManagement'
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL === '/sap-cpi-assistant/' ? '/sap-cpi-assistant' : ''}>
+      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/*" element={
