@@ -63,17 +63,17 @@ start "SAP CPI - Backend" cmd /k "cd /d %~dp0backend && py -m uvicorn main:app -
 echo  Starting frontend...
 start "SAP CPI - Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
 
-:: Wait and open browser
+:: Wait for Vite to compile and start (takes ~8-10 seconds on first load)
 echo.
-echo  Waiting for servers (5 sec)...
-timeout /t 5 /nobreak >nul
+echo  Waiting for servers to start (10 sec)...
+timeout /t 10 /nobreak >nul
 
 start "" http://localhost:5173
 
 echo.
 echo  ========================================================
 echo    App:      http://localhost:5173
-echo    API:      http://localhost:8000
+echo    API Docs: http://localhost:8000/docs
 echo    Login:    admin@cpi.local / admin123
 echo  ========================================================
 echo.
