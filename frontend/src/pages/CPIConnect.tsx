@@ -470,7 +470,8 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
   const deploy = async (artifact: Artifact) => {
     setBusy(artifact.id); setMsg(artifact.id, '')
     try {
-      await cpiAPI.deploy(pkg.id, artifact.id)
+      // Use generic deploy for all artifact types (messageMapping, valueMapping, scriptCollection, functionLibrary, iflow)
+      await cpiAPI.deployArtifact(artifact.artifactType, artifact.id)
       setMsg(artifact.id, 'Deploying…')
       const start = Date.now()
       const poll = async (): Promise<void> => {
@@ -725,7 +726,7 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
                     🗺️ Message Mappings ({allMMs.length})
                   </p>
-                  {allMMs.map(a => renderArtifactRow(a, Layers, 'text-blue-400', false))}
+                  {allMMs.map(a => renderArtifactRow(a, Layers, 'text-blue-400', true))}
                 </div>
               )}
 
@@ -735,7 +736,7 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
                     📋 Value Mappings ({allVMs.length})
                   </p>
-                  {allVMs.map(a => renderArtifactRow(a, Layers, 'text-green-400', false))}
+                  {allVMs.map(a => renderArtifactRow(a, Layers, 'text-green-400', true))}
                 </div>
               )}
 
@@ -745,7 +746,7 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
                     📜 Script Collections ({allScripts.length})
                   </p>
-                  {allScripts.map(a => renderArtifactRow(a, FileText, 'text-yellow-400', false))}
+                  {allScripts.map(a => renderArtifactRow(a, FileText, 'text-yellow-400', true))}
                 </div>
               )}
 
@@ -755,7 +756,7 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
                     ⚡ Function Libraries ({allFnLibs.length})
                   </p>
-                  {allFnLibs.map(a => renderArtifactRow(a, FileText, 'text-orange-400', false))}
+                  {allFnLibs.map(a => renderArtifactRow(a, FileText, 'text-orange-400', true))}
                 </div>
               )}
 

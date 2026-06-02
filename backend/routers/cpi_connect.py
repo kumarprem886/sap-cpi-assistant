@@ -387,24 +387,51 @@ def get_runtime_status(iflow_id: str):
     }
 
 
-# ── iFlow deployment ──────────────────────────────────────────────────────────
+# ── Deploy action name per artifact type ──────────────────────────────────────
+# SAP CPI OData deploy actions: DeployXxxDesigntimeArtifact?Id=...&Version=active
+_DEPLOY_ACTION = {
+    "iflow":             "DeployIntegrationDesigntimeArtifact",
+    "messagemapping":    "DeployMessageMappingDesigntimeArtifact",
+    "valuemapping":      "DeployValueMappingDesigntimeArtifact",
+    "scriptcollection":  "DeployScriptCollectionDesigntimeArtifact",
+    "functionlibrary":   "DeployFunctionLibraryDesigntimeArtifact",
+}
 
-@router.post("/packages/{package_id}/iflows/{iflow_id}/deploy")
-def deploy_iflow(package_id: str, iflow_id: str):
-    """Deploy (activate) a design-time iFlow to the runtime."""
+
+def _deploy_action(artifact_type: str) -> str:
+    return _DEPLOY_ACTION.get(
+        artifact_type.lower().replace(" ", "").replace("_", "").replace("-", ""),
+        "DeployIntegrationDesigntimeArtifact",
+    )
+
+
+# ── Generic artifact deploy ────────────────────────────────────────────────────
+
+@router.post("/artifacts/{artifact_type}/{artifact_id}/deploy")
+def deploy_artifact(artifact_type: str, artifact_id: str):
+    """Deploy any CPI design-time artifact (iFlow, Message Mapping, Value Mapping, etc.)"""
     base = _api_base()
     if not base:
         raise HTTPException(503, "CPI_API_BASE_URL not set")
-    url = f"{base}/DeployIntegrationDesigntimeArtifact?Id='{iflow_id}'&Version='active'"
-    resp = httpx.post(url, headers=_headers(), auth=_auth(), timeout=30)
+    action = _deploy_action(artifact_type)
+    url    = f"{base}/{action}?Id='{artifact_id}'&Version='active'"
+    resp   = httpx.post(url, headers=_headers(), auth=_auth(), timeout=30)
     if resp.status_code in (200, 202):
         task_id = None
         try:
             task_id = resp.json().get("d", {}).get("results", {}).get("TaskId")
         except Exception:
             pass
-        return {"status": "deploying", "iflow": iflow_id, "taskId": task_id}
-    raise HTTPException(resp.status_code, resp.text)
+        return {"status": "deploying", "artifact": artifact_id, "type": artifact_type, "taskId": task_id}
+    raise HTTPException(resp.status_code, f"Deploy failed [{resp.status_code}]: {resp.text[:300]}")
+
+
+# ── iFlow deployment (kept for backward compat) ───────────────────────────────
+
+@router.post("/packages/{package_id}/iflows/{iflow_id}/deploy")
+def deploy_iflow(package_id: str, iflow_id: str):
+    """Deploy (activate) a design-time iFlow to the runtime. Calls the generic endpoint."""
+    return deploy_artifact("iflow", iflow_id)
 
 
 @router.delete("/runtime/{iflow_id}")

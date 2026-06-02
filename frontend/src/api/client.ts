@@ -156,6 +156,10 @@ export const cpiAPI = {
     api.put(`/cpi/iflows/${encodeURIComponent(iflowId)}/configurations/${encodeURIComponent(key)}`, { value }),
 
   // ── Deploy / Undeploy ───────────────────────────────────────────────────────
+  // Generic deploy works for all artifact types: iflow, messageMapping, valueMapping, scriptCollection, functionLibrary
+  deployArtifact:    (artifactType: string, id: string) =>
+    api.post(`/cpi/artifacts/${encodeURIComponent(artifactType)}/${encodeURIComponent(id)}/deploy`),
+  // Keep old iFlow-specific method for backward compat
   deploy:            (pkgId: string, id: string)   =>
     api.post(`/cpi/packages/${encodeURIComponent(pkgId)}/iflows/${encodeURIComponent(id)}/deploy`),
   runtimeStatus:     ()                            => api.get('/cpi/runtime'),
