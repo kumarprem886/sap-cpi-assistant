@@ -863,10 +863,13 @@ def list_all_artifacts(package_id: str):
                     for a in _get(path).get("d", {}).get("results", [])]
         except Exception:
             return []
+    pkg = f"/IntegrationPackages('{package_id}')"
     return {
-        "iflows":            _fetch(f"/IntegrationPackages('{package_id}')/IntegrationDesigntimeArtifacts?$format=json", "iflow"),
-        "valueMappings":     _fetch(f"/IntegrationPackages('{package_id}')/ValueMappingDesigntimeArtifacts?$format=json", "valueMapping"),
-        "scriptCollections": _fetch(f"/IntegrationPackages('{package_id}')/ScriptCollectionDesigntimeArtifacts?$format=json", "scriptCollection"),
+        "iflows":            _fetch(f"{pkg}/IntegrationDesigntimeArtifacts?$format=json",         "iflow"),
+        "messageMappings":   _fetch(f"{pkg}/MessageMappingDesigntimeArtifacts?$format=json",      "messageMapping"),
+        "valueMappings":     _fetch(f"{pkg}/ValueMappingDesigntimeArtifacts?$format=json",        "valueMapping"),
+        "scriptCollections": _fetch(f"{pkg}/ScriptCollectionDesigntimeArtifacts?$format=json",    "scriptCollection"),
+        "functionLibraries": _fetch(f"{pkg}/FunctionLibraryDesigntimeArtifacts?$format=json",    "functionLibrary"),
     }
 
 

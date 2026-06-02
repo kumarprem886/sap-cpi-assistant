@@ -16,7 +16,13 @@ import { cpiAPI } from '../api/client'
 interface PingResult    { connected: boolean; tenant?: string; reason?: string }
 interface CpiPackage    { id: string; name: string; description: string; version: string; modified: string }
 interface Artifact      { id: string; name: string; version: string; artifactType: string }
-interface AllArtifacts  { iflows: Artifact[]; valueMappings: Artifact[]; scriptCollections: Artifact[] }
+interface AllArtifacts  {
+  iflows:            Artifact[]
+  messageMappings:   Artifact[]
+  valueMappings:     Artifact[]
+  scriptCollections: Artifact[]
+  functionLibraries: Artifact[]
+}
 interface ConfigParam   { key: string; value: string; dataType: string; description: string }
 interface Message       { id: string; iflow: string; status: string; start: string; end: string; sender: string; receiver: string }
 interface MsgRun        { status: string; start: string; stop: string; processingNode: string; stepId: string }
@@ -457,7 +463,7 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
     if (artifacts) return
     setLoading(true)
     try { const r = await cpiAPI.allArtifacts(pkg.id); setArtifacts(r.data) }
-    catch { setArtifacts({ iflows: [], valueMappings: [], scriptCollections: [] }) }
+    catch { setArtifacts({ iflows: [], messageMappings: [], valueMappings: [], scriptCollections: [], functionLibraries: [] }) }
     finally { setLoading(false) }
   }
 
@@ -502,9 +508,11 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
       await cpiAPI.deleteIflow(pkg.id, artifact.id)
       setArtifacts(a => a ? {
         ...a,
-        iflows: a.iflows.filter(x => x.id !== artifact.id),
-        valueMappings: a.valueMappings.filter(x => x.id !== artifact.id),
+        iflows:            a.iflows.filter(x => x.id !== artifact.id),
+        messageMappings:   a.messageMappings.filter(x => x.id !== artifact.id),
+        valueMappings:     a.valueMappings.filter(x => x.id !== artifact.id),
         scriptCollections: a.scriptCollections.filter(x => x.id !== artifact.id),
+        functionLibraries: a.functionLibraries.filter(x => x.id !== artifact.id),
       } : a)
     } catch (e: any) { setMsg(artifact.id, e?.response?.data?.detail ?? 'Delete failed', true) }
     finally { setBusy(null) }
@@ -540,9 +548,12 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
   const filterArtifacts = (list: Artifact[]) =>
     searchQuery ? list.filter(a => a.name.toLowerCase().includes(searchQuery.toLowerCase()) || a.id.toLowerCase().includes(searchQuery.toLowerCase())) : list
 
-  const allIflows = filterArtifacts(artifacts?.iflows ?? [])
-  const allVMs    = filterArtifacts(artifacts?.valueMappings ?? [])
-  const allScripts = filterArtifacts(artifacts?.scriptCollections ?? [])
+  const allIflows   = filterArtifacts(artifacts?.iflows            ?? [])
+  const allMMs      = filterArtifacts(artifacts?.messageMappings   ?? [])
+  const allVMs      = filterArtifacts(artifacts?.valueMappings     ?? [])
+  const allScripts  = filterArtifacts(artifacts?.scriptCollections ?? [])
+  const allFnLibs   = filterArtifacts(artifacts?.functionLibraries ?? [])
+  const totalArtifacts = allIflows.length + allMMs.length + allVMs.length + allScripts.length + allFnLibs.length
 
   const renderArtifactRow = (artifact: Artifact, icon: any, iconClass: string, showDeploy: boolean) => {
     const isDeployed  = !!deployedIds[artifact.id]
@@ -698,31 +709,57 @@ function PackageRow({ pkg, deployedIds, packages, onDeleted, onRuntimeChange, on
             </div>
           ) : (
             <>
-              {/* iFlows */}
+              {/* Integration Flows */}
               {allIflows.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">Integration Flows ({allIflows.length})</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
+                    🔗 Integration Flows ({allIflows.length})
+                  </p>
                   {allIflows.map(a => renderArtifactRow(a, GitMerge, 'text-purple-400', true))}
+                </div>
+              )}
+
+              {/* Message Mappings */}
+              {allMMs.length > 0 && (
+                <div className={allIflows.length > 0 ? 'border-t border-gray-800/60' : ''}>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
+                    🗺️ Message Mappings ({allMMs.length})
+                  </p>
+                  {allMMs.map(a => renderArtifactRow(a, Layers, 'text-blue-400', false))}
                 </div>
               )}
 
               {/* Value Mappings */}
               {allVMs.length > 0 && (
-                <div className={allIflows.length > 0 ? 'border-t border-gray-800/60' : ''}>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">Value Mappings ({allVMs.length})</p>
+                <div className={(allIflows.length + allMMs.length) > 0 ? 'border-t border-gray-800/60' : ''}>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
+                    📋 Value Mappings ({allVMs.length})
+                  </p>
                   {allVMs.map(a => renderArtifactRow(a, Layers, 'text-green-400', false))}
                 </div>
               )}
 
               {/* Script Collections */}
               {allScripts.length > 0 && (
-                <div className={(allIflows.length + allVMs.length) > 0 ? 'border-t border-gray-800/60' : ''}>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">Script Collections ({allScripts.length})</p>
+                <div className={(allIflows.length + allMMs.length + allVMs.length) > 0 ? 'border-t border-gray-800/60' : ''}>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
+                    📜 Script Collections ({allScripts.length})
+                  </p>
                   {allScripts.map(a => renderArtifactRow(a, FileText, 'text-yellow-400', false))}
                 </div>
               )}
 
-              {allIflows.length === 0 && allVMs.length === 0 && allScripts.length === 0 && (
+              {/* Function Libraries */}
+              {allFnLibs.length > 0 && (
+                <div className={(allIflows.length + allMMs.length + allVMs.length + allScripts.length) > 0 ? 'border-t border-gray-800/60' : ''}>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-5 pt-3 pb-1">
+                    ⚡ Function Libraries ({allFnLibs.length})
+                  </p>
+                  {allFnLibs.map(a => renderArtifactRow(a, FileText, 'text-orange-400', false))}
+                </div>
+              )}
+
+              {totalArtifacts === 0 && (
                 <EmptyState icon={Package} title="No artifacts found" sub={searchQuery ? 'No matches for your search' : 'This package is empty'} />
               )}
             </>
