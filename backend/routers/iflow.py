@@ -1,4 +1,4 @@
-import re
+﻿import re
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
@@ -63,344 +63,131 @@ def Message processData(Message msg) {
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Load the iFlow cheatsheet (v4) — confirmed versions + adapter properties from
-# 4 live tenant iFlows.  Injected into IFLOW_SYSTEM so AI reads it first.
+# Load condensed cheatsheet — only critical rules + confirmed versions.
+# The FULL cheatsheet (62K) is kept on disk for reference but NOT injected
+# into every prompt — it would exceed Groq's 12K TPM free-tier limit.
 # ─────────────────────────────────────────────────────────────────────────────
 def _load_iflow_cheatsheet() -> str:
-    """Load the iFlow cheatsheet from resources folder."""
+    """Load full iFlow cheatsheet (used for detailed lookups, not injected into prompt)."""
     try:
         cs_path = Path(__file__).parent.parent / "resources" / "iflow_cheatsheet.md"
         return cs_path.read_text(encoding="utf-8")
     except Exception:
         return ""
 
-_IFLOW_CHEATSHEET = _load_iflow_cheatsheet()
+def _condensed_cheatsheet() -> str:
+    """
+    Extract only the minimum-critical sections from the cheatsheet.
+    Target: < 3,000 tokens so total IFLOW_SYSTEM fits within Groq free-tier 12K TPM.
+    Includes: Critical Rules + Confirmed Versions table + ZIP structure + BPMN rules.
+    Skips: Full adapter property sets, full palette step formats (too verbose).
+    """
+    full = _load_iflow_cheatsheet()
+    if not full:
+        return ""
+
+    # ── Take only the CRITICAL RULES section (first big block) ──────────────
+    # Stop before adapter details start
+    stop_markers = [
+        "## COMPLETE ADAPTER PROPERTY SETS",
+        "## COMPLETE PALETTE STEP FORMATS",
+        "### HTTPS Sender",
+        "### HTTP Receiver",
+        "### OData",
+    ]
+    top = full
+    for marker in stop_markers:
+        idx = top.find(marker)
+        if idx > 0:
+            top = top[:idx]
+            break
+    # Cap the top section so it doesn't include verbose tables
+    top = top[:6000]
+
+    # ── Extract just the versions table (condensed) ──────────────────────────
+    ver_start = full.find("## CONFIRMED VERSIONS")
+    ver_block = ""
+    if ver_start > 0:
+        ver_end = full.find("\n## ", ver_start + 50)
+        ver_block = full[ver_start: ver_start + 2000] if ver_end < 0 else full[ver_start:min(ver_start+2000, ver_end)]
+
+    # ── ZIP structure ─────────────────────────────────────────────────────────
+    zip_start = full.find("## ZIP FILE STRUCTURE")
+    zip_block = ""
+    if zip_start > 0:
+        zip_end = full.find("\n## ", zip_start + 50)
+        zip_block = full[zip_start: zip_start + 600] if zip_end < 0 else full[zip_start:min(zip_start+600, zip_end)]
+
+    # ── BPMN rules summary ────────────────────────────────────────────────────
+    bpmn_start = full.find("## IFLW BPMN RULES")
+    bpmn_block = ""
+    if bpmn_start > 0:
+        bpmn_block = full[bpmn_start: bpmn_start + 800]
+
+    result = "\n\n".join(filter(None, [top.strip(), ver_block.strip(), zip_block.strip(), bpmn_block.strip()]))
+    return result
+
+_IFLOW_CHEATSHEET = _load_iflow_cheatsheet()      # full — for reference only
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tenant-specific system prompt — cheatsheet-driven
+# Tenant-specific system prompt.
+# NOTE: We do NOT inject the full cheatsheet here — it pushes the prompt over
+# Groq's 12K TPM free-tier limit.  The existing rules below are comprehensive
+# and already include the confirmed version numbers.
 # ─────────────────────────────────────────────────────────────────────────────
 IFLOW_SYSTEM = """\
-You are an SAP CPI iFlow generator. Produce complete, importable .iflw XML.
-Use ONLY the exact versions below — confirmed working on a live SAP Integration Suite tenant.
+You are an SAP CPI iFlow generator. Generate complete, importable .iflw XML.
 
-""" + (_IFLOW_CHEATSHEET or "Use ONLY the exact versions confirmed on a live tenant.") + """
+== CONFIRMED VERSIONS (from 4 live tenant iFlows — use exactly) ==
+IFlowConfig:         ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.4
+IntegrationProcess:  ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.1
+httpSessionHandling: onExchange  (NOT None)
 
-══ ABSOLUTE FINAL RULES ══════════════════════════════════════════════════════
-The cheatsheet above is your source of truth.
-You are an SAP CPI iFlow generator. Produce complete, importable .iflw XML.
-
-══ CRITICAL RULES (violation = import failure) ══════════════════════════════
-
-1. ROOT ELEMENT — use EXACTLY this namespace declaration (copy verbatim):
-   <?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions
-       xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
-       xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-       xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-       xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
-       xmlns:ifl="http:///com.sap.ifl.model/Ifl.xsd"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       id="Definitions_1">
-   ⚠ The ifl namespace is http:///com.sap.ifl.model/Ifl.xsd (triple slash, NOT http://www.sap.com/...)
-
-2. PARTICIPANTS
-   - Receiver systems: ifl:type="EndpointRecevier"  ← SAP typo, single 'i' in Recevier
-   - Sender systems:   ifl:type="EndpointSender"
-   - Process participant: ifl:type="IntegrationProcess"
-   - Each participant MUST have extensionElements with inner <ifl:property>:
-     <bpmn2:participant id="Participant_Recv" ifl:type="EndpointRecevier" name="ReceiverName">
-         <bpmn2:extensionElements>
-             <ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property>
-         </bpmn2:extensionElements>
-     </bpmn2:participant>
-
-3. COLLABORATION extensionElements — ALL 16 properties REQUIRED:
-   namespaceMapping(empty), httpSessionHandling=None, accessControlMaxAge(empty),
-   returnExceptionToSender=false, log=All events, corsEnabled=false,
-   exposedHeaders(empty), componentVersion=1.2, allowedHeaderList(empty),
-   ServerTrace=false, allowedOrigins(empty), accessControlAllowCredentials=false,
-   allowedHeaders(empty), allowedMethods(empty),
-   cmdVariantUri=ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.3
-
-4. TIMER startEvent
-   - MUST include <bpmn2:timerEventDefinition/>  — MUST NOT include intervalInMinutes/runOnce
-   - Only 4 properties: activityType=StartTimerEvent, scheduleKey={{Scheduler}},
-     componentVersion=1.3, cmdVariantUri=ctype::FlowstepVariant/cname::intermediatetimer/version::1.3.0
-
-5. EXCEPTION SUBPROCESS — NO triggeredByEvent attribute on <bpmn2:subProcess>
-
-6. BPMN DIAGRAM (REQUIRED — missing causes "unable to load")
-   - <bpmndi:BPMNDiagram name="Default Collaboration Diagram">
-   - Every <di:waypoint> MUST have xsi:type="dc:Point"
-   - Every <bpmndi:BPMNEdge> MUST have sourceElement and targetElement (BPMNShape IDs)
-   - Shape IDs: BPMNShape_<elementId>   Edge IDs: BPMNEdge_<elementId>
-
-7. ADAPTER CONFIGS go on <bpmn2:messageFlow>, NOT on <bpmn2:participant>
-
-8. StartEvent / EndEvent MUST have extensionElements with cmdVariantUri:
-   MessageStartEvent extensionElements → single property:
-     <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::MessageStartEvent</value></ifl:property>
-   MessageEndEvent extensionElements → two properties:
-     <ifl:property><key>componentVersion</key><value>1.1</value></ifl:property>
-     <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::MessageEndEvent/version::1.1.0</value></ifl:property>
-   Both include <bpmn2:messageEventDefinition/> as the LAST child element.
-
-9. ELEMENT TYPES — CRITICAL (SAP CPI strict):
-   bpmn2:serviceTask  → ONLY activityType=ExternalCall (outbound adapter call, 3 properties only)
-   bpmn2:callActivity → ALL other steps: Script, Enricher, Mapping, Router, Splitter, etc.
-   Groovy Script callActivity MUST include these two extra properties right after activityType:
-     <ifl:property><key>subActivityType</key><value>GroovyScript</value></ifl:property>
-     <ifl:property><key>scriptBundleId</key><value/></ifl:property>
-   The receiver messageFlow sourceRef MUST point to the ExternalCall serviceTask ID, NOT EndEvent.
-
-10. 4-space indent, multi-line XML. Externalize all URLs/creds as {{PARAM_NAME}}
-
-══ CONFIRMED STEP VERSIONS ══════════════════════════════════════════════════
-
-Step                   activityType                  cmdVariantUri (prefix: ctype::FlowstepVariant/cname::)
-Groovy Script          Script                        GroovyScript/version::1.1.2
-Content Modifier       Enricher                      Enricher/version::1.5.1
-Request Reply          ExternalCall                  ExternalCall/version::1.0.4
-Message Mapping        Mapping                       MessageMapping/version::1.3.1
-JSON→XML               JsonToXmlConverter            JsonToXmlConverter/version::1.0
-XML→JSON               XmlToJsonConverter            XmlToJsonConverter/version::1.0.8
-Router (CBR)           ExclusiveGateway              ExclusiveGateway/version::1.1.2
-General Splitter       Splitter                      GeneralSplitter/version::1.6.0
-DataStore Write        DBstorage                     put/version::1.7.1
-Timer startEvent       StartTimerEvent               intermediatetimer/version::1.3.0
-Error SubProcess       ErrorEventSubProcessTemplate  ErrorEventSubProcessTemplate/version::1.1.0
-Message End Event      (none)                        MessageEndEvent/version::1.1.0
-Message Start Event    (none)                        MessageStartEvent  (no version suffix)
-Error End Event        EndErrorEvent                 ErrorEndEvent  (no version suffix)
-Error Start Event      StartErrorEvent               ErrorStartEvent  (no version suffix)
-Process Call           ProcessCallElement            NonLoopingProcess/version::1.0.3
-
-Flow elements:
-  IntegrationProcess:  ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.1
-  IFlowConfig:         ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.4
+Steps (all bpmn2:callActivity except ExternalCall and Router):
+  Groovy Script:     Script / GroovyScript/version::1.1.2   (needs subActivityType+scriptBundleId)
+  Content Modifier:  Enricher / Enricher/version::1.5.3
+  Request Reply:     ExternalCall / ExternalCall/version::1.0.4  (bpmn2:serviceTask NOT callActivity)
+  Message Mapping:   Mapping / MessageMapping/version::1.3.1
+  Router:            ExclusiveGateway  (bpmn2:exclusiveGateway, cmdVariantUri=ExclusiveGateway no version)
+  Splitter:          Splitter / GeneralSplitter/version::1.6.0
+  DataStore Write:   DBstorage / put/version::1.7.1
+  Timer Start:       StartTimerEvent / intermediatetimer/version::1.3.0
+  Error SubProcess:  ErrorEventSubProcessTemplate/version::1.1.0
+  MessageEndEvent:   cmdVariantUri=MessageEndEvent/version::1.1.0  (bpmn2:endEvent, needs messageEventDefinition)
+  MessageStartEvent: cmdVariantUri=MessageStartEvent  (no version, needs messageEventDefinition)
+  ErrorStartEvent:   cmdVariantUri=ErrorStartEvent  (no version)
+  ErrorEndEvent:     cmdVariantUri=ErrorEndEvent  (no version)
 
 Adapters:
-  HTTPS Sender:   ctype::AdapterVariant/cname::sap:HTTPS/tp::HTTPS/mp::None/direction::Sender/version::1.5.0
-  HTTP Receiver:  ctype::AdapterVariant/cname::sap:HTTP/tp::HTTP/mp::None/direction::Receiver/version::1.17.1
-  OData Receiver: ctype::AdapterVariant/cname::sap:HCIOData/tp::HTTP/mp::OData V2/direction::Receiver/version::1.27.0
-  SOAP Receiver:  ctype::AdapterVariant/cname::sap:SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.12.3
+  HTTPS Sender:  sap:HTTPS/tp::HTTPS/mp::None/direction::Sender/version::1.5.0
+  HTTP Receiver: sap:HTTP/tp::HTTP/mp::None/direction::Receiver/version::1.15.0
+  OData Recv:    sap:HCIOData/tp::HTTP/mp::OData V2/direction::Receiver/version::1.24.0
+  SOAP Recv:     sap:SOAP/tp::HTTP/mp::SOAP 1.x/direction::Receiver/version::1.12.3
+  SFTP Recv:     sap:SFTP/tp::SFTP/mp::File/direction::Receiver/version::1.13.3
 
-══ KEY XML PATTERNS ══════════════════════════════════════════════════════════
+== CRITICAL RULES (each violation causes import failure) ==
+1. ifl namespace: xmlns:ifl="http:///com.sap.ifl.model/Ifl.xsd"  (triple slash)
+2. bpmn2:definitions has NO targetNamespace attribute
+3. Collaboration name = "Default Collaboration" always
+4. Participant ifl:type="EndpointRecevier" (SAP typo — single i in Recevier)
+5. IntegrationProcess participant has EMPTY <bpmn2:extensionElements/>
+6. Receiver messageFlow sourceRef = ServiceTask ID (NEVER EndEvent ID)
+7. Exception Subprocess: NO triggeredByEvent attribute on bpmn2:subProcess
+8. BPMNDiagram name="Default Collaboration Diagram" — required or iFlow won't open
+9. Every di:waypoint needs xsi:type="dc:Point"
+10. Every BPMNEdge needs sourceElement and targetElement (Shape ID refs)
+11. Groovy Script callActivity must have subActivityType=GroovyScript + scriptBundleId (empty)
+12. Router = bpmn2:exclusiveGateway (NOT callActivity). Conditions on sequenceFlow via bpmn2:conditionExpression
+13. SFTP ServiceTask uses activityType=Send (NOT ExternalCall)
+14. Timer startEvent: MUST have timerEventDefinition, scheduleKey={{Scheduler}}, NO intervalInMinutes
 
-── Collaboration extensionElements (all 16 properties — use exactly):
-<bpmn2:extensionElements>
-    <ifl:property><key>namespaceMapping</key><value/></ifl:property>
-    <ifl:property><key>httpSessionHandling</key><value>None</value></ifl:property>
-    <ifl:property><key>accessControlMaxAge</key><value/></ifl:property>
-    <ifl:property><key>returnExceptionToSender</key><value>false</value></ifl:property>
-    <ifl:property><key>log</key><value>All events</value></ifl:property>
-    <ifl:property><key>corsEnabled</key><value>false</value></ifl:property>
-    <ifl:property><key>exposedHeaders</key><value/></ifl:property>
-    <ifl:property><key>componentVersion</key><value>1.2</value></ifl:property>
-    <ifl:property><key>allowedHeaderList</key><value/></ifl:property>
-    <ifl:property><key>ServerTrace</key><value>false</value></ifl:property>
-    <ifl:property><key>allowedOrigins</key><value/></ifl:property>
-    <ifl:property><key>accessControlAllowCredentials</key><value>false</value></ifl:property>
-    <ifl:property><key>allowedHeaders</key><value/></ifl:property>
-    <ifl:property><key>allowedMethods</key><value/></ifl:property>
-    <ifl:property><key>cmdVariantUri</key><value>ctype::IFlowVariant/cname::IFlowConfiguration/version::1.2.4</value></ifl:property>
-</bpmn2:extensionElements>
+== ZIP FILE STRUCTURE (files at root — NO wrapper folder) ==
+.project | metainfo.prop | META-INF/MANIFEST.MF
+src/main/resources/scenarioflows/integrationflow/<Name>.iflw
+src/main/resources/script/<Script>.groovy
+src/main/resources/parameters.prop | parameters.propdef
 
-── Timer startEvent:
-<bpmn2:startEvent id="StartEvent_1" name="Timer Start">
-    <bpmn2:extensionElements>
-        <ifl:property><key>activityType</key><value>StartTimerEvent</value></ifl:property>
-        <ifl:property><key>scheduleKey</key><value>{{Scheduler}}</value></ifl:property>
-        <ifl:property><key>componentVersion</key><value>1.3</value></ifl:property>
-        <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::intermediatetimer/version::1.3.0</value></ifl:property>
-    </bpmn2:extensionElements>
-    <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
-    <bpmn2:timerEventDefinition/>
-</bpmn2:startEvent>
-
-── Exception Subprocess (NO triggeredByEvent):
-<bpmn2:subProcess id="SubProcess_Error" name="Exception Subprocess">
-    <bpmn2:extensionElements>
-        <ifl:property><key>componentVersion</key><value>1.1</value></ifl:property>
-        <ifl:property><key>activityType</key><value>ErrorEventSubProcessTemplate</value></ifl:property>
-        <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorEventSubProcessTemplate/version::1.1.0</value></ifl:property>
-    </bpmn2:extensionElements>
-    <bpmn2:startEvent id="ErrorStartEvent_1" name="Error Start">
-        <bpmn2:outgoing>ErrorFlow_1</bpmn2:outgoing>
-        <bpmn2:errorEventDefinition>
-            <bpmn2:extensionElements>
-                <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorStartEvent</value></ifl:property>
-                <ifl:property><key>activityType</key><value>StartErrorEvent</value></ifl:property>
-            </bpmn2:extensionElements>
-        </bpmn2:errorEventDefinition>
-    </bpmn2:startEvent>
-    <bpmn2:endEvent id="ErrorEndEvent_1" name="Error End">
-        <bpmn2:incoming>ErrorFlow_1</bpmn2:incoming>
-        <bpmn2:errorEventDefinition>
-            <bpmn2:extensionElements>
-                <ifl:property><key>cmdVariantUri</key><value>ctype::FlowstepVariant/cname::ErrorEndEvent</value></ifl:property>
-                <ifl:property><key>activityType</key><value>EndErrorEvent</value></ifl:property>
-            </bpmn2:extensionElements>
-        </bpmn2:errorEventDefinition>
-    </bpmn2:endEvent>
-    <bpmn2:sequenceFlow id="ErrorFlow_1" sourceRef="ErrorStartEvent_1" targetRef="ErrorEndEvent_1"/>
-</bpmn2:subProcess>
-
-── Groovy Script step — use bpmn2:callActivity (NEVER serviceTask):
-<bpmn2:callActivity id="Script_SetProperties" name="Set Properties">
-    <bpmn2:extensionElements>
-        <ifl:property>
-            <key>scriptFunction</key>
-            <value>processData</value>
-        </ifl:property>
-        <ifl:property>
-            <key>scriptBundleId</key>
-            <value/>
-        </ifl:property>
-        <ifl:property>
-            <key>componentVersion</key>
-            <value>1.1</value>
-        </ifl:property>
-        <ifl:property>
-            <key>activityType</key>
-            <value>Script</value>
-        </ifl:property>
-        <ifl:property>
-            <key>cmdVariantUri</key>
-            <value>ctype::FlowstepVariant/cname::GroovyScript/version::1.1.2</value>
-        </ifl:property>
-        <ifl:property>
-            <key>subActivityType</key>
-            <value>GroovyScript</value>
-        </ifl:property>
-        <ifl:property>
-            <key>script</key>
-            <value>SetProperties.groovy</value>
-        </ifl:property>
-    </bpmn2:extensionElements>
-    <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
-    <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
-</bpmn2:callActivity>
-
-── ExternalCall serviceTask — the ONLY valid use of serviceTask (3 properties only):
-<bpmn2:serviceTask id="ServiceTask_Receiver" name="Send to Receiver">
-    <bpmn2:extensionElements>
-        <ifl:property>
-            <key>componentVersion</key>
-            <value>1.0</value>
-        </ifl:property>
-        <ifl:property>
-            <key>activityType</key>
-            <value>ExternalCall</value>
-        </ifl:property>
-        <ifl:property>
-            <key>cmdVariantUri</key>
-            <value>ctype::FlowstepVariant/cname::ExternalCall/version::1.0.4</value>
-        </ifl:property>
-    </bpmn2:extensionElements>
-    <bpmn2:incoming>SequenceFlow_n</bpmn2:incoming>
-    <bpmn2:outgoing>SequenceFlow_end</bpmn2:outgoing>
-</bpmn2:serviceTask>
-The receiver messageFlow MUST reference this serviceTask: sourceRef="ServiceTask_Receiver"
-
-── MessageStartEvent (extensionElements REQUIRED):
-<bpmn2:startEvent id="StartEvent_1" name="Start">
-    <bpmn2:extensionElements>
-        <ifl:property>
-            <key>cmdVariantUri</key>
-            <value>ctype::FlowstepVariant/cname::MessageStartEvent</value>
-        </ifl:property>
-    </bpmn2:extensionElements>
-    <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
-    <bpmn2:messageEventDefinition/>
-</bpmn2:startEvent>
-
-── MessageEndEvent (extensionElements REQUIRED):
-<bpmn2:endEvent id="EndEvent_1" name="End">
-    <bpmn2:extensionElements>
-        <ifl:property>
-            <key>componentVersion</key>
-            <value>1.1</value>
-        </ifl:property>
-        <ifl:property>
-            <key>cmdVariantUri</key>
-            <value>ctype::FlowstepVariant/cname::MessageEndEvent/version::1.1.0</value>
-        </ifl:property>
-    </bpmn2:extensionElements>
-    <bpmn2:incoming>SequenceFlow_n</bpmn2:incoming>
-    <bpmn2:messageEventDefinition/>
-</bpmn2:endEvent>
-
-── HTTPS Sender messageFlow properties:
-ComponentType=HTTPS, ComponentNS=sap, componentVersion=1.5, urlPath={{Sender_Endpoint_Path}},
-Name=HTTPS, TransportProtocolVersion=1.5.2, ComponentSWCVName=external, ComponentSWCVId=1.5.2,
-system=SenderSystem, xsrfProtection=1, TransportProtocol=HTTPS, userRole=ESBMessaging.send,
-senderAuthType=RoleBased, MessageProtocol=None, MessageProtocolVersion=1.5.2,
-direction=Sender, maximumBodySize=40
-
-── HTTP Receiver messageFlow properties:
-ComponentNS=sap, httpMethod=POST, allowedResponseHeaders=*, Name=HTTP,
-TransportProtocolVersion=1.17.1, ComponentSWCVName=external, ComponentSWCVId=1.17.1,
-streaming=false, enableMPLAttachments=true, httpRequestTimeout=60000,
-MessageProtocol=None, direction=Receiver, ComponentType=HTTP,
-throwExceptionOnFailure=true, proxyType=default, componentVersion=1.17,
-retryIteration=1, retryOnConnectionFailure=false, system=ReceiverSystem,
-authenticationMethod=Basic, credentialName={{Receiver_Credential}},
-retryInterval=5, TransportProtocol=HTTP, MessageProtocolVersion=1.17.1,
-httpAddressWithoutQuery={{Receiver_Endpoint_URL}}
-
-══ REQUIRED DOCUMENT STRUCTURE (element ORDER is critical) ══════════════════
-
-<?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions [all 6 namespaces] id="Definitions_1">
-
-  1. <bpmn2:collaboration id="Collaboration_1" name="Default Collaboration">
-       <bpmn2:documentation .../>
-       <bpmn2:extensionElements>  ← ALL 16 collaboration properties
-       </bpmn2:extensionElements>
-       <bpmn2:participant id="Participant_Sender"  ifl:type="EndpointSender"   name="SenderName">
-           <bpmn2:extensionElements><ifl:property><key>ifl:type</key><value>EndpointSender</value></ifl:property></bpmn2:extensionElements>
-       </bpmn2:participant>
-       <bpmn2:participant id="Participant_Receiver" ifl:type="EndpointRecevier" name="ReceiverName">
-           <bpmn2:extensionElements><ifl:property><key>ifl:type</key><value>EndpointRecevier</value></ifl:property></bpmn2:extensionElements>
-       </bpmn2:participant>
-       <bpmn2:participant id="Participant_Process_1" ifl:type="IntegrationProcess"
-                          name="Integration Process" processRef="Process_1">
-           <bpmn2:extensionElements/>
-       </bpmn2:participant>
-       <bpmn2:messageFlow id="MF_Sender"   sourceRef="Participant_Sender"   targetRef="StartEvent_1">
-           ← HTTPS sender adapter properties
-       </bpmn2:messageFlow>
-       <bpmn2:messageFlow id="MF_Receiver" sourceRef="ServiceTask_Receiver" targetRef="Participant_Receiver">
-           ← HTTP/SOAP/OData receiver adapter properties (sourceRef = ExternalCall serviceTask ID!)
-       </bpmn2:messageFlow>
-  </bpmn2:collaboration>
-
-  2. <bpmn2:process id="Process_1" name="Integration Process">   ← name ALWAYS "Integration Process", NO isExecutable
-       <bpmn2:extensionElements>
-           <ifl:property><key>transactionTimeout</key><value>30</value></ifl:property>
-           <ifl:property><key>componentVersion</key><value>1.2</value></ifl:property>
-           <ifl:property><key>cmdVariantUri</key><value>ctype::FlowElementVariant/cname::IntegrationProcess/version::1.2.1</value></ifl:property>
-           <ifl:property><key>transactionalHandling</key><value>Not Required</value></ifl:property>
-       </bpmn2:extensionElements>
-       ← [Optional] subProcess exception handler
-       ← bpmn2:startEvent  (with extensionElements cmdVariantUri=MessageStartEvent + messageEventDefinition)
-       ← bpmn2:callActivity steps (SetProperties.groovy, Content Modifiers, Mappings, etc.)
-       ← bpmn2:serviceTask id="ServiceTask_Receiver" (ExternalCall ONLY — outbound adapter step)
-       ← bpmn2:endEvent    (with extensionElements componentVersion=1.1 + cmdVariantUri=MessageEndEvent + messageEventDefinition)
-       ← bpmn2:sequenceFlow elements
-  </bpmn2:process>
-
-  3. <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Default Collaboration Diagram">
-       <bpmndi:BPMNPlane bpmnElement="Collaboration_1" id="BPMNPlane_1">
-           ← BPMNShape for every participant, startEvent, callActivity, endEvent, subProcess
-           ← BPMNEdge for every sequenceFlow and messageFlow
-               Each BPMNEdge MUST have sourceElement="BPMNShape_<srcId>" targetElement="BPMNShape_<tgtId>"
-               Each di:waypoint MUST have xsi:type="dc:Point"
-       </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-
-</bpmn2:definitions>
-
-══ OUTPUT FORMAT ═════════════════════════════════════════════════════════════
+== OUTPUT FORMAT ==
 Return ONLY the raw .iflw XML — no JSON, no markdown fences, no explanation.
 Start directly with: <?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions
 End with: </bpmn2:definitions>
