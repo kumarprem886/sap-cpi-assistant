@@ -1,23 +1,26 @@
 """
-SAP-style integration flowchart generator.
+SAP-style integration flowchart generator with SAP-themed system icons.
 Supports:
   - Multi-hop chains  (S4 → AEM → CPI → PIGMA → Shroom)
   - Multiple receivers (fan-out from CPI or last relay)
   - SAP CPI internal-step visualisation
+  - SAP-themed icon boxes (S/4HANA, CPI, 3rd party, SFTP, HTTP, SOAP, Cloud…)
 """
-import io, re, textwrap
+import io, re, textwrap, math
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch, Circle, Arc, FancyArrowPatch
+from matplotlib.path import Path
+import matplotlib.patheffects as pe
+import numpy as np
 
-# ── SAP colours ───────────────────────────────────────────────────────────────
+# ── SAP brand colours ─────────────────────────────────────────────────────────
 C_BLUE      = "#0070F2"
 C_DARK      = "#1C2B33"
 C_GRAY      = "#5C6B73"
 C_LIGHT_BG  = "#EEF4FF"
-C_SYS_FILL  = "#F7FAFF"
 C_MAP       = "#FFF4E0"
 C_ROUTE     = "#FFFBE0"
 C_ERROR     = "#FFF0EE"
@@ -28,27 +31,218 @@ C_STEP_BDR  = "#B0C4DE"
 C_ARROW     = "#0070F2"
 WHITE       = "#FFFFFF"
 
-# System-type colours
-_SYS_COLORS = {
-    "sap":    ("#0070F2", "#E8F0FF"),   # SAP systems
-    "aem":    ("#9B59B6", "#F5EEF8"),   # Event Mesh / AEM
-    "mq":     ("#8E44AD", "#F5EEF8"),   # Message queue
-    "pigma":  ("#27AE60", "#EAFAF1"),   # PIGMA / relay
-    "sftp":   ("#16A085", "#E8F8F5"),   # SFTP
-    "other":  ("#5C6B73", "#F2F4F5"),   # default external
+# ── System type detection ─────────────────────────────────────────────────────
+def _sys_type(name: str) -> str:
+    """Classify a system name into an icon category."""
+    n = name.lower()
+    if any(k in n for k in ("s4", "s/4", "hana", "ecc", "r/3", "erp", "sap erp")):
+        return "s4hana"
+    if any(k in n for k in ("cpi", "integration suite", "cloud platform integration",
+                              "btp", "sap cloud", "integration flow")):
+        return "cpi"
+    if any(k in n for k in ("aem", "event mesh", "event grid", "kafka", "amqp", "event")):
+        return "eventmesh"
+    if any(k in n for k in ("sftp", "ftp", "file server")):
+        return "sftp"
+    if any(k in n for k in ("soap", "web service", "wsdl")):
+        return "soap"
+    if any(k in n for k in ("odata", "rest", "http", "api", "webhook", "endpoint")):
+        return "api"
+    if any(k in n for k in ("cloud", "aws", "azure", "gcp", "saas")):
+        return "cloud"
+    if any(k in n for k in ("database", "db", "oracle", "sql", "hana db")):
+        return "database"
+    if any(k in n for k in ("pigma", "relay", "middleware", "hub", "mq", "queue")):
+        return "middleware"
+    if any(k in n for k in ("mail", "email", "smtp", "exchange")):
+        return "mail"
+    return "thirdparty"
+
+# ── Color scheme per system type ─────────────────────────────────────────────
+_ICON_THEME = {
+    "s4hana":     {"hdr": "#1B3A6D", "body": "#EBF0F8", "accent": "#0070F2"},
+    "cpi":        {"hdr": "#006B9F", "body": "#E6F4FB", "accent": "#00A0D1"},
+    "eventmesh":  {"hdr": "#7B2D8B", "body": "#F4EBF8", "accent": "#9B59B6"},
+    "sftp":       {"hdr": "#1A6B5A", "body": "#E6F5F2", "accent": "#16A085"},
+    "soap":       {"hdr": "#5A3472", "body": "#F0EBF6", "accent": "#8E44AD"},
+    "api":        {"hdr": "#0E6B3C", "body": "#E6F5EC", "accent": "#27AE60"},
+    "cloud":      {"hdr": "#1A5276", "body": "#E8F4FB", "accent": "#2980B9"},
+    "database":   {"hdr": "#7B2A1A", "body": "#F8ECEA", "accent": "#C0392B"},
+    "middleware": {"hdr": "#4A5568", "body": "#F0F2F4", "accent": "#718096"},
+    "mail":       {"hdr": "#7A4B00", "body": "#FFF4E0", "accent": "#E67E22"},
+    "thirdparty": {"hdr": "#3A4A55", "body": "#F0F2F4", "accent": "#5C6B73"},
 }
 
-def _sys_color(name: str):
+def _get_theme(name: str) -> dict:
+    return _ICON_THEME.get(_sys_type(name), _ICON_THEME["thirdparty"])
+
+
+# ── SAP-themed icon drawing functions ─────────────────────────────────────────
+
+def _draw_icon_s4hana(ax, cx, cy, sz, color=WHITE):
+    """S/4HANA: SAP diamond/rhombus symbol."""
+    d = sz * 0.38
+    diamond = plt.Polygon([(cx, cy+d),(cx+d, cy),(cx, cy-d),(cx-d, cy)],
+                          facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(diamond)
+    # Inner diamond
+    d2 = d * 0.45
+    inner = plt.Polygon([(cx, cy+d2),(cx+d2, cy),(cx, cy-d2),(cx-d2, cy)],
+                        facecolor=_ICON_THEME["s4hana"]["hdr"], edgecolor="none", zorder=9)
+    ax.add_patch(inner)
+
+def _draw_icon_cpi(ax, cx, cy, sz, color=WHITE):
+    """CPI: Three connected nodes (integration/network icon)."""
+    r = sz * 0.13
+    positions = [(cx, cy+sz*0.25), (cx-sz*0.22, cy-sz*0.15), (cx+sz*0.22, cy-sz*0.15)]
+    for px, py in positions:
+        ax.add_patch(Circle((px, py), r, facecolor=color, edgecolor="none", zorder=8))
+    # Connection lines
+    for i, (px, py) in enumerate(positions):
+        for j, (qx, qy) in enumerate(positions):
+            if j > i:
+                ax.plot([px, qx], [py, qy], color=color, lw=1.2, alpha=0.7, zorder=7)
+
+def _draw_icon_eventmesh(ax, cx, cy, sz, color=WHITE):
+    """Event Mesh: Lightning bolt."""
+    pts = [(cx-sz*0.08, cy+sz*0.35),(cx+sz*0.12, cy+sz*0.05),
+           (cx-sz*0.04, cy+sz*0.05),(cx+sz*0.08, cy-sz*0.35),(cx-sz*0.12, cy-sz*0.05),
+           (cx+sz*0.04, cy-sz*0.05)]
+    ax.add_patch(plt.Polygon(pts, facecolor=color, edgecolor="none", zorder=8))
+
+def _draw_icon_sftp(ax, cx, cy, sz, color=WHITE):
+    """SFTP: Folder icon."""
+    # Folder body
+    body = FancyBboxPatch((cx-sz*0.3, cy-sz*0.28), sz*0.6, sz*0.42,
+                          boxstyle="round,pad=0,rounding_size=0.03",
+                          facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(body)
+    # Tab on top
+    tab = FancyBboxPatch((cx-sz*0.3, cy+sz*0.14), sz*0.22, sz*0.1,
+                         boxstyle="round,pad=0,rounding_size=0.02",
+                         facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(tab)
+
+def _draw_icon_soap(ax, cx, cy, sz, color=WHITE):
+    """SOAP: Envelope icon."""
+    # Envelope body
+    body = FancyBboxPatch((cx-sz*0.3, cy-sz*0.22), sz*0.6, sz*0.38,
+                          boxstyle="square,pad=0", facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(body)
+    # V-fold lines
+    ax.plot([cx-sz*0.3, cx, cx+sz*0.3], [cy+sz*0.16, cy-sz*0.04, cy+sz*0.16],
+            color=_ICON_THEME["soap"]["hdr"], lw=1.3, zorder=9)
+
+def _draw_icon_api(ax, cx, cy, sz, color=WHITE):
+    """REST/HTTP/API: Drawn angle brackets < and > with a slash."""
+    lw = 1.6
+    # Left bracket <
+    ax.plot([cx-sz*0.28, cx-sz*0.10, cx-sz*0.28],
+            [cy+sz*0.22, cy, cy-sz*0.22], color=color, lw=lw, solid_capstyle='round', zorder=8)
+    # Right bracket >
+    ax.plot([cx+sz*0.28, cx+sz*0.10, cx+sz*0.28],
+            [cy+sz*0.22, cy, cy-sz*0.22], color=color, lw=lw, solid_capstyle='round', zorder=8)
+    # Slash /
+    ax.plot([cx+sz*0.08, cx-sz*0.08], [cy-sz*0.20, cy+sz*0.20],
+            color=color, lw=lw, solid_capstyle='round', zorder=8)
+
+def _draw_icon_cloud(ax, cx, cy, sz, color=WHITE):
+    """Cloud: Cloud outline made of circles."""
+    r1, r2 = sz*0.22, sz*0.16
+    ax.add_patch(Circle((cx,      cy+sz*0.06), r1, facecolor=color, edgecolor="none", zorder=8))
+    ax.add_patch(Circle((cx-sz*0.18, cy-sz*0.04), r2, facecolor=color, edgecolor="none", zorder=8))
+    ax.add_patch(Circle((cx+sz*0.18, cy-sz*0.04), r2, facecolor=color, edgecolor="none", zorder=8))
+    ax.add_patch(FancyBboxPatch((cx-sz*0.34, cy-sz*0.28), sz*0.68, sz*0.24,
+                                boxstyle="square,pad=0", facecolor=color, edgecolor="none", zorder=7))
+
+def _draw_icon_database(ax, cx, cy, sz, color=WHITE):
+    """Database: Cylinder icon."""
+    ew, eh = sz*0.32, sz*0.1
+    ax.add_patch(mpatches.Ellipse((cx, cy+sz*0.18), ew*2, eh*2,
+                                  facecolor=color, edgecolor="none", zorder=8))
+    body = FancyBboxPatch((cx-ew, cy-sz*0.22), ew*2, sz*0.40,
+                          boxstyle="square,pad=0", facecolor=color, edgecolor="none", zorder=7)
+    ax.add_patch(body)
+    ax.add_patch(mpatches.Ellipse((cx, cy-sz*0.22), ew*2, eh*2,
+                                  facecolor=color, edgecolor="none", zorder=8))
+
+def _draw_icon_middleware(ax, cx, cy, sz, color=WHITE):
+    """Middleware/relay: Two arrows crossing."""
+    aw = sz*0.28
+    ax.annotate("", xy=(cx+aw, cy+sz*0.12), xytext=(cx-aw, cy+sz*0.12),
+                arrowprops=dict(arrowstyle="-|>", color=color, lw=1.5, mutation_scale=10), zorder=8)
+    ax.annotate("", xy=(cx-aw, cy-sz*0.12), xytext=(cx+aw, cy-sz*0.12),
+                arrowprops=dict(arrowstyle="-|>", color=color, lw=1.5, mutation_scale=10), zorder=8)
+
+def _draw_icon_mail(ax, cx, cy, sz, color=WHITE):
+    """Mail: Envelope with @ symbol."""
+    body = FancyBboxPatch((cx-sz*0.3, cy-sz*0.22), sz*0.6, sz*0.36,
+                          boxstyle="square,pad=0", facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(body)
+    ax.text(cx, cy-sz*0.05, "@", ha="center", va="center",
+            fontsize=sz*6, color=_ICON_THEME["mail"]["hdr"], fontweight="bold", zorder=9)
+
+def _draw_icon_thirdparty(ax, cx, cy, sz, color=WHITE):
+    """3rd party: Building/office icon."""
+    # Building body
+    body = FancyBboxPatch((cx-sz*0.25, cy-sz*0.28), sz*0.5, sz*0.44,
+                          boxstyle="square,pad=0", facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(body)
+    # Windows
+    wc = _ICON_THEME["thirdparty"]["hdr"]
+    for wx, wy in [(cx-sz*0.12, cy+sz*0.06),(cx+sz*0.05, cy+sz*0.06),
+                   (cx-sz*0.12, cy-sz*0.08),(cx+sz*0.05, cy-sz*0.08)]:
+        ax.add_patch(FancyBboxPatch((wx, wy), sz*0.1, sz*0.1,
+                                    boxstyle="square,pad=0", facecolor=wc, edgecolor="none", zorder=9))
+    # Roof triangle
+    roof = plt.Polygon([(cx-sz*0.3, cy+sz*0.16),(cx, cy+sz*0.38),(cx+sz*0.3, cy+sz*0.16)],
+                       facecolor=color, edgecolor="none", zorder=8)
+    ax.add_patch(roof)
+
+_ICON_DRAW_FN = {
+    "s4hana":    _draw_icon_s4hana,
+    "cpi":       _draw_icon_cpi,
+    "eventmesh": _draw_icon_eventmesh,
+    "sftp":      _draw_icon_sftp,
+    "soap":      _draw_icon_soap,
+    "api":       _draw_icon_api,
+    "cloud":     _draw_icon_cloud,
+    "database":  _draw_icon_database,
+    "middleware":_draw_icon_middleware,
+    "mail":      _draw_icon_mail,
+    "thirdparty":_draw_icon_thirdparty,
+}
+
+_ICON_LABELS = {
+    "s4hana":    "SAP S/4HANA",
+    "cpi":       "Integration Suite",
+    "eventmesh": "Event Mesh",
+    "sftp":      "SFTP Server",
+    "soap":      "SOAP Service",
+    "api":       "REST / HTTP",
+    "cloud":     "Cloud System",
+    "database":  "Database",
+    "middleware":"Middleware",
+    "mail":      "Mail Server",
+    "thirdparty":"3rd Party",
+}
+
+def _is_relay_system(name: str) -> bool:
+    """True only if the system is a genuine middleware relay (not a final receiver)."""
     n = name.lower()
-    if any(k in n for k in ("s4", "sap", "erp", "hana", "ecc")):
-        return _SYS_COLORS["sap"]
-    if any(k in n for k in ("aem", "event mesh", "event grid", "kafka", "amqp")):
-        return _SYS_COLORS["aem"]
-    if any(k in n for k in ("pigma", "relay", "middleware")):
-        return _SYS_COLORS["pigma"]
-    if any(k in n for k in ("sftp", "ftp", "file")):
-        return _SYS_COLORS["sftp"]
-    return _SYS_COLORS["other"]
+    return any(k in n for k in (
+        "pigma", "relay", "middleware", "hub", "bus",
+        "aem", "event mesh", "event grid", "kafka", "mq", "amqp",
+    ))
+
+
+def _proto_from_name(name: str) -> str:
+    """Infer the protocol label from a receiver system name."""
+    n = name.upper()
+    for proto in ("SFTP", "FTP", "SOAP", "HTTPS", "HTTP", "IDOC", "RFC", "AS2", "AMQP", "ODATA"):
+        if proto in n:
+            return proto
+    return ""
 
 
 # ── chain parsing ─────────────────────────────────────────────────────────────
@@ -101,24 +295,6 @@ def _split_multi(s: str) -> list[str]:
     """Split a comma/semicolon-separated target list."""
     parts = [p.strip() for p in re.split(r"[,;]", s) if p.strip()]
     return parts or [s.strip()]
-
-
-def _is_relay_system(name: str) -> bool:
-    """True only if the system is a genuine middleware relay (not a final receiver)."""
-    n = name.lower()
-    return any(k in n for k in (
-        "pigma", "relay", "middleware", "hub", "bus",
-        "aem", "event mesh", "event grid", "kafka", "mq", "amqp",
-    ))
-
-
-def _proto_from_name(name: str) -> str:
-    """Infer the protocol label from a receiver system name, e.g. 'Manogna SFTP' → 'SFTP'."""
-    n = name.upper()
-    for proto in ("SFTP", "FTP", "SOAP", "HTTPS", "HTTP", "IDOC", "RFC", "AS2", "AMQP", "ODATA"):
-        if proto in n:
-            return proto
-    return ""
 
 
 # ── CPI step extraction ───────────────────────────────────────────────────────
@@ -217,30 +393,73 @@ def _rbox(ax, x, y, w, h, text, fill, edge, tc=C_DARK, fs=8, bold=False, r=0.12)
 
 
 def _sys_box(ax, x, y, w, h, label, name):
-    edge, fill = _sys_color(name)
-    # Body
+    """
+    Draw a SAP-themed system icon box.
+    Layout:
+      ┌─────────────────────┐   ← rounded border (shadow effect)
+      │  [ICON]  TYPE LABEL │   ← colored header with icon
+      ├─────────────────────┤
+      │    System Name      │   ← white body with bold name
+      └─────────────────────┘
+    """
+    stype  = _sys_type(name)
+    theme  = _get_theme(name)
+    hdr    = theme["hdr"]
+    body   = theme["body"]
+
+    # Shadow
+    ax.add_patch(FancyBboxPatch(
+        (x + 0.04, y - 0.04), w, h,
+        boxstyle="round,pad=0.0,rounding_size=0.14",
+        facecolor="#CCCCCC", edgecolor="none", linewidth=0, zorder=2, alpha=0.4,
+    ))
+
+    # Body background
     ax.add_patch(FancyBboxPatch(
         (x, y), w, h,
-        boxstyle="round,pad=0.0,rounding_size=0.12",
-        facecolor=fill, edgecolor=edge, linewidth=1.8, zorder=3,
+        boxstyle="round,pad=0.0,rounding_size=0.14",
+        facecolor=body, edgecolor=hdr, linewidth=1.6, zorder=3,
     ))
-    # Header strip
-    hdr_h = 0.35
+
+    # Header strip (top portion)
+    hdr_h = h * 0.42
     ax.add_patch(FancyBboxPatch(
         (x, y + h - hdr_h), w, hdr_h,
-        boxstyle="round,pad=0.0,rounding_size=0.10",
-        facecolor=edge, edgecolor=edge, linewidth=0, zorder=4,
+        boxstyle="round,pad=0.0,rounding_size=0.12",
+        facecolor=hdr, edgecolor="none", linewidth=0, zorder=4,
     ))
-    ax.text(x + w / 2, y + h - hdr_h / 2, label,
+    # Fill bottom of header corners (make it rectangular at the bottom)
+    ax.add_patch(mpatches.Rectangle(
+        (x, y + h - hdr_h), w, hdr_h * 0.4,
+        facecolor=hdr, edgecolor="none", zorder=4,
+    ))
+
+    # Icon in header (left portion)
+    icon_cx = x + hdr_h * 0.55
+    icon_cy = y + h - hdr_h * 0.50
+    icon_sz = min(hdr_h * 0.42, 0.28)
+    draw_fn = _ICON_DRAW_FN.get(stype, _draw_icon_thirdparty)
+    draw_fn(ax, icon_cx, icon_cy, icon_sz, WHITE)
+
+    # Type label in header (right of icon)
+    type_label = _ICON_LABELS.get(stype, label)
+    short_label = type_label if len(type_label) <= 16 else type_label[:14] + "…"
+    ax.text(x + hdr_h * 0.9 + (w - hdr_h * 0.9) / 2,
+            y + h - hdr_h * 0.50,
+            short_label,
             ha="center", va="center",
-            fontsize=7, fontweight="bold", color=WHITE, zorder=5)
-    lines = textwrap.wrap(name, width=14)
-    lh = 0.24
-    cy = y + (h - hdr_h) / 2 + (len(lines) - 1) * lh / 2
+            fontsize=6.2, fontweight="bold", color=WHITE, zorder=6)
+
+    # System name in body
+    lines = textwrap.wrap(name, width=13)
+    body_h = h - hdr_h
+    lh = 0.23
+    total_h = (len(lines) - 1) * lh
+    start_y = y + body_h / 2 + total_h / 2
     for i, ln in enumerate(lines):
-        ax.text(x + w / 2, cy - i * lh, ln,
+        ax.text(x + w / 2, start_y - i * lh, ln,
                 ha="center", va="center",
-                fontsize=8, fontweight="bold", color=C_DARK, zorder=5)
+                fontsize=8.0, fontweight="bold", color=C_DARK, zorder=5)
 
 
 def _arrow(ax, x1, y1, x2, y2, label=""):
