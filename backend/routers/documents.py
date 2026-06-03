@@ -287,3 +287,28 @@ issues (list of objects with issue/resolution)
     iface_id = data.get("interface_id", "TD")
     filename = f"{iface_id}_TD.docx"
     return _docx_response(content, filename)
+
+
+# ── TD + iFlow → Enhanced TD ──────────────────────────────────────────────────
+
+@router.post("/enhance-td")
+async def enhance_td(
+    td_file:   UploadFile = File(...),
+    iflow_zip: UploadFile = File(...),
+):
+    """
+    Append a Developer Implementation Guide section to an existing TD document.
+    Does NOT modify existing content — only appends a new section.
+    """
+    from services.td_enhancer import enhance_td_with_iflow
+
+    td_bytes    = await td_file.read()
+    iflow_bytes = await iflow_zip.read()
+
+    enhanced = enhance_td_with_iflow(td_bytes, iflow_bytes)
+
+    # Derive output filename from TD file
+    base = td_file.filename.replace('.docx', '') if td_file.filename else 'TD'
+    filename = f"{base}_with_DevGuide.docx"
+
+    return _docx_response(enhanced, filename)

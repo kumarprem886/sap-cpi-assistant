@@ -3,7 +3,7 @@ import { FileText, Loader2, Download, Upload, Wand2, ArrowRight, FileCode2, Chec
 import axios from 'axios'
 import { iflowAPI } from '../api/client'
 
-type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td'
+type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td' | 'enhance-td'
 
 const adapters = ['HTTP', 'HTTPS', 'SOAP', 'REST', 'OData', 'SFTP', 'JDBC', 'Mail', 'AS2', 'AMQP', 'IDoc', 'RFC']
 const processingTypes = ['IDOC', 'REST API', 'SOAP', 'File Transfer', 'RFC', 'OData', 'Event-based']
@@ -109,10 +109,33 @@ export default function DocumentGenerator() {
     } finally { setLoading(false) }
   }
 
+  // ── TD + iFlow → Enhanced TD state ────────────────────────────────────────
+  const [enhTdFile,    setEnhTdFile]    = useState<File | null>(null)
+  const [enhIflowFile, setEnhIflowFile] = useState<File | null>(null)
+  const enhTdRef    = useRef<HTMLInputElement>(null)
+  const enhIflowRef = useRef<HTMLInputElement>(null)
+
+  const handleEnhanceTd = async () => {
+    if (!enhTdFile || !enhIflowFile) return
+    setLoading(true); setError(''); setDownloadUrl(null)
+    try {
+      const form = new FormData()
+      form.append('td_file', enhTdFile)
+      form.append('iflow_zip', enhIflowFile)
+      const res = await axios.post('/api/docs/enhance-td', form, { responseType: 'blob' })
+      const cd = res.headers['content-disposition'] || ''
+      const name = cd.match(/filename=(.+)/)?.[1] || 'TD_Enhanced.docx'
+      triggerDownload(res.data, name)
+    } catch (e: any) {
+      setError('Enhancement failed. Make sure both files are valid.')
+    } finally { setLoading(false) }
+  }
+
   const tabs: { id: Tab; label: string; icon: typeof Wand2; badge?: string }[] = [
-    { id: 'fd', label: 'FD Generator', icon: FileText, badge: 'New' },
-    { id: 'fd-to-td', label: 'FD → TD', icon: ArrowRight, badge: 'New' },
-    { id: 'iflow-to-td', label: 'iFlow → TD', icon: FileCode2, badge: 'New' },
+    { id: 'fd',         label: 'FD Generator', icon: FileText,  badge: 'AI' },
+    { id: 'fd-to-td',  label: 'FD → TD',       icon: ArrowRight },
+    { id: 'iflow-to-td', label: 'iFlow → TD',  icon: FileCode2 },
+    { id: 'enhance-td', label: 'TD + iFlow',    icon: CheckCircle, badge: 'New' },
   ]
 
   return (
@@ -337,6 +360,70 @@ export default function DocumentGenerator() {
           <button className="btn-primary flex items-center gap-2" onClick={generateIFlowToTD} disabled={loading || !iflowForm.iflow_xml}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <FileCode2 size={16} />}
             {loading ? 'Generating TD from iFlow...' : 'Generate TD from iFlow (.docx)'}
+          </button>
+        </div>
+      )}
+
+      {/* ── TD + iFlow → Enhanced TD ──────────────────────────── */}
+      {tab === 'enhance-td' && (
+        <div className="card space-y-5">
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-300">
+            <p className="font-semibold mb-1">📎 TD + iFlow → Enhanced TD with Developer Guide</p>
+            <p>Upload your existing Technical Design document (TD) and the iFlow ZIP. A new <strong>"Developer Implementation Guide"</strong> section is <strong>appended</strong> — original content is untouched.</p>
+            <p className="mt-2 text-blue-400/80">The appended section includes: flow diagram · step-by-step palette config · all adapter properties · Groovy scripts · parameters table · deployment checklist.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* TD file */}
+            <div>
+              <label className="label">Existing TD Document (.docx) *</label>
+              <div
+                onClick={() => enhTdRef.current?.click()}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition-colors"
+              >
+                <FileText size={28} className="mx-auto mb-2 text-gray-500" />
+                {enhTdFile
+                  ? <p className="text-sm text-green-400 font-medium">{enhTdFile.name}</p>
+                  : <p className="text-sm text-gray-400">Click to upload TD (.docx)</p>}
+              </div>
+              <input ref={enhTdRef} type="file" accept=".docx" className="hidden"
+                onChange={e => setEnhTdFile(e.target.files?.[0] ?? null)} />
+            </div>
+
+            {/* iFlow ZIP */}
+            <div>
+              <label className="label">iFlow ZIP (exported from CPI) *</label>
+              <div
+                onClick={() => enhIflowRef.current?.click()}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 transition-colors"
+              >
+                <FileCode2 size={28} className="mx-auto mb-2 text-gray-500" />
+                {enhIflowFile
+                  ? <p className="text-sm text-green-400 font-medium">{enhIflowFile.name}</p>
+                  : <p className="text-sm text-gray-400">Click to upload iFlow (.zip)</p>}
+              </div>
+              <input ref={enhIflowRef} type="file" accept=".zip" className="hidden"
+                onChange={e => setEnhIflowFile(e.target.files?.[0] ?? null)} />
+            </div>
+          </div>
+
+          <div className="bg-gray-800/50 rounded-lg p-4 text-sm text-gray-400 space-y-1">
+            <p className="text-gray-300 font-medium">What gets appended:</p>
+            <p>✅ Flow diagram (ASCII) showing all steps and adapters in order</p>
+            <p>✅ Step-by-step palette configuration for every iFlow step</p>
+            <p>✅ All adapter connection properties (URL, auth, timeout, headers)</p>
+            <p>✅ Full Groovy script code with explanation</p>
+            <p>✅ Externalized parameters table with defaults</p>
+            <p>✅ Deployment steps checklist</p>
+          </div>
+
+          <button
+            className="btn-primary flex items-center gap-2 w-full justify-center py-3"
+            onClick={handleEnhanceTd}
+            disabled={loading || !enhTdFile || !enhIflowFile}
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+            {loading ? 'Appending Developer Guide...' : 'Append Developer Guide to TD (.docx)'}
           </button>
         </div>
       )}
