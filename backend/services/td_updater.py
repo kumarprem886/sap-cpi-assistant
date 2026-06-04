@@ -16,6 +16,167 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from services.flowchart_builder import generate_flowchart
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PACKAGE NAME DERIVATION
+# Convention:
+#   Single country → {ISO2} - {VendorName}   e.g.  IT - ITALTRANS
+#   Multi-country  → GLO - {VendorName}       e.g.  GLO - ITALTRANS
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Country keyword → ISO-2 code
+# Ordered: longer/more-specific names first to avoid short-name false matches
+_COUNTRY_MAP: list[tuple[str, str]] = [
+    # Europe
+    ("ITALY",          "IT"), ("ITAL",          "IT"), ("ITALIAN",       "IT"),
+    ("SPAIN",          "ES"), ("SPANISH",        "ES"), ("ESPANA",        "ES"),
+    ("GERMANY",        "DE"), ("GERMAN",         "DE"), ("DEUTSCH",       "DE"),
+    ("FRANCE",         "FR"), ("FRENCH",         "FR"), ("FRANCAIS",      "FR"),
+    ("POLAND",         "PL"), ("POLISH",         "PL"), ("POLSKA",        "PL"),
+    ("NETHERLANDS",    "NL"), ("DUTCH",          "NL"), ("HOLLAND",       "NL"),
+    ("BELGIUM",        "BE"), ("BELGIAN",        "BE"),
+    ("PORTUGAL",       "PT"), ("PORTUGUESE",     "PT"),
+    ("SWEDEN",         "SE"), ("SWEDISH",        "SE"),
+    ("NORWAY",         "NO"), ("NORWEGIAN",      "NO"),
+    ("DENMARK",        "DK"), ("DANISH",         "DK"),
+    ("FINLAND",        "FI"), ("FINNISH",        "FI"),
+    ("AUSTRIA",        "AT"), ("AUSTRIAN",       "AT"),
+    ("SWITZERLAND",    "CH"), ("SWISS",          "CH"),
+    ("GREECE",         "GR"), ("GREEK",          "GR"),
+    ("CZECHIA",        "CZ"), ("CZECH",          "CZ"),
+    ("HUNGARY",        "HU"), ("HUNGARIAN",      "HU"),
+    ("ROMANIA",        "RO"), ("ROMANIAN",       "RO"),
+    ("BULGARIA",       "BG"), ("BULGARIAN",      "BG"),
+    ("CROATIA",        "HR"), ("CROATIAN",       "HR"),
+    ("SLOVAKIA",       "SK"), ("SLOVAK",         "SK"),
+    ("SLOVENIA",       "SI"), ("SLOVENIAN",      "SI"),
+    ("UKRAINE",        "UA"), ("UKRAINIAN",      "UA"),
+    ("RUSSIA",         "RU"), ("RUSSIAN",        "RU"),
+    ("TURKEY",         "TR"), ("TURKISH",        "TR"),
+    ("UNITED KINGDOM", "GB"), ("UK",             "GB"), ("BRITAIN",       "GB"),
+    # Americas
+    ("UNITED STATES",  "US"), ("USA",            "US"), ("AMERICA",       "US"),
+    ("CANADA",         "CA"), ("CANADIAN",       "CA"),
+    ("MEXICO",         "MX"), ("MEXICAN",        "MX"),
+    ("BRAZIL",         "BR"), ("BRAZILIAN",      "BR"),
+    ("ARGENTINA",      "AR"), ("ARGENTINIAN",    "AR"),
+    ("CHILE",          "CL"), ("CHILEAN",        "CL"),
+    ("COLOMBIA",       "CO"), ("COLOMBIAN",      "CO"),
+    # Asia-Pacific
+    ("CHINA",          "CN"), ("CHINESE",        "CN"),
+    ("JAPAN",          "JP"), ("JAPANESE",       "JP"),
+    ("INDIA",          "IN"), ("INDIAN",         "IN"),
+    ("KOREA",          "KR"), ("KOREAN",         "KR"),
+    ("AUSTRALIA",      "AU"), ("AUSTRALIAN",     "AU"),
+    ("SINGAPORE",      "SG"), ("SINGAPOREAN",    "SG"),
+    ("MALAYSIA",       "MY"), ("MALAYSIAN",      "MY"),
+    ("INDONESIA",      "ID"), ("INDONESIAN",     "ID"),
+    ("THAILAND",       "TH"), ("THAI",           "TH"),
+    ("VIETNAM",        "VN"), ("VIETNAMESE",     "VN"),
+    # Middle East / Africa
+    ("UAE",            "AE"), ("EMIRATES",       "AE"), ("DUBAI",         "AE"),
+    ("SAUDI",          "SA"), ("ARABIA",         "SA"),
+    ("EGYPT",          "EG"), ("EGYPTIAN",       "EG"),
+    ("SOUTH AFRICA",   "ZA"),
+    ("NIGERIA",        "NG"), ("NIGERIAN",       "NG"),
+]
+
+# SAP system names to EXCLUDE from vendor detection
+_SAP_SYSTEMS = {
+    "SAP", "S4HANA", "S4", "CPI", "AEM", "BTP", "ERP", "ECC", "PI", "PO",
+    "INTEGRATION", "PROCESS", "CLOUD", "HANA", "FIORI", "ABAP", "BASIS",
+}
+
+# Prefixes to strip from vendor participant names to get clean vendor name
+_VENDOR_STRIP_PREFIXES = ("3PL", "3PL ", "SYSTEM", "PARTNER", "EXTERNAL", "RECEIVER")
+
+
+def _detect_countries(text: str) -> set[str]:
+    """Find all country ISO-2 codes mentioned in the given text."""
+    upper = text.upper()
+    found = set()
+    for keyword, iso in _COUNTRY_MAP:
+        # Word-boundary match to avoid false positives (e.g. "IT" inside "WITH")
+        if re.search(r'\b' + re.escape(keyword) + r'\b', upper):
+            found.add(iso)
+    return found
+
+
+def _extract_vendor_name(facts: dict) -> str:
+    """
+    Extract the external vendor/partner name from the iFlow facts.
+    Prefers the first non-SAP receiver participant name.
+    Falls back to extracting from the iFlow Bundle-Name.
+    """
+    # Try participants (receivers that aren't SAP systems)
+    for p in facts.get('participants', []):
+        name = p.get('name', '').strip()
+        ptype = p.get('type', '')
+        if not name or ptype == 'IntegrationProcess':
+            continue
+        name_upper = name.upper().replace('_', '')
+        if any(sap in name_upper for sap in _SAP_SYSTEMS):
+            continue
+        if name_upper in ('TRIGGERSALERTMAIL', 'TRIGGERALERTMAIL', 'MAIL', 'EMAIL'):
+            continue
+        # Strip common prefixes from vendor name
+        display = name
+        for prefix in _VENDOR_STRIP_PREFIXES:
+            if display.upper().startswith(prefix):
+                display = display[len(prefix):].strip()
+        return display.upper() if display else name.upper()
+
+    # Fallback: extract from iFlow Bundle-Name (e.g. "Send - Batch Status to 3PL ITALTRANS")
+    iflow_name = facts.get('iflow_name', '')
+    if iflow_name:
+        # Take the last word(s) — usually the vendor name
+        words = iflow_name.split()
+        for i, word in enumerate(reversed(words)):
+            w_upper = word.upper()
+            if (len(w_upper) >= 3 and
+                not any(sap in w_upper for sap in _SAP_SYSTEMS) and
+                w_upper not in ('AND', 'TO', 'FROM', 'VIA', 'THE', 'A', 'AN')):
+                return w_upper
+
+    return ''
+
+
+def derive_package_name(facts: dict) -> str:
+    """
+    Derive the CPI package name following the convention:
+      Single country  → {ISO2} - {VendorName}   e.g.  IT - ITALTRANS
+      Multi-country   → GLO - {VendorName}       e.g.  GLO - ITALTRANS
+      Unknown country → GLO - {VendorName}
+
+    Sources searched (in priority order):
+    1. iFlow Bundle-Name
+    2. metainfo.prop description
+    3. Participant names (receivers)
+    4. Step names
+    """
+    # Collect all text to search for country keywords
+    search_text = ' '.join(filter(None, [
+        facts.get('iflow_name', ''),
+        facts.get('description', ''),
+        ' '.join(p.get('name', '') for p in facts.get('participants', [])),
+        ' '.join(s.get('name', '') for s in facts.get('steps', [])),
+        ' '.join(a.get('name', '') or a.get('url', '') for a in facts.get('adapters', [])),
+    ]))
+
+    countries = _detect_countries(search_text)
+    vendor    = _extract_vendor_name(facts)
+
+    if not vendor:
+        return 'GLO'
+
+    if len(countries) == 0:
+        prefix = 'GLO'
+    elif len(countries) == 1:
+        prefix = list(countries)[0]
+    else:
+        prefix = 'GLO'
+
+    return f'{prefix} - {vendor}'
+
 # ── Colour helpers ────────────────────────────────────────────────────────────
 SAP_BLUE = RGBColor(0x00, 0x6D, 0xB3)
 SAP_DARK = RGBColor(0x1A, 0x1A, 0x2E)
@@ -413,7 +574,7 @@ def _replace_artifact_names_everywhere(doc: Document, facts: dict, appendix_data
     """
     iflow_name  = facts.get('iflow_name', '')
     mmap_name   = facts.get('mmap_name', '')
-    pkg_name    = appendix_data.get(_norm('Folder name (PO) or Package (CPI)'), '')
+    pkg_name    = derive_package_name(facts)  # e.g. "IT - ITALTRANS"
     description = facts.get('description', '')
 
     for table in doc.tables:
@@ -590,7 +751,7 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     # instead of the real iFlow Bundle-Name from the ZIP).
     iflow_name_from_zip = facts['iflow_name']
     mmap_name_from_zip  = facts['mmap_name']
-    pkg_from_appendix   = appendix_data.get(_norm('Folder name (PO) or Package (CPI)'), '')
+    pkg_from_appendix   = derive_package_name(facts)  # e.g. "IT - ITALTRANS" or "GLO - ITALTRANS"
 
     for table in doc.tables[:main_body_limit]:
         for row in table.rows:
