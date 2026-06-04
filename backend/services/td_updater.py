@@ -1337,6 +1337,23 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     ) if real_receivers else 'Target System'
     tgt_protocol = real_receivers[0]['component'] if real_receivers else 'HTTP'
 
+    # ── Build full process chain for diagram ──────────────────────────────────
+    # If the sender is SAP AEM (Event Mesh), the real end-to-end flow is:
+    #   S/4HANA → AEM → CPI → Target
+    # Detect this and prepend the upstream source system so the diagram shows
+    # the complete chain, not just AEM → CPI → Target.
+    _is_aem_sender = any(k in sender_name.lower() for k in ('aem', 'event', 'mesh'))
+    if _is_aem_sender:
+        # Try to get upstream source system from TD appendix data
+        _upstream = (appendix_data.get(_norm('Source system'), '')
+                     or appendix_data.get(_norm('Source system:'), '')
+                     or 'S/4HANA')
+        # Build explicit chain: S/4HANA → AEM → CPI → Target
+        process_flow_chain = f'{_upstream} → {sender_name} → CPI → {tgt_display}'
+    else:
+        # Single sender, let _parse_chain fall back to source_app_name / target_app_name
+        process_flow_chain = ''
+
     correct_png = None
     try:
         correct_png = generate_flowchart({
@@ -1347,6 +1364,7 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
             'target_protocol': tgt_protocol,
             'integration_logic': step_desc,
             'mapping_type':    mapping_type,
+            'process_flow':    process_flow_chain,   # full S4→AEM→CPI→Target chain
         })
         p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.add_run().add_picture(io.BytesIO(correct_png), width=Inches(6.2))
