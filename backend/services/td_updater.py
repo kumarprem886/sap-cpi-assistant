@@ -562,6 +562,440 @@ def _replace_all_occurrences(doc: Document, replacements: list[tuple[str, str]])
                     _fix_para(para)
 
 
+def _infer_step_purpose(step: dict, facts: dict) -> tuple[str, str, list[str]]:
+    """
+    Returns (purpose_sentence, developer_note, key_config_list) for a step.
+    Infers purpose from naming conventions, step type, and script content.
+    """
+    name = step.get('name', '')
+    act  = step.get('activity_type', '')
+    elem = step.get('element_type', '')
+    props = step.get('properties', {})
+    script_code = step.get('script_code', '')
+    name_upper = name.upper().replace('_', ' ').replace('-', ' ')
+
+    # ── Infer activity type from naming convention if not set ─────────────────
+    # SAP CPI naming: GS_=Groovy, CM_=Content Modifier, MM_=MessageMapping,
+    # RR_=RequestReply, MR_=MessageRouter
+    if not act:
+        nu = name.upper()
+        if nu.startswith('GS_') or nu.startswith('GS ') or 'GROOVY' in nu:
+            act = 'Script'
+        elif nu.startswith('CM_') or nu.startswith('CM '):
+            act = 'Enricher'
+        elif nu.startswith('MM_') or nu.startswith('MM ') or 'MAPPING' in nu and 'MESSAGE' in nu:
+            act = 'Mapping'
+        elif nu.startswith('RR_') or nu.startswith('RR '):
+            act = 'ExternalCall'
+        elif nu.startswith('MR_') or 'ROUTER' in nu or 'GATEWAY' in nu:
+            act = 'ExclusiveGateway'
+        elif 'JSON' in nu and 'XML' in nu:
+            act = 'JsonToXmlConverter'
+        elif 'XML' in nu and 'JSON' in nu:
+            act = 'XmlToJsonConverter'
+        elif 'REMOVE XML' in nu or 'REMOVEXML' in nu:
+            act = 'Enricher'
+
+    purpose = ''
+    dev_note = ''
+    key_config = []
+
+    # ── Start/End events ──────────────────────────────────────────────────────
+    if elem == 'startEvent':
+        if 'Error' in name:
+            purpose = 'Entry point of the Exception Subprocess. Activated whenever an uncaught exception occurs in the main integration flow.'
+            dev_note = 'SAP CPI automatically routes to this on any runtime exception.'
+        else:
+            senders = [a for a in facts.get('adapters', []) if a['direction'] == 'Sender']
+            src = senders[0]['source_ref'] if senders else 'source system'
+            comp = senders[0]['component'] if senders else 'HTTPS'
+            purpose = (f'Integration entry point. Receives the inbound message from {src} '
+                       f'via the {comp} adapter. The message arrives as a trigger from the sender system '
+                       f'and initiates the integration processing chain.')
+            dev_note = f'In the Designer: drag a Message Start Event. Connect the sender participant via a {comp} adapter messageFlow.'
+    elif elem == 'endEvent':
+        purpose = 'Marks the successful completion of the integration flow. The message has been processed and delivered.'
+        dev_note = 'Drag a Message End Event after the last processing step.'
+
+    # ── Groovy Scripts ────────────────────────────────────────────────────────
+    elif act in ('Script', 'GroovyScript'):
+        fn = step.get('script_fn', 'processData')
+        sf = step.get('script_file', '')
+
+        # Infer from name keywords
+        if 'LOGBEFORE' in name_upper or 'LOG BEFORE' in name_upper:
+            purpose = ('Captures and logs the incoming message payload BEFORE any transformation. '
+                       'Creates a Message Processing Log (MPL) attachment for audit trail and troubleshooting. '
+                       'Only active when ENABLE_PAYLOAD_LOGGING parameter is set to TRUE.')
+            dev_note = 'Set ENABLE_PAYLOAD_LOGGING=TRUE in test environments. Keep FALSE in production for performance.'
+            key_config = ['Parameter: ENABLE_PAYLOAD_LOGGING (TRUE/FALSE)', f'Script: {sf}', f'Function: {fn}']
+
+        elif 'LOGAFTER' in name_upper or 'LOG AFTER' in name_upper:
+            purpose = ('Captures and logs the transformed message payload AFTER mapping/conversion. '
+                       'Allows comparison of before/after state in the MPL for debugging. '
+                       'Controlled by the same ENABLE_PAYLOAD_LOGGING parameter.')
+            key_config = ['Parameter: ENABLE_PAYLOAD_LOGGING (TRUE/FALSE)', f'Script: {sf}']
+
+        elif 'LOGEXCEPTION' in name_upper or 'LOG EXCEPTION' in name_upper or 'LOGPAYLOAD' in name_upper and 'Exception' in name:
+            purpose = ('Logs the failed payload and full exception stack trace into the MPL when an error occurs. '
+                       'Provides developers and operations with the exact payload that caused the failure '
+                       'for root cause analysis and manual retry decisions.')
+            key_config = [f'Script: {sf}', 'Logs: ErrorMessage, ErrorClass, FailedPayload attachment']
+
+        elif 'SETEXCEPTION' in name_upper or 'SET EXCEPTION' in name_upper:
+            purpose = ('Extracts the exception details (error class, error message) from the caught exception '
+                       'and sets them as message properties. These properties are then used by the email '
+                       'notification step to include meaningful error information in the alert.')
+            key_config = ['Sets: ErrorMessage, ErrorClass properties', f'Script: {sf}']
+
+        elif 'SETPROP' in name_upper or 'SET PROP' in name_upper:
+            purpose = 'Sets required message properties for downstream processing.'
+            key_config = [f'Script: {sf}', f'Function: {fn}']
+
+        else:
+            # Read first meaningful comment from script code
+            desc_from_code = ''
+            if script_code:
+                for line in script_code.split('\n')[:20]:
+                    line = line.strip()
+                    if line.startswith('//') or line.startswith('*') or line.startswith('/**'):
+                        clean = line.lstrip('/* ').rstrip(' */')
+                        if len(clean) > 20 and not clean.startswith('@'):
+                            desc_from_code = clean
+                            break
+
+            purpose = desc_from_code or f'Groovy script step: {name}. Performs custom processing logic.'
+            dev_note = f'Script file: {sf}, function: {fn}(Message msg)'
+            key_config = [f'Script: {sf}', f'Function: {fn}']
+
+    # ── Content Modifier (Enricher) ───────────────────────────────────────────
+    elif act == 'Enricher':
+        header_tbl = props.get('headerTable', '')
+        prop_tbl   = props.get('propertyTable', '')
+
+        # Extract what's being set
+        headers_set = re.findall(r"<cell id='Name'>([^<]+)</cell>", header_tbl)
+        props_set   = re.findall(r"<cell id='Name'>([^<]+)</cell>", prop_tbl)
+
+        if 'DELETE' in name_upper or 'REMOVE HEADER' in name_upper:
+            purpose = ('Removes all HTTP headers inherited from the incoming message. '
+                       'This is a best practice in SAP CPI to prevent unwanted headers '
+                       '(e.g., Authorization, Content-Type from AEM) from being passed to downstream receivers. '
+                       'Ensures the adapter configurations control the outbound headers, not the inbound ones.')
+            dev_note = 'In Content Modifier: Message Header tab → set Action=Delete for all headers, or use a wildcard.'
+
+        elif 'SETATTR' in name_upper or 'SET ATTR' in name_upper or 'SETATTRIB' in name_upper:
+            if props_set:
+                purpose = (f'Sets message properties required for processing: {", ".join(props_set[:6])}. '
+                           'These properties are used by downstream steps for routing, adapter configuration, '
+                           'and monitoring. Must be set before the routing gateway.')
+            else:
+                purpose = 'Sets message attributes (properties/headers) required for downstream processing and adapter configuration.'
+            if props_set:
+                key_config = [f'Sets properties: {", ".join(props_set[:5])}']
+            if headers_set:
+                key_config.append(f'Sets headers: {", ".join(headers_set[:5])}')
+            dev_note = 'Content Modifier: Exchange Properties tab. Use expressions like ${header.x} or ${property.y}.'
+
+        elif 'CUSTOMSTATUS' in name_upper or 'UPDATE' in name_upper and 'STATUS' in name_upper:
+            purpose = ('Updates the SAP_MessageProcessingLogCustomStatus property, which is used by '
+                       'SAP Cloud ALM and Message Monitor for operational tracking. '
+                       'Setting a meaningful status (e.g., COMPLETED with business key) allows the '
+                       'operations team to search and filter messages by business context.')
+            status_val = re.search(r"Value'>(COMPLETED[^<]*)</cell>", prop_tbl)
+            if status_val:
+                key_config = [f'Status value: {status_val.group(1)[:60]}']
+            dev_note = 'Required for Cloud ALM integration. Property: SAP_MessageProcessingLogCustomStatus'
+
+        elif 'SETBODY' in name_upper or 'SET BODY' in name_upper:
+            purpose = 'Sets or transforms the message body content for the outbound payload.'
+            dev_note = 'Content Modifier: Body tab. Can use expressions or fixed content.'
+
+        elif headers_set or props_set:
+            all_set = (headers_set + props_set)[:6]
+            purpose = f'Content Modifier that sets the following: {", ".join(all_set)}.'
+            key_config = [f'Headers set: {", ".join(headers_set[:3])}'] if headers_set else []
+            if props_set: key_config.append(f'Properties set: {", ".join(props_set[:3])}')
+
+        else:
+            purpose = f'Content Modifier step: {name}. Configures message headers and/or properties.'
+
+    # ── Message Mapping ───────────────────────────────────────────────────────
+    elif act == 'Mapping':
+        mmap = step.get('script_file', '') or facts.get('mmap_name', '')
+        xsds = facts.get('xsd_files', [])
+        src_xsd = next((x for x in xsds if not x.startswith('Z_')), xsds[0] if xsds else '')
+        tgt_xsd = next((x for x in xsds if x.startswith('Z_')), xsds[-1] if xsds else '')
+        purpose = (f'Performs the structural IDoc-to-IDoc message mapping using the '
+                   f'SAP CPI Graphical Message Mapping artifact "{mmap}". '
+                   f'Transforms the standard SAP format ({src_xsd}) into the customer-specific '
+                   f'format ({tgt_xsd}) required by the receiver. '
+                   f'Field mappings include {len(facts.get("mmap_dst_fields", []))} target fields '
+                   f'from {len(facts.get("mmap_src_fields", []))} source fields.')
+        dev_note = (f'Message Mapping artifact "{mmap}" must be deployed separately in the same CPI package '
+                    f'before this iFlow can be deployed. Upload the .mmap ZIP to the package first.')
+        key_config = [f'Mapping: {mmap}', f'Source XSD: {src_xsd}', f'Target XSD: {tgt_xsd}']
+
+    # ── JSON/XML Converters ───────────────────────────────────────────────────
+    elif 'JsonToXml' in act or 'JSON' in name_upper and 'XML' in name_upper:
+        purpose = ('Converts the incoming JSON payload (as sent by SAP Advanced Event Mesh) '
+                   'into XML format. SAP CPI IDoc processing and message mapping require XML format. '
+                   'AEM events are typically published in JSON; this step bridges the format gap.')
+        dev_note = 'Palette: Call → JSON to XML Converter. No configuration usually needed.'
+
+    elif 'XmlToJson' in act:
+        purpose = 'Converts XML payload to JSON format for JSON-based receiver systems.'
+        dev_note = 'Palette: Call → XML to JSON Converter.'
+
+    # ── Router / Gateway ──────────────────────────────────────────────────────
+    elif elem == 'exclusiveGateway':
+        seqs = [f for f in facts.get('sequence_flows', [])
+                if f.get('source') == step.get('id', '') and f.get('condition')]
+        purpose = (f'Content-Based Router that evaluates conditions on message properties or headers '
+                   f'to route the message to the correct downstream target. '
+                   f'{"Conditions: " + "; ".join(f["condition"] for f in seqs[:3]) if seqs else "Routing conditions are configured on the outgoing sequence flows."}')
+        dev_note = ('Palette: Routing → Router. Add outgoing routes. '
+                    'Set condition type to Non-XML and write property expressions like ${property.receiverNumber} = "1".')
+        if seqs:
+            key_config = [f'Route "{f["name"]}": {f["condition"]}'
+                          for f in seqs[:5] if f.get('name') and f.get('condition')]
+
+    # ── Request Reply (Service Task) ──────────────────────────────────────────
+    elif elem == 'serviceTask' or act == 'ExternalCall':
+        adapters_for_step = [a for a in facts.get('adapters', [])
+                              if a.get('source_ref') == step.get('id', '')
+                              or a.get('name', '').replace(' ','') in name.replace(' ','')]
+        if adapters_for_step:
+            a = adapters_for_step[0]
+            comp = a.get('component', 'unknown')
+            tgt  = a.get('target_ref', '')
+            purpose = (f'Request Reply step that delivers the message to the receiver system "{tgt}" '
+                       f'using the {comp} adapter. This is the outbound delivery step where the '
+                       f'transformed payload is sent to the target. '
+                       f'{"Credential alias: " + a["credential"] if a.get("credential") else ""}')
+            dev_note = f'Palette: Call → Request Reply. Use a bpmn2:serviceTask (NOT callActivity). Connect to {tgt} participant via {comp} adapter messageFlow.'
+            cred = a.get('credential', '')
+            url  = a.get('url', '')
+            if cred: key_config.append(f'Credential alias: {cred}')
+            if url:  key_config.append(f'Endpoint: {url[:60]}')
+            key_config.append(f'Adapter: {comp}')
+        elif 'MAIL' in name_upper or 'ALERT' in name_upper or 'EMAIL' in name_upper:
+            purpose = ('Sends an email notification to the operations team when the integration fails. '
+                       'Uses ProcessDirect to call a dedicated email-sending iFlow, keeping the error '
+                       'notification logic separate from the main integration.')
+            dev_note = 'ProcessDirect adapter: set address to match the consumer iFlow sender address.'
+            key_config = ['Adapter: ProcessDirect', 'Calls: Email notification sub-iFlow']
+        else:
+            purpose = f'Outbound call step: {name}. Sends the message to the receiver.'
+            key_config = [act]
+
+    elif act == 'Send':
+        adapters_for_step = [a for a in facts.get('adapters', [])
+                              if a.get('source_ref') == step.get('id', '')]
+        if adapters_for_step:
+            a = adapters_for_step[0]
+            purpose = (f'One-way send step that delivers the file/message to the receiver using {a.get("component","SFTP")} adapter. '
+                       f'Unlike Request Reply, this does not wait for a response.')
+        else:
+            purpose = f'Outbound send step: {name}.'
+
+    # ── Exception Subprocess ──────────────────────────────────────────────────
+    elif act == 'ErrorEventSubProcessTemplate' or 'subprocess' in elem.lower():
+        purpose = ('Exception Subprocess that catches ALL unhandled runtime exceptions from the main flow. '
+                   'It runs automatically when any step in the main flow throws an exception. '
+                   'Best practice in SAP CPI: always include an exception subprocess for proper '
+                   'error logging, alerting, and MPL status management.')
+        dev_note = ('Palette: Call → Exception Subprocess. Place at the bottom of the canvas. '
+                    'Do NOT add triggeredByEvent=true attribute.')
+
+    # ── Remove XML declaration ────────────────────────────────────────────────
+    elif 'REMOVEXML' in name_upper or 'REMOVE XML' in name_upper or 'XML DEFINIT' in name_upper:
+        purpose = ('Removes the XML declaration header (<?xml version="1.0" encoding="UTF-8"?>) '
+                   'from the message payload. Some AS2 or B2B receivers cannot process messages '
+                   'with an XML declaration prefix and expect raw content. '
+                   'This step ensures compatibility with strict receiver requirements.')
+        dev_note = 'Typically implemented as a Content Modifier with a Groovy expression on the Body tab.'
+
+    # ── Fallback ──────────────────────────────────────────────────────────────
+    if not purpose:
+        label = STEP_LABELS.get(act, elem)
+        purpose = f'{label} step "{name}". Performs processing as part of the integration flow.'
+
+    return purpose, dev_note, key_config
+
+
+def _build_narrative_steps(doc: Document, facts: dict, senders: list, receivers: list):
+    """
+    Build the main step-by-step narrative section.
+    Each step gets a paragraph describing WHAT it does, WHY, and key config for development.
+    """
+    # ── Section heading ────────────────────────────────────────────────────────
+    h3 = doc.add_heading('Step-by-Step Processing Guide', level=2)
+    for r in h3.runs: r.font.color.rgb = SAP_BLUE
+
+    _add_para(doc,
+        'This section documents every step in the iFlow in execution order. '
+        'A developer should follow these steps in SAP Integration Suite Designer '
+        'to implement or recreate the iFlow from scratch.',
+        size=10, color=MID_GREY)
+    doc.add_paragraph()
+
+    # ── Sender adapter narrative (before Step 1) ──────────────────────────────
+    if senders:
+        a = senders[0]
+        h_send = doc.add_heading('Sender Adapter Configuration', level=3)
+        for r in h_send.runs: r.font.color.rgb = RGBColor(0x00, 0x6B, 0x9F)
+        _add_para(doc,
+            f'The iFlow is triggered by the sender system "{a["source_ref"]}" using the '
+            f'{a["component"]} adapter. This defines HOW the message enters CPI.',
+            size=10, bold=False)
+        if a.get('url'):
+            _add_para(doc, f'Endpoint path: {a["url"]}', size=9, color=MID_GREY, indent=0.5)
+        if a.get('credential'):
+            _add_para(doc, f'Authentication: credential alias "{a["credential"]}"', size=9, color=MID_GREY, indent=0.5)
+        doc.add_paragraph()
+
+    # ── Separate main flow from error handling ─────────────────────────────────
+    main_steps = [s for s in facts['steps']
+                  if s['element_type'] not in ('endEvent',)
+                  and not ('Error' in s.get('name','') and s['element_type'] == 'startEvent')
+                  and s.get('name')]
+
+    error_steps = [s for s in facts['steps']
+                   if (('Error' in s.get('name','') or 'Exception' in s.get('name',''))
+                       and s['element_type'] not in ('endEvent',)
+                       and s.get('name'))
+                   or s.get('activity_type') == 'ErrorEventSubProcessTemplate']
+
+    # Remove error steps from main using NAME matching (IDs may be empty)
+    error_names = {s.get('name','').strip() for s in error_steps if s.get('name','').strip()}
+    main_steps = [s for s in main_steps if s.get('name','').strip() not in error_names]
+
+    # ── Main flow steps ────────────────────────────────────────────────────────
+    h_main = doc.add_heading('Main Processing Flow', level=3)
+    for r in h_main.runs: r.font.color.rgb = GREEN
+
+    step_num = 1
+    for s in main_steps:
+        elem  = s['element_type']
+        act   = s.get('activity_type', '')
+        name  = s['name']
+        label = STEP_LABELS.get(act, elem.replace('Event','').title())
+
+        purpose, dev_note, key_config = _infer_step_purpose(s, facts)
+
+        # Step heading
+        color = ('1A8A5A' if 'Event' in elem
+                 else 'CC7700' if elem == 'exclusiveGateway'
+                 else '1A1A2E')
+        t = doc.add_table(rows=1, cols=2); t.style = 'Table Grid'
+        c0 = t.rows[0].cells[0]; c0.text = f'Step {step_num}'; c0.width = Cm(2.5)
+        c1 = t.rows[0].cells[1]; c1.text = f'{name}  [{label}]'; c1.width = Cm(15)
+        for ci, col_hex in [(c0, color),(c1, color)]:
+            _shd(ci, col_hex)
+            ci.paragraphs[0].runs[0].font.bold = True
+            ci.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF,0xFF,0xFF)
+            ci.paragraphs[0].runs[0].font.size = Pt(10)
+        step_num += 1
+
+        # Purpose
+        _add_para(doc, purpose, size=10, indent=0.3)
+
+        # Key config
+        if key_config:
+            for cfg in key_config:
+                _add_para(doc, f'  - {cfg}', size=9, color=MID_GREY)
+
+        # Developer note
+        if dev_note:
+            _add_para(doc, f'Developer note: {dev_note}', size=9, color=AMBER, indent=0.3)
+
+        doc.add_paragraph()
+
+    # ── Receiver adapter narrative ─────────────────────────────────────────────
+    real_receivers = [a for a in receivers if a.get('component') not in ('ProcessDirect',)]
+    if real_receivers:
+        h_recv = doc.add_heading('Receiver Adapter Configuration', level=3)
+        for r in h_recv.runs: r.font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
+        for a in real_receivers:
+            _add_para(doc,
+                f'Delivers the transformed message to "{a["target_ref"]}" via the {a["component"]} adapter.',
+                size=10, bold=True)
+            if a.get('url'):
+                _add_para(doc, f'  Endpoint: {a["url"]}', size=9, color=MID_GREY)
+            if a.get('credential'):
+                _add_para(doc, f'  Credential alias: "{a["credential"]}" (create in CPI Security Material before deploying)',
+                          size=9, color=AMBER)
+            doc.add_paragraph()
+
+    # ── Exception handling ─────────────────────────────────────────────────────
+    if error_steps:
+        h_err = doc.add_heading('Exception Handling Flow', level=3)
+        for r in h_err.runs: r.font.color.rgb = RED_C
+
+        _add_para(doc,
+            'The following steps run ONLY when an exception occurs in the main flow. '
+            'They are contained inside the Exception Subprocess at the bottom of the iFlow canvas.',
+            size=10, color=MID_GREY)
+        doc.add_paragraph()
+
+        for s in error_steps:
+            if s.get('activity_type') == 'ErrorEventSubProcessTemplate':
+                continue  # container, skip
+            elem  = s['element_type']
+            act   = s.get('activity_type', '')
+            name  = s.get('name','')
+            if not name: continue
+            label = STEP_LABELS.get(act, elem.replace('Event','').title())
+            purpose, dev_note, key_config = _infer_step_purpose(s, facts)
+
+            t = doc.add_table(rows=1, cols=2); t.style = 'Table Grid'
+            c0 = t.rows[0].cells[0]; c0.text = f'EX'; c0.width = Cm(1.5)
+            c1 = t.rows[0].cells[1]; c1.text = f'{name}  [{label}]'; c1.width = Cm(16)
+            for ci in (c0, c1):
+                _shd(ci, 'C02C2C')
+                ci.paragraphs[0].runs[0].font.bold = True
+                ci.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF,0xFF,0xFF)
+                ci.paragraphs[0].runs[0].font.size = Pt(10)
+
+            _add_para(doc, purpose, size=10, indent=0.3)
+            if key_config:
+                for cfg in key_config:
+                    _add_para(doc, f'  - {cfg}', size=9, color=MID_GREY)
+            if dev_note:
+                _add_para(doc, f'Developer note: {dev_note}', size=9, color=AMBER, indent=0.3)
+            doc.add_paragraph()
+
+    # ── Externalized parameters (condensed, only required ones) ───────────────
+    params = facts.get('parameters', [])
+    required_params = [p for p in params if p.get('required')]
+    optional_params = [p for p in params if not p.get('required')]
+
+    if params:
+        h_params = doc.add_heading('Configuration Parameters', level=3)
+        for r in h_params.runs: r.font.color.rgb = SAP_BLUE
+        _add_para(doc,
+            'The following parameters must be configured in CPI after import: '
+            'iFlow → Configure → Parameters tab.',
+            size=10, color=MID_GREY)
+
+        if required_params:
+            _add_para(doc, 'Required (must fill before deploying):', bold=True, size=10)
+            _add_table(doc,
+                ['Parameter Name', 'Description'],
+                [(p['name'], p['description'][:80] if p['description'] else 'Set before deploying')
+                 for p in required_params[:20]],
+                col_widths=[6, 11.5])
+
+        if optional_params:
+            _add_para(doc, f'Optional ({len(optional_params)} parameters — set as needed):', bold=False, size=9, color=MID_GREY)
+            _add_table(doc,
+                ['Parameter Name', 'Description'],
+                [(p['name'], p['description'][:80] if p['description'] else '')
+                 for p in optional_params[:15]],
+                col_widths=[6, 11.5])
+
+
 def _replace_artifact_names_everywhere(doc: Document, facts: dict, appendix_data: dict):
     """
     Scan every cell in every table in the document.
@@ -862,52 +1296,8 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
 
     doc.add_paragraph()
 
-    # ── Step-by-step table ────────────────────────────────────────────────────
-    h3 = doc.add_heading('Step-by-Step Configuration', level=2)
-    for r in h3.runs: r.font.color.rgb = SAP_BLUE
-
-    step_rows = []
-    step_num = 1
-    for s in facts['steps']:
-        if s['element_type'] in ('endEvent',): continue
-        if 'Error' in s.get('name','') and s['element_type'] == 'startEvent': continue
-        label = STEP_LABELS.get(s['activity_type'], s['element_type'].replace('Event','').title())
-        step_rows.append((
-            str(step_num),
-            s['name'],
-            label,
-            s.get('script_file', '') or '',
-            s.get('cmd_uri', '').split('/')[-1] if s.get('cmd_uri') else '',
-        ))
-        step_num += 1
-
-    _add_table(doc,
-        ['#', 'Step Name', 'Type', 'Script / Artifact', 'Version'],
-        step_rows, col_widths=[1, 6, 3, 4.5, 3])
-
-    # ── Adapters ──────────────────────────────────────────────────────────────
-    h4 = doc.add_heading('Adapters', level=2)
-    for r in h4.runs: r.font.color.rgb = SAP_BLUE
-
-    adapter_rows = []
-    for a in facts['adapters']:
-        direction = a['direction']
-        sys_ref   = a['source_ref'] if direction == 'Sender' else a['target_ref']
-        adapter_rows.append((direction, sys_ref, a['component'],
-                             a['url'][:50] if a['url'] else '', a['credential']))
-    _add_table(doc,
-        ['Direction', 'System', 'Adapter', 'URL / Endpoint', 'Credential Alias'],
-        adapter_rows, col_widths=[2.5, 3.5, 2.5, 5.5, 3.5])
-
-    # ── Parameters ───────────────────────────────────────────────────────────
-    if facts['parameters']:
-        h5 = doc.add_heading('Externalized Parameters', level=2)
-        for r in h5.runs: r.font.color.rgb = SAP_BLUE
-        _add_table(doc,
-            ['Parameter Name', 'Required', 'Description'],
-            [(p['name'], 'Yes' if p['required'] else 'No', p['description'])
-             for p in facts['parameters'][:30]],
-            col_widths=[6, 2, 9.5])
+    # ── Narrative step-by-step guide ──────────────────────────────────────────
+    _build_narrative_steps(doc, facts, senders, receivers)
 
     # ── Message Mapping ───────────────────────────────────────────────────────
     if facts['mmap_name']:
