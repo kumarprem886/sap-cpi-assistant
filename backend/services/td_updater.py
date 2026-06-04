@@ -15,6 +15,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from services.flowchart_builder import generate_flowchart
+from services.iflow_parser import parse_iflow_zip as _parse_iflow_zip_full
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PACKAGE NAME DERIVATION
@@ -606,9 +607,10 @@ def _infer_step_purpose(step: dict, facts: dict) -> tuple[str, str, list[str]]:
             purpose = 'Entry point of the Exception Subprocess. Activated whenever an uncaught exception occurs in the main integration flow.'
             dev_note = 'SAP CPI automatically routes to this on any runtime exception.'
         else:
-            senders = [a for a in facts.get('adapters', []) if a['direction'] == 'Sender']
-            src = senders[0]['source_ref'] if senders else 'source system'
-            comp = senders[0]['component'] if senders else 'HTTPS'
+            _senders = [a for a in facts.get('adapters', []) if a['direction'] == 'Sender']
+            src  = (_senders[0].get('source_name') or _senders[0].get('system','')
+                    or 'source system') if _senders else 'source system'
+            comp = _senders[0]['component'] if _senders else 'HTTPS'
             purpose = (f'Integration entry point. Receives the inbound message from {src} '
                        f'via the {comp} adapter. The message arrives as a trigger from the sender system '
                        f'and initiates the integration processing chain.')
@@ -763,7 +765,7 @@ def _infer_step_purpose(step: dict, facts: dict) -> tuple[str, str, list[str]]:
     # ── Request Reply (Service Task) ──────────────────────────────────────────
     elif elem == 'serviceTask' or act == 'ExternalCall':
         adapters_for_step = [a for a in facts.get('adapters', [])
-                              if a.get('source_ref') == step.get('id', '')
+                              if a.get('source_name') or a.get('source_ref','') == step.get('id', '')
                               or a.get('name', '').replace(' ','') in name.replace(' ','')]
         if adapters_for_step:
             a = adapters_for_step[0]
@@ -791,7 +793,7 @@ def _infer_step_purpose(step: dict, facts: dict) -> tuple[str, str, list[str]]:
 
     elif act == 'Send':
         adapters_for_step = [a for a in facts.get('adapters', [])
-                              if a.get('source_ref') == step.get('id', '')]
+                              if a.get('source_name') or a.get('source_ref','') == step.get('id', '')]
         if adapters_for_step:
             a = adapters_for_step[0]
             purpose = (f'One-way send step that delivers the file/message to the receiver using {a.get("component","SFTP")} adapter. '
@@ -846,7 +848,7 @@ def _build_narrative_steps(doc: Document, facts: dict, senders: list, receivers:
         h_send = doc.add_heading('Sender Adapter Configuration', level=3)
         for r in h_send.runs: r.font.color.rgb = RGBColor(0x00, 0x6B, 0x9F)
         _add_para(doc,
-            f'The iFlow is triggered by the sender system "{a["source_ref"]}" using the '
+            f'The iFlow is triggered by the sender system "{a.get("source_name") or a.get("source_ref","")}" using the '
             f'{a["component"]} adapter. This defines HOW the message enters CPI.',
             size=10, bold=False)
         if a.get('url'):
@@ -919,7 +921,7 @@ def _build_narrative_steps(doc: Document, facts: dict, senders: list, receivers:
         for r in h_recv.runs: r.font.color.rgb = RGBColor(0x1A, 0x1A, 0x2E)
         for a in real_receivers:
             _add_para(doc,
-                f'Delivers the transformed message to "{a["target_ref"]}" via the {a["component"]} adapter.',
+                f'Delivers the transformed message to "{a.get("target_name") or a.get("target_ref","")}" via the {a["component"]} adapter.',
                 size=10, bold=True)
             if a.get('url'):
                 _add_para(doc, f'  Endpoint: {a["url"]}', size=9, color=MID_GREY)
@@ -1086,6 +1088,17 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     """
     doc   = Document(io.BytesIO(td_bytes))
     facts = _extract_iflow_facts(iflow_zip_bytes)
+    # Overlay adapter and step data from parse_iflow_zip which correctly
+    # maps participant IDs → names (source_name/target_name) and infers direction.
+    # _extract_iflow_facts is kept for mmap/xsd/script fields.
+    try:
+        _parsed = _parse_iflow_zip_full(iflow_zip_bytes)
+        if _parsed.get('adapters'):
+            facts['adapters'] = _parsed['adapters']
+        if _parsed.get('steps'):
+            facts['steps'] = _parsed['steps']
+    except Exception:
+        pass  # fall back to _extract_iflow_facts data if parse fails
     appendix_data = _extract_appendix_data(doc)
 
     # ── Step 0: Extract what the TD currently has (to know what to replace) ──
@@ -1136,6 +1149,28 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
 
     if replacements:
         _replace_all_occurrences(doc, replacements)
+
+    # ── Step 0c: Targeted fix for Mapping table ───────────────────────────────
+    # After global replacement, the Mapping table rows (16) may now have the
+    # iFlow name where they should have the mmap name.
+    # Fix: in any table with a "Mapping" header, replace iFlow name → mmap name.
+    if iflow_name and mmap_name:
+        for table in doc.tables:
+            # Check if this table has a "Mapping" header
+            first_row_text = ' '.join(c.text.strip() for c in table.rows[0].cells) if table.rows else ''
+            if 'Mapping' not in first_row_text:
+                continue
+            # In this mapping table, replace iFlow name with mmap name
+            fix_pairs = [
+                (iflow_name, mmap_name),
+                (f'Artifact: {iflow_name} (CPI)', f'Artifact: {mmap_name} (CPI)'),
+                (f'Artifact: {iflow_name}', f'Artifact: {mmap_name}'),
+            ]
+            for row in table.rows:
+                for cell in row.cells:
+                    for old_t, new_t in fix_pairs:
+                        if old_t in cell.text:
+                            _replace_text_in_cell(cell, old_t, new_t)
 
     # ── Build override dict from actual iFlow ZIP facts ───────────────────────
     overrides = {}
@@ -1231,15 +1266,39 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
                     if 'name' in nf and len(nf) < 15:
                         _set_cell(val_cell, mmap_name_from_zip)
 
+    # ── Step FINAL: Re-apply Mapping table fix after all other fills ─────────
+    # The appendix fill / hard-replace may have re-set iFlow name into Mapping
+    # table cells. Run the targeted replacement one final time as the last op
+    # so the mmap name is authoritative in all Mapping tables.
+    if iflow_name_from_zip and mmap_name_from_zip:
+        fix_pairs_final = [
+            (iflow_name_from_zip, mmap_name_from_zip),
+            (f'Artifact: {iflow_name_from_zip} (CPI)', f'Artifact: {mmap_name_from_zip} (CPI)'),
+            (f'Artifact: {iflow_name_from_zip}', f'Artifact: {mmap_name_from_zip}'),
+        ]
+        for table in doc.tables:
+            first_row_text = ' '.join(c.text.strip() for c in table.rows[0].cells) if table.rows else ''
+            if 'Mapping' not in first_row_text:
+                continue
+            for row in table.rows:
+                for cell in row.cells:
+                    for old_t, new_t in fix_pairs_final:
+                        if old_t in cell.text:
+                            _replace_text_in_cell(cell, old_t, new_t)
+
     # ── Add new page with iFlow Design Steps ─────────────────────────────────
     doc.add_page_break()
 
     h = doc.add_heading('iFlow Design – Technical Steps', level=1)
     for r in h.runs: r.font.color.rgb = SAP_BLUE
 
+    # Use iflow_name (Bundle-Name) which is now set by parse_iflow_zip
+    iflow_display_name = facts.get('iflow_name') or facts.get('name', 'Integration Process')
+    pkg_name = derive_package_name(facts)
+
     _add_para(doc,
-        f'iFlow: {facts["iflow_name"]} | Version: {facts["iflow_version"]} | '
-        f'Package: {appendix_data.get(_norm("Folder name (PO) or Package (CPI)"), "TBD")}',
+        f'iFlow: {iflow_display_name} | Version: {facts.get("iflow_version","1.0")} | '
+        f'Package: {pkg_name}',
         size=9, color=MID_GREY)
     _add_para(doc, facts['description'], size=10)
     doc.add_paragraph()
@@ -1261,36 +1320,32 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     mapping_type = ('Groovy' if any(a in ('Script','GroovyScript') for a in act_types)
                     else 'Message Mapping' if 'Mapping' in act_types else '')
 
-    src_name = senders[0]['source_ref']   if senders   else 'SAP_AEM'
-    # Get participant name for sender
-    sender_participant = next((p['name'] for p in facts['participants']
-                               if p['type'] == 'EndpointSender'), src_name)
+    # Adapters from parse_iflow_zip use source_name/target_name (not source_ref/target_ref)
+    sender_name = (senders[0].get('source_name') or senders[0].get('name','')
+                   or 'Source System') if senders else 'Source System'
+    sender_comp = senders[0]['component'] if senders else 'HTTPS'
 
-    tgt_names = ', '.join(
-        f"{r['target_ref']} {r['component']}" for r in receivers
-        if r['component'] not in ('ProcessDirect',)
-    ) if receivers else 'Target'
-
-    # Map participant refs to actual names
-    part_names = {p['name']: p['name'] for p in facts['participants']}
-    # Use component name for target classification
+    # Real receivers = exclude ProcessDirect (internal, not external target)
+    real_receivers = [r for r in receivers if r.get('component') not in ('ProcessDirect',)]
     tgt_display = ', '.join(
-        f"{next((p['name'] for p in facts['participants'] if p['name'] == r['target_ref']), r['target_ref'])} {r['component']}"
-        for r in receivers if r['component'] not in ('ProcessDirect',)
-    ) if receivers else 'Target'
+        f"{r.get('target_name') or r.get('name','')} {r['component']}"
+        for r in real_receivers
+    ) if real_receivers else 'Target System'
+    tgt_protocol = real_receivers[0]['component'] if real_receivers else 'HTTP'
 
+    correct_png = None
     try:
-        png = generate_flowchart({
-            'interface_name':  facts['iflow_name'],
-            'source_app_name': sender_participant,
-            'source_protocol': senders[0]['component'] if senders else 'HTTPS',
-            'target_app_name': tgt_display or tgt_names,
-            'target_protocol': receivers[0]['component'] if receivers else 'AS2',
+        correct_png = generate_flowchart({
+            'interface_name':  iflow_display_name,
+            'source_app_name': sender_name,
+            'source_protocol': sender_comp,
+            'target_app_name': tgt_display,
+            'target_protocol': tgt_protocol,
             'integration_logic': step_desc,
             'mapping_type':    mapping_type,
         })
         p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.add_run().add_picture(io.BytesIO(png), width=Inches(6.2))
+        p.add_run().add_picture(io.BytesIO(correct_png), width=Inches(6.2))
     except Exception as e:
         _add_para(doc, f'[Diagram error: {e}]', size=9, color=RED_C)
 
@@ -1353,4 +1408,28 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     # ── Save ─────────────────────────────────────────────────────────────────
     out = io.BytesIO()
     doc.save(out)
-    return out.getvalue()
+    raw = out.getvalue()
+
+    # ── Replace existing flowchart diagram(s) in the DOCX ZIP ────────────────
+    # The original TD may already have an embedded diagram (large PNG) showing
+    # wrong source/target names. Replace all large PNGs with the correct diagram
+    # we generated above, so there are no stale diagrams left in the document.
+    if correct_png:   # diagram was generated successfully above
+        try:
+            import zipfile as _zf
+            buf2 = io.BytesIO()
+            with _zf.ZipFile(io.BytesIO(raw), 'r') as zin, \
+                 _zf.ZipFile(buf2, 'w', compression=_zf.ZIP_DEFLATED) as zout:
+                for item in zin.infolist():
+                    data = zin.read(item.filename)
+                    # Replace any large PNG (>30 KB) that is an embedded flowchart diagram
+                    if (item.filename.startswith('word/media/') and
+                            item.filename.lower().endswith('.png') and
+                            len(data) > 30000):
+                        data = correct_png  # replace with the freshly generated correct diagram
+                    zout.writestr(item, data)
+            return buf2.getvalue()
+        except Exception:
+            pass  # fall back to unmodified saved bytes
+
+    return raw

@@ -23,6 +23,20 @@ def parse_iflow_zip(zip_bytes: bytes) -> dict:
             return {}
         xml_text = z.read(iflw_files[0]).decode('utf-8', errors='replace')
 
+        # MANIFEST.MF → Bundle-Name (real iFlow name) + Bundle-Version
+        bundle_name    = ''
+        bundle_version = ''
+        for fn in files:
+            if 'MANIFEST.MF' in fn:
+                mf = z.read(fn).decode('utf-8', errors='replace')
+                # MANIFEST lines can be wrapped with a leading space on continuation lines
+                mf_clean = re.sub(r'\n ', '', mf)   # join continuation lines
+                bn = re.search(r'^Bundle-Name:\s*(.+)', mf_clean, re.MULTILINE)
+                bv = re.search(r'^Bundle-Version:\s*(.+)', mf_clean, re.MULTILINE)
+                if bn: bundle_name    = bn.group(1).strip()
+                if bv: bundle_version = bv.group(1).strip()
+                break
+
         # metainfo.prop → description
         description = ''
         for pf in files:
@@ -69,6 +83,15 @@ def parse_iflow_zip(zip_bytes: bytes) -> dict:
 
         # Parse the iflw XML
         result = _parse_iflw_xml(xml_text, scripts, parameters, description)
+
+        # Add Bundle-Name as iflow_name (preferred over BPMN process name)
+        if bundle_name:
+            result['iflow_name']    = bundle_name
+            result['iflow_version'] = bundle_version
+        else:
+            result['iflow_name']    = result.get('name', '')
+            result['iflow_version'] = ''
+
         return result
 
 
