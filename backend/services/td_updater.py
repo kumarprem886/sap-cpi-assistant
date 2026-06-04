@@ -1396,6 +1396,58 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
     # ── Narrative step-by-step guide ──────────────────────────────────────────
     _build_narrative_steps(doc, facts, senders, receivers)
 
+    # ── Message Mapping — embedded Excel OLE object ───────────────────────────
+    _ole_ids = None   # will be set if we successfully prepare an OLE embed
+    _xlsx_bytes = None
+    if facts.get('mmap_name'):
+        try:
+            from services.mapping_excel import generate_mapping_excel
+            _xlsx_result = generate_mapping_excel(iflow_zip_bytes)
+            if _xlsx_result:
+                _xlsx_bytes, _xlsx_embed_name = _xlsx_result
+                import uuid as _uuid
+                _rId_obj   = f"rIdMmap{_uuid.uuid4().hex[:8]}"
+                _shape_id  = f"_x0000_i{_uuid.uuid4().int % 90000 + 10000}"
+                _obj_id    = f"_{_uuid.uuid4().int % 2000000000}"
+
+                doc.add_page_break()
+                h_mm = doc.add_heading('Message Mapping', level=2)
+                for r in h_mm.runs: r.font.color.rgb = SAP_BLUE
+                _add_para(doc,
+                    f'Artifact: {facts["mmap_name"]}.mmap  —  '
+                    'Double-click the icon below to open the full mapping specification.',
+                    size=9, color=MID_GREY)
+                doc.add_paragraph()
+
+                # Add OLE placeholder paragraph via lxml
+                _p = doc.add_paragraph()
+                _p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                from lxml import etree as _ET
+                _NS_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+                _NS_V = 'urn:schemas-microsoft-com:vml'
+                _NS_O = 'urn:schemas-microsoft-com:office:office'
+                _NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+                _obj_xml = (
+                    f'<w:object xmlns:w="{_NS_W}" xmlns:v="{_NS_V}" '
+                    f'xmlns:o="{_NS_O}" xmlns:r="{_NS_R}" '
+                    f'w:dxaOrig="9180" w:dyaOrig="5760">'
+                    f'<v:shape id="{_shape_id}" type="#_x0000_t75" '
+                    f'style="width:5in;height:3in" o:ole=""/>'
+                    f'<o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" '
+                    f'ShapeID="{_shape_id}" DrawAspect="Icon" '
+                    f'ObjectID="{_obj_id}" r:id="{_rId_obj}"/>'
+                    f'</w:object>'
+                )
+                _r_elem = _ET.SubElement(_p._p, qn('w:r'))
+                _r_elem.append(_ET.fromstring(_obj_xml))
+
+                _ole_ids = {
+                    'rId_obj':   _rId_obj,
+                    'embed_name': _xlsx_embed_name,
+                }
+        except Exception as _exc:
+            _add_para(doc, f'[Mapping embed error: {_exc}]', size=9, color=RED_C)
+
     # ── Groovy Scripts ────────────────────────────────────────────────────────
     if facts['scripts']:
         h7 = doc.add_heading('Groovy Scripts', level=2)
@@ -1423,11 +1475,8 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
     doc.save(out)
     raw = out.getvalue()
 
-    # ── Replace existing flowchart diagram(s) in the DOCX ZIP ────────────────
-    # The original TD may already have an embedded diagram (large PNG) showing
-    # wrong source/target names. Replace all large PNGs with the correct diagram
-    # we generated above, so there are no stale diagrams left in the document.
-    if correct_png:   # diagram was generated successfully above
+    # ── ZIP surgery: replace diagrams + embed mapping Excel OLE ─────────────
+    if correct_png or _ole_ids:
         try:
             import zipfile as _zf
             buf2 = io.BytesIO()
@@ -1435,12 +1484,44 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                  _zf.ZipFile(buf2, 'w', compression=_zf.ZIP_DEFLATED) as zout:
                 for item in zin.infolist():
                     data = zin.read(item.filename)
-                    # Replace any large PNG (>30 KB) that is an embedded flowchart diagram
-                    if (item.filename.startswith('word/media/') and
-                            item.filename.lower().endswith('.png') and
-                            len(data) > 30000):
-                        data = correct_png  # replace with the freshly generated correct diagram
+                    fn   = item.filename
+
+                    # ① Replace stale flowchart PNGs with correct diagram
+                    if (correct_png and fn.startswith('word/media/') and
+                            fn.lower().endswith('.png') and len(data) > 30000):
+                        data = correct_png
+
+                    # ② Inject OLE relationship for embedded Excel
+                    elif _ole_ids and fn == 'word/_rels/document.xml.rels':
+                        data = data.decode('utf-8')
+                        new_rel = (
+                            f'<Relationship Id="{_ole_ids["rId_obj"]}" '
+                            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject" '
+                            f'Target="embeddings/{_ole_ids["embed_name"]}"/>'
+                        )
+                        data = data.replace('</Relationships>', new_rel + '</Relationships>')
+                        data = data.encode('utf-8')
+
+                    # ③ Register xlsx content-type so Word recognises it
+                    elif _ole_ids and fn == '[Content_Types].xml':
+                        data = data.decode('utf-8')
+                        ct = ('application/vnd.openxmlformats-officedocument'
+                              '.spreadsheetml.sheet')
+                        if 'xlsx' not in data:
+                            data = data.replace('</Types>',
+                                f'<Default Extension="xlsx" ContentType="{ct}"/>'
+                                '</Types>')
+                        data = data.encode('utf-8')
+
                     zout.writestr(item, data)
+
+                # ④ Write embedded xlsx file into the docx package
+                if _ole_ids and _xlsx_bytes:
+                    zout.writestr(
+                        f'word/embeddings/{_ole_ids["embed_name"]}',
+                        _xlsx_bytes,
+                    )
+
             return buf2.getvalue()
         except Exception:
             pass  # fall back to unmodified saved bytes

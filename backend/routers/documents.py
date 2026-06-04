@@ -358,40 +358,15 @@ async def update_td(
 ):
     """
     Update an existing TD document with iFlow ZIP data — ZERO AI.
-    Returns a ZIP containing:
-      - <TD name>_Updated.docx  — the filled-in Technical Design document
-      - <MappingName>_MappingSpec.xlsx  — mapping spec Excel (if iFlow has an .mmap)
+    The mapping Excel (.xlsx) is embedded as an OLE object inside the returned DOCX.
     """
-    import zipfile as _zf
     from services.td_updater import update_td_with_iflow
-    from services.mapping_excel import generate_mapping_excel
-
     td_bytes    = await td_file.read()
     iflow_bytes = await iflow_zip.read()
-
-    docx_bytes = update_td_with_iflow(td_bytes, iflow_bytes, author=author)
-    xlsx_result = generate_mapping_excel(iflow_bytes)   # (bytes, name) | None
-
+    result   = update_td_with_iflow(td_bytes, iflow_bytes, author=author)
     base     = (td_file.filename or "TD").replace(".docx", "")
-    docx_name = f"{base}_Updated.docx"
-
-    if xlsx_result:
-        # Bundle DOCX + XLSX in a single ZIP for one-click download
-        xlsx_bytes, xlsx_name = xlsx_result
-        buf = BytesIO()
-        with _zf.ZipFile(buf, 'w', compression=_zf.ZIP_DEFLATED) as zout:
-            zout.writestr(docx_name,  docx_bytes)
-            zout.writestr(xlsx_name,  xlsx_bytes)
-        buf.seek(0)
-        zip_name = f"{base}_Updated.zip"
-        return StreamingResponse(
-            buf,
-            media_type="application/zip",
-            headers={"Content-Disposition": f'attachment; filename="{zip_name}"'},
-        )
-    else:
-        # No mapping found — return just the DOCX
-        return _docx_response(docx_bytes, docx_name)
+    filename = f"{base}_Updated.docx"
+    return _docx_response(result, filename)
 
 
 @router.post("/mapping-excel")
