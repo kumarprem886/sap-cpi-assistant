@@ -224,10 +224,31 @@ def _extract_appendix_data(doc: Document) -> dict:
     return data
 
 
+# Labels where we ALWAYS replace the current value (even if not empty)
+# because the TD may have wrong placeholder names from the FD
+_ALWAYS_REPLACE_LABELS = {
+    'iflow',           # IFlow name
+    'artifact',        # Artifact (CPI)
+    'package',         # Package / Folder name
+    'folder',          # Folder name (PO)
+    'mappingname',     # Mapping name row
+    'mmapping',        # Mapping name
+    'description',     # iFlow description
+    'mode',            # Asynchronous/Synchronous
+    'bundlename',      # Bundle name
+    'artifactname',    # Artifact name
+}
+
+def _should_always_replace(norm_label: str) -> bool:
+    """Return True if this label's value should always be replaced from iFlow ZIP."""
+    return any(k in norm_label for k in _ALWAYS_REPLACE_LABELS)
+
+
 def _fill_table_from_appendix(table, appendix_data: dict, overrides: dict = None):
     """
     For each row in a main-body table:
-    If first cell matches a label in appendix_data AND second cell is empty → fill it.
+    - If label is in ALWAYS_REPLACE list → replace regardless of current value
+    - If cell is empty or has a placeholder → fill from appendix / overrides
     overrides: {normalized_label: value} that takes priority over appendix.
     """
     for row in table.rows:
@@ -249,7 +270,12 @@ def _fill_table_from_appendix(table, appendix_data: dict, overrides: dict = None
             continue
 
         current_val = value_cell.text.strip()
-        # Only fill if currently empty or contains template placeholder
+        norm_label  = _norm(label_text)
+
+        # Always replace for iFlow-critical fields (iFlow name, package, mmap name, description)
+        force_replace = _should_always_replace(norm_label) and bool(overrides)
+
+        # For other fields: only fill if empty or placeholder
         is_empty = (not current_val or
                     current_val.startswith('[TBD') or
                     current_val.startswith('Example:') or
@@ -259,10 +285,10 @@ def _fill_table_from_appendix(table, appendix_data: dict, overrides: dict = None
                     current_val.startswith('TBF') or
                     current_val.startswith('upon receiving'))
 
-        if not is_empty:
+        if not is_empty and not force_replace:
             continue
 
-        # Check overrides first, then appendix
+        # Check overrides first (iFlow ZIP data), then appendix
         new_val = None
         if overrides:
             for ok, ov in overrides.items():
@@ -331,6 +357,128 @@ STEP_LABELS = {
 }
 
 
+def _replace_text_in_cell(cell, old_text: str, new_text: str):
+    """Replace text in all runs of all paragraphs in a cell."""
+    for para in cell.paragraphs:
+        full = ''.join(r.text for r in para.runs)
+        if old_text in full:
+            new_full = full.replace(old_text, new_text)
+            if para.runs:
+                para.runs[0].text = new_full
+                for r in para.runs[1:]:
+                    r.text = ''
+            else:
+                para.add_run(new_full)
+
+
+def _replace_all_occurrences(doc: Document, replacements: list[tuple[str, str]]):
+    """
+    Replace ALL occurrences of old→new text across EVERY run in EVERY paragraph
+    in EVERY table cell and regular paragraph in the document.
+    replacements: list of (old_text, new_text)
+    """
+    def _fix_para(para):
+        for old, new in replacements:
+            full = ''.join(r.text for r in para.runs)
+            if old in full:
+                new_full = full.replace(old, new)
+                if para.runs:
+                    para.runs[0].text = new_full
+                    for r in para.runs[1:]:
+                        r.text = ''
+                else:
+                    para.add_run(new_full)
+
+    # Regular paragraphs
+    for para in doc.paragraphs:
+        _fix_para(para)
+
+    # Table cells
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    _fix_para(para)
+
+
+def _replace_artifact_names_everywhere(doc: Document, facts: dict, appendix_data: dict):
+    """
+    Scan every cell in every table in the document.
+    Replace wrong/placeholder artifact names with correct names from iFlow ZIP.
+
+    Targets:
+    - Any cell whose label-row says 'IFlow', 'Artifact', 'Package', 'Folder name',
+      'Name:' (in mapping context), 'Description'
+    - The value cell in that row gets the correct name
+    """
+    iflow_name  = facts.get('iflow_name', '')
+    mmap_name   = facts.get('mmap_name', '')
+    pkg_name    = appendix_data.get(_norm('Folder name (PO) or Package (CPI)'), '')
+    description = facts.get('description', '')
+
+    for table in doc.tables:
+        for row in table.rows:
+            cells = row.cells
+            if not cells:
+                continue
+
+            # Get first cell as the label, subsequent non-merged cells as values
+            label = cells[0].text.strip()
+            if not label:
+                continue
+            nf = _norm(label)
+
+            # Collect unique value cells
+            value_cells = []
+            seen_texts = {cells[0].text}
+            for c in cells[1:]:
+                if c.text not in seen_texts:
+                    seen_texts.add(c.text)
+                    value_cells.append(c)
+
+            if not value_cells:
+                continue
+            val_cell = value_cells[0]
+            curr = val_cell.text.strip()
+
+            # ── iFlow name rows ───────────────────────────────────────────────
+            if iflow_name and ('iflow' in nf or ('artifact' in nf and 'cpi' in nf)):
+                if curr and curr != iflow_name:
+                    _set_cell(val_cell, iflow_name)
+
+            # ── Package / Folder name rows ────────────────────────────────────
+            elif pkg_name and ('folder' in nf or 'package' in nf):
+                if curr and curr != pkg_name:
+                    _set_cell(val_cell, pkg_name)
+
+            # ── Description rows (iFlow description) ─────────────────────────
+            elif description and nf == _norm('Description:'):
+                if not curr or curr.startswith('[') or len(curr) < 20:
+                    _set_cell(val_cell, description)
+
+            # ── Mapping name rows ─────────────────────────────────────────────
+            # Replace if cell looks like an old wrong mapping/artifact name
+            elif mmap_name:
+                is_name_row = 'name' in nf and len(nf) <= len(_norm('Name:') + 'softwarecomponentversion')
+                if is_name_row and curr:
+                    looks_like_wrong_name = (
+                        curr.startswith('MM_') or
+                        curr.startswith('GLO') or
+                        (len(curr) > 5 and not curr.startswith('[') and
+                         not curr.startswith('http') and
+                         not curr.startswith('This') and
+                         any(sep in curr for sep in ('_', '-')) and
+                         curr != mmap_name)
+                    )
+                    if looks_like_wrong_name:
+                        _set_cell(val_cell, mmap_name)
+
+            # ── Artifact: <name> (CPI) rows ───────────────────────────────────
+            elif mmap_name and 'artifactnamespace' in nf or ('artifact' in nf and 'cpi' in nf and 'namespace' not in nf):
+                if curr and curr != f'Artifact: {mmap_name} (CPI)' and 'Artifact:' in curr:
+                    _set_cell(val_cell, f'Artifact: {mmap_name} (CPI)')
+
+
 def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     """
     Update an existing TD document with iFlow ZIP data.
@@ -341,9 +489,58 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     - Adds SAP-themed flow diagram
     ZERO AI — 100% deterministic.
     """
-    doc = Document(io.BytesIO(td_bytes))
+    doc   = Document(io.BytesIO(td_bytes))
     facts = _extract_iflow_facts(iflow_zip_bytes)
     appendix_data = _extract_appendix_data(doc)
+
+    # ── Step 0: Extract what the TD currently has (to know what to replace) ──
+    # Collect all "wrong" artifact names already in the document that need replacing.
+    # We collect every cell value in the iFlow artifact and mapping tables
+    # and replace any that differ from the correct ZIP names.
+    existing_iflow_names = set()
+    existing_mmap_names  = set()
+
+    for table in doc.tables:
+        for row in table.rows:
+            cells = row.cells
+            if not cells: continue
+            for cell in cells:
+                t = cell.text.strip()
+                # Looks like an iFlow artifact name (CamelCase, no spaces, starts with Send/Receive/Map etc.)
+                if (len(t) > 8 and ' ' not in t and
+                    any(t.startswith(p) for p in ('Send','Receive','Get','Post','Map','I_','GLO','MM_',
+                                                    'FDMAP','TDMAP','Inbound','Outbound'))):
+                    # It's a candidate wrong name if it's NOT the correct names
+                    if t != facts['iflow_name'] and t != facts['mmap_name']:
+                        if any(kw in cell.text for kw in ['Batch','Stock','MBGMCR','ITALTRANS','Italtrans',
+                                                            'BatchStatus','StockStatus']):
+                            if t.startswith('MM_'):
+                                existing_mmap_names.add(t)
+                            else:
+                                existing_iflow_names.add(t)
+
+    # ── Step 0b: Build replacement list and do a full document text replacement
+    replacements = []
+    iflow_name = facts.get('iflow_name', '')
+    mmap_name  = facts.get('mmap_name', '')
+
+    # Replace wrong iFlow names with correct one
+    if iflow_name:
+        for wrong in existing_iflow_names:
+            if wrong and wrong != iflow_name:
+                replacements.append((wrong, iflow_name))
+        # Also replace "Artifact: {wrong} (CPI)" → "Artifact: {iflow_name} (CPI)"
+        for wrong in existing_iflow_names:
+            replacements.append((f'Artifact: {wrong} (CPI)', f'Artifact: {iflow_name} (CPI)'))
+
+    # Replace wrong mmap names with correct one
+    if mmap_name:
+        for wrong in existing_mmap_names:
+            if wrong and wrong != mmap_name:
+                replacements.append((wrong, mmap_name))
+
+    if replacements:
+        _replace_all_occurrences(doc, replacements)
 
     # ── Build override dict from actual iFlow ZIP facts ───────────────────────
     overrides = {}
@@ -356,6 +553,12 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
         overrides[_norm('Name:')] = facts['mmap_name']
     if facts['iflow_version']:
         overrides[_norm('Version')] = facts['iflow_version']
+
+    # ── Full-document name replacement ────────────────────────────────────────
+    # BEFORE filling tables, do a direct find-and-replace of wrong names
+    # across ALL cells in ALL tables. This catches names that were copied
+    # from the FD into the TD and are now incorrect.
+    _replace_artifact_names_everywhere(doc, facts, appendix_data)
 
     # ── Fill each main body table from appendix data + overrides ─────────────
     # Appendix tables are the last ~14 tables; main body is everything before
@@ -381,7 +584,14 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
                             _set_cell(c, step_summary)
                     break
 
-    # ── Special: fill iFlow artifact table (Table 15) precisely ──────────────
+    # ── Hard replace: iFlow name, package, mapping name in ALL tables ────────
+    # These must be replaced regardless of current cell content because
+    # the TD may have wrong names from FD (e.g. SendBatchAndStockStatusToItaltrans
+    # instead of the real iFlow Bundle-Name from the ZIP).
+    iflow_name_from_zip = facts['iflow_name']
+    mmap_name_from_zip  = facts['mmap_name']
+    pkg_from_appendix   = appendix_data.get(_norm('Folder name (PO) or Package (CPI)'), '')
+
     for table in doc.tables[:main_body_limit]:
         for row in table.rows:
             cells = row.cells
@@ -390,26 +600,41 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
             if not first: continue
             nf = _norm(first)
 
-            # Package name
-            if 'folder' in nf or 'package' in nf:
-                for c in cells[1:]:
-                    if c != cells[0] and (not c.text.strip() or c.text.strip().startswith('[')):
-                        pkg = appendix_data.get(_norm('Folder name (PO) or Package (CPI)'), '')
-                        if pkg: _set_cell(c, pkg)
-                        break
+            # Get the value cell (first non-merged cell after label)
+            val_cell = None
+            for c in cells[1:]:
+                if c.text.strip() != cells[0].text.strip():
+                    val_cell = c
+                    break
+            if not val_cell:
+                continue
 
-            # iFlow name
-            elif 'iflow' in nf or 'artifact' in nf:
-                for c in cells[1:]:
-                    if c != cells[0] and (not c.text.strip() or c.text.strip().startswith('[')):
-                        _set_cell(c, facts['iflow_name'] or appendix_data.get(_norm('IFlow (PO) or Artifact (CPI)'), ''))
-                        break
+            # Package / Folder name → ALWAYS replace with appendix value
+            if ('folder' in nf or 'package' in nf) and pkg_from_appendix:
+                _set_cell(val_cell, pkg_from_appendix)
 
-            # Mode
-            elif 'mode' in nf and ('async' in nf or 'synchron' in nf or len(nf) < 10):
-                # Keep as-is (checkbox field), don't overwrite
+            # iFlow / Artifact name → ALWAYS replace with ZIP Bundle-Name
+            elif ('iflow' in nf or ('artifact' in nf and 'cpi' in nf)) and iflow_name_from_zip:
+                _set_cell(val_cell, iflow_name_from_zip)
 
-                pass
+            # iFlow Description → ALWAYS replace with metainfo.prop description
+            elif nf == _norm('Description:') and facts['description']:
+                _set_cell(val_cell, facts['description'])
+
+            # Mapping Name rows → ALWAYS replace with actual mmap name from ZIP
+            elif mmap_name_from_zip and val_cell.text.strip():
+                # If the cell looks like an old mapping name (starts with MM_ or SendBatch...)
+                curr = val_cell.text.strip()
+                is_old_mapping_name = (
+                    (curr.startswith('MM_') or curr.startswith('Send') or
+                     curr.startswith('FDMAP') or curr.startswith('TDMAP'))
+                    and 'Artifact:' not in curr
+                    and any(k in nf for k in ('name', 'artifact', 'mapping'))
+                )
+                if is_old_mapping_name:
+                    # Only replace if the label suggests it's a mapping name field
+                    if 'name' in nf and len(nf) < 15:
+                        _set_cell(val_cell, mmap_name_from_zip)
 
     # ── Add new page with iFlow Design Steps ─────────────────────────────────
     doc.add_page_break()
