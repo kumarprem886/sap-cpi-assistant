@@ -319,6 +319,8 @@ def _classify(label: str):
     return C_STEP_DEF, C_DARK
 
 def _extract_steps(data: dict) -> list[str]:
+    if data.get("show_steps") is False:
+        return []   # caller requested no internal step detail in CPI box
     logic = (data.get("integration_logic", "") + " " +
              data.get("processing_description", "") + " " +
              data.get("iflow_description", "")).lower()
@@ -498,6 +500,8 @@ HDR_H  = 0.38      # CPI title bar height
 
 
 def _cpi_height(steps: list[str]) -> float:
+    if not steps:
+        return SYS_H  # simple box, same height as sender/receiver
     n = len(steps)
     return (HDR_H + 0.35          # title + padding
             + EVT_R * 2 + STEP_G  # start event
@@ -513,10 +517,18 @@ def _draw_cpi_box(ax, x, y, w, h, steps: list[str]):
         boxstyle="round,pad=0.0,rounding_size=0.18",
         facecolor=C_LIGHT_BG, edgecolor=C_BLUE, linewidth=2.0, zorder=1,
     ))
-    ax.text(x + w / 2, y + h - HDR_H / 2,
+    ax.text(x + w / 2, y + h / 2 + 0.12,
             "SAP Cloud Platform Integration",
             ha="center", va="center",
             fontsize=8.5, fontweight="bold", color=C_BLUE, zorder=2)
+
+    if not steps:
+        # Simple mode: just a clean labeled box, no BPMN flow inside
+        ax.text(x + w / 2, y + h / 2 - 0.18,
+                "SAP CPI",
+                ha="center", va="center",
+                fontsize=7.5, color=C_GRAY, style="italic", zorder=2)
+        return
 
     cx = x + w / 2
     cur_y = y + h - HDR_H - 0.30

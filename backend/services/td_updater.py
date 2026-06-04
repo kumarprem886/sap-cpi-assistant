@@ -141,7 +141,7 @@ def _extract_vendor_name(facts: dict) -> str:
     return ''
 
 
-def derive_package_name(facts: dict) -> str:
+def derive_package_name(facts: dict, extra_text: str = '') -> str:
     """
     Derive the CPI package name following the convention:
       Single country  → {ISO2} - {VendorName}   e.g.  IT - ITALTRANS
@@ -153,6 +153,7 @@ def derive_package_name(facts: dict) -> str:
     2. metainfo.prop description
     3. Participant names (receivers)
     4. Step names
+    5. extra_text (e.g. TD appendix data — contains "Target system: Italy Italtrans 3PL")
     """
     # Collect all text to search for country keywords
     search_text = ' '.join(filter(None, [
@@ -161,6 +162,7 @@ def derive_package_name(facts: dict) -> str:
         ' '.join(p.get('name', '') for p in facts.get('participants', [])),
         ' '.join(s.get('name', '') for s in facts.get('steps', [])),
         ' '.join(a.get('name', '') or a.get('url', '') for a in facts.get('adapters', [])),
+        extra_text,
     ]))
 
     countries = _detect_countries(search_text)
@@ -1077,13 +1079,12 @@ def _replace_artifact_names_everywhere(doc: Document, facts: dict, appendix_data
                     _set_cell(val_cell, f'Artifact: {mmap_name} (CPI)')
 
 
-def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
+def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = '') -> bytes:
     """
     Update an existing TD document with iFlow ZIP data.
     - Fills main body tables from Appendix data
     - Overrides iFlow artifact fields from ZIP MANIFEST
     - Adds iFlow Design Steps section
-    - Adds Message Mapping field table
     - Adds SAP-themed flow diagram
     ZERO AI — 100% deterministic.
     """
@@ -1202,21 +1203,19 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     for i, table in enumerate(doc.tables[:main_body_limit]):
         _fill_table_from_appendix(table, appendix_data, overrides)
 
-    # ── Special: fill Integration Logic table (Table 14 ~) with step summary ─
-    step_summary = ' → '.join(
-        s['name'] for s in facts['steps']
-        if s['element_type'] not in ('endEvent', 'startEvent')
-        and 'Error' not in s.get('name', '')
-        and s.get('name')
-    )
-    if step_summary:
+    # ── Fill author name if provided ──────────────────────────────────────────
+    if author and author.strip():
         for table in doc.tables[:main_body_limit]:
             for row in table.rows:
-                if any('Integration flow' in c.text for c in row.cells):
-                    for c in row.cells:
-                        if 'Integration flow' not in c.text and (not c.text.strip() or c.text.strip().startswith('Example')):
-                            _set_cell(c, step_summary)
+                cells = row.cells
+                if len(cells) >= 2 and 'Author' in cells[0].text and len(cells[0].text.strip()) < 10:
+                    val_cell = cells[1]
+                    if val_cell != cells[0]:
+                        _set_cell(val_cell, author.strip())
                     break
+
+    # NOTE: Integration Flow step summary intentionally NOT injected —
+    # the existing TD content for "Integration flow:" is preserved as-is.
 
     # ── Hard replace: iFlow name, package, mapping name in ALL tables ────────
     # These must be replaced regardless of current cell content because
@@ -1224,7 +1223,9 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     # instead of the real iFlow Bundle-Name from the ZIP).
     iflow_name_from_zip = facts['iflow_name']
     mmap_name_from_zip  = facts['mmap_name']
-    pkg_from_appendix   = derive_package_name(facts)  # e.g. "IT - ITALTRANS" or "GLO - ITALTRANS"
+    # Pass appendix text so country detection finds "Italy" from "Italy Italtrans 3PL"
+    _appendix_text = ' '.join(str(v) for v in appendix_data.values())
+    pkg_from_appendix   = derive_package_name(facts, extra_text=_appendix_text)
 
     for table in doc.tables[:main_body_limit]:
         for row in table.rows:
@@ -1290,6 +1291,25 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
                         if old_t in cell.text:
                             _replace_text_in_cell(cell, old_t, new_t)
 
+    # ── Fix "Within Sender" monitoring section ────────────────────────────────
+    # If the real sender is S/4HANA (via AEM), the template may say "Third Party System"
+    # which is wrong. Correct it to reflect SAP system monitoring.
+    _real_sender = appendix_data.get(_norm('Source system'), '') or 'S/4HANA'
+    _is_s4_sender = any(k in _real_sender.upper() for k in ('S4', 'S/4', 'HANA', 'ECC', 'ERP'))
+    if _is_s4_sender:
+        for table in doc.tables[:main_body_limit]:
+            header_text = table.rows[0].cells[0].text.strip() if table.rows else ''
+            if 'Within Sender' in header_text:
+                for row in table.rows:
+                    cells = row.cells
+                    if len(cells) >= 2:
+                        label = cells[0].text.strip()
+                        val   = cells[1].text.strip()
+                        # Fix "Third Party System" → SAP system monitoring text
+                        if 'Monitoring' in label and val in ('Third Party System', 'Third party System', 'Third Party'):
+                            _set_cell(cells[1], f'SAP {_real_sender} system monitoring (Transaction SXMB_MONI / Cloud ALM)')
+                break
+
     # ── Add new page with iFlow Design Steps ─────────────────────────────────
     doc.add_page_break()
 
@@ -1298,7 +1318,7 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
 
     # Use iflow_name (Bundle-Name) which is now set by parse_iflow_zip
     iflow_display_name = facts.get('iflow_name') or facts.get('name', 'Integration Process')
-    pkg_name = derive_package_name(facts)
+    pkg_name = derive_package_name(facts, extra_text=_appendix_text)
 
     _add_para(doc,
         f'iFlow: {iflow_display_name} | Version: {facts.get("iflow_version","1.0")} | '
@@ -1331,8 +1351,9 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
 
     # Real receivers = exclude ProcessDirect (internal, not external target)
     real_receivers = [r for r in receivers if r.get('component') not in ('ProcessDirect',)]
+    # Use only the system name (not the adapter protocol) in the diagram box label
     tgt_display = ', '.join(
-        f"{r.get('target_name') or r.get('name','')} {r['component']}"
+        (r.get('target_name') or r.get('name','') or 'Target').strip()
         for r in real_receivers
     ) if real_receivers else 'Target System'
     tgt_protocol = real_receivers[0]['component'] if real_receivers else 'HTTP'
@@ -1362,9 +1383,8 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
             'source_protocol': sender_comp,
             'target_app_name': tgt_display,
             'target_protocol': tgt_protocol,
-            'integration_logic': step_desc,
-            'mapping_type':    mapping_type,
             'process_flow':    process_flow_chain,   # full S4→AEM→CPI→Target chain
+            'show_steps':      False,                # clean CPI box, no internal steps
         })
         p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.add_run().add_picture(io.BytesIO(correct_png), width=Inches(6.2))

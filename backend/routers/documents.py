@@ -354,20 +354,40 @@ IMPORTANT for diagram fields:
 async def update_td(
     td_file:   UploadFile = File(...),
     iflow_zip: UploadFile = File(...),
+    author:    str = Form(""),
 ):
     """
     Update an existing TD document with iFlow ZIP data — ZERO AI.
     - Copies Appendix data to main body sections
     - Fills iFlow name, mmap name, description from actual ZIP
-    - Adds iFlow design steps, diagram, mapping table, scripts
+    - Adds iFlow design steps, diagram
     """
     from services.td_updater import update_td_with_iflow
     td_bytes    = await td_file.read()
     iflow_bytes = await iflow_zip.read()
-    result   = update_td_with_iflow(td_bytes, iflow_bytes)
+    result   = update_td_with_iflow(td_bytes, iflow_bytes, author=author)
     base     = (td_file.filename or "TD").replace(".docx", "")
     filename = f"{base}_Updated.docx"
     return _docx_response(result, filename)
+
+
+@router.post("/mapping-excel")
+async def mapping_excel(
+    iflow_zip: UploadFile = File(...),
+):
+    """Generate a mapping specification Excel file from an iFlow ZIP."""
+    from services.mapping_excel import generate_mapping_excel
+    iflow_bytes = await iflow_zip.read()
+    result = generate_mapping_excel(iflow_bytes)
+    if not result:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="No message mapping (.mmap) found in iFlow ZIP")
+    xlsx_bytes, filename = result
+    return StreamingResponse(
+        BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/iflow-to-td-noai")

@@ -112,6 +112,7 @@ export default function DocumentGenerator() {
   // â”€â”€ TD + iFlow  to  Enhanced TD state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [enhTdFile,    setEnhTdFile]    = useState<File | null>(null)
   const [enhIflowFile, setEnhIflowFile] = useState<File | null>(null)
+  const [updateAuthor, setUpdateAuthor] = useState('')
   const enhTdRef    = useRef<HTMLInputElement>(null)
   const enhIflowRef = useRef<HTMLInputElement>(null)
 
@@ -590,35 +591,72 @@ export default function DocumentGenerator() {
             </div>
           </div>
 
+          {/* Author name */}
+          <div>
+            <label className="label">Author Name (optional)</label>
+            <input
+              className="input-field"
+              placeholder="Your full name — written into the TD Author field"
+              value={updateAuthor}
+              onChange={e => setUpdateAuthor(e.target.value)}
+            />
+          </div>
+
           {/* Status chips when both uploaded */}
           {enhTdFile && enhIflowFile && (
             <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/40 rounded-lg px-3 py-2">
               <CheckCircle size={13} className="text-green-400" />
-              Both files ready  -  click below to generate the updated TD
+              Both files ready — click below to generate the updated TD
             </div>
           )}
 
-          <button
-            className="btn-primary flex items-center gap-2 w-full justify-center py-2.5"
-            onClick={async () => {
-              if (!enhTdFile || !enhIflowFile) return
-              setLoading(true); setError(''); setDownloadUrl(null)
-              try {
-                const form = new FormData()
-                form.append('td_file',   enhTdFile)
-                form.append('iflow_zip', enhIflowFile)
-                const res = await axios.post('/api/docs/update-td', form, { responseType: 'blob' })
-                const cd  = res.headers['content-disposition'] || ''
-                const name = cd.match(/filename=(.+)/)?.[1] || 'TD_Updated.docx'
-                triggerDownload(res.data, name)
-              } catch (e: any) {
-                setError('Update failed. Check the files are valid.')
-              } finally { setLoading(false) }
-            }}
-            disabled={loading || !enhTdFile || !enhIflowFile}>
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-            {loading ? 'Updating TD...' : 'Update TD with iFlow Details (.docx)'}
-          </button>
+          {/* Action buttons */}
+          <div className="flex gap-3">
+            <button
+              className="btn-primary flex items-center gap-2 flex-1 justify-center py-2.5"
+              onClick={async () => {
+                if (!enhTdFile || !enhIflowFile) return
+                setLoading(true); setError(''); setDownloadUrl(null)
+                try {
+                  const form = new FormData()
+                  form.append('td_file',   enhTdFile)
+                  form.append('iflow_zip', enhIflowFile)
+                  if (updateAuthor.trim()) form.append('author', updateAuthor.trim())
+                  const res = await axios.post('/api/docs/update-td', form, { responseType: 'blob' })
+                  const cd  = res.headers['content-disposition'] || ''
+                  const name = cd.match(/filename=(.+)/)?.[1] || 'TD_Updated.docx'
+                  triggerDownload(res.data, name)
+                } catch (e: any) {
+                  setError('Update failed. Check the files are valid.')
+                } finally { setLoading(false) }
+              }}
+              disabled={loading || !enhTdFile || !enhIflowFile}>
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+              {loading ? 'Updating TD...' : 'Update TD (.docx)'}
+            </button>
+
+            <button
+              className="btn-secondary flex items-center gap-2 justify-center py-2.5 px-4 text-sm"
+              title="Download mapping specification as Excel"
+              onClick={async () => {
+                if (!enhIflowFile) return
+                setLoading(true); setError('')
+                try {
+                  const form = new FormData()
+                  form.append('iflow_zip', enhIflowFile)
+                  const res = await axios.post('/api/docs/mapping-excel', form, { responseType: 'blob' })
+                  const cd  = res.headers['content-disposition'] || ''
+                  const name = cd.match(/filename=(.+)/)?.[1] || 'MappingSpec.xlsx'
+                  triggerDownload(res.data, name)
+                } catch (e: any) {
+                  setError('No mapping found in this iFlow ZIP, or generation failed.')
+                } finally { setLoading(false) }
+              }}
+              disabled={loading || !enhIflowFile}>
+              <Download size={15} />
+              Mapping Excel
+            </button>
+          </div>
         </div>
       )}
 
