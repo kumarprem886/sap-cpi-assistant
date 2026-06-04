@@ -538,7 +538,7 @@ export default function DocumentGenerator() {
                     <p className="text-xs text-gray-500">{(enhTdFile.size / 1024).toFixed(0)} KB</p>
                   </div>
                   <button onClick={e => { e.stopPropagation(); setEnhTdFile(null) }}
-                    className="text-gray-500 hover:text-red-400 flex-shrink-0 text-base leading-none">âœ•</button>
+                    className="text-gray-500 hover:text-red-400 flex-shrink-0 text-sm leading-none font-bold">x</button>
                 </div>
               ) : (
                 <div onClick={() => enhTdRef.current?.click()}
@@ -570,7 +570,7 @@ export default function DocumentGenerator() {
                     <p className="text-xs text-gray-500">{(enhIflowFile.size / 1024).toFixed(0)} KB</p>
                   </div>
                   <button onClick={e => { e.stopPropagation(); setEnhIflowFile(null) }}
-                    className="text-gray-500 hover:text-red-400 flex-shrink-0 text-base leading-none">âœ•</button>
+                    className="text-gray-500 hover:text-red-400 flex-shrink-0 text-sm leading-none font-bold">x</button>
                 </div>
               ) : (
                 <div onClick={() => enhIflowRef.current?.click()}
