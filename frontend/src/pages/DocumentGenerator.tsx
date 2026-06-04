@@ -606,7 +606,7 @@ export default function DocumentGenerator() {
           {enhTdFile && enhIflowFile && (
             <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/40 rounded-lg px-3 py-2">
               <CheckCircle size={13} className="text-green-400" />
-              Both files ready — click below to generate the updated TD
+              Both files ready — generates a <strong>.zip</strong> with the updated TD (.docx) + mapping spec (.xlsx)
             </div>
           )}
 
@@ -624,7 +624,7 @@ export default function DocumentGenerator() {
                   if (updateAuthor.trim()) form.append('author', updateAuthor.trim())
                   const res = await axios.post('/api/docs/update-td', form, { responseType: 'blob' })
                   const cd  = res.headers['content-disposition'] || ''
-                  const name = cd.match(/filename=(.+)/)?.[1] || 'TD_Updated.docx'
+                  const name = cd.match(/filename="?([^"]+)"?/)?.[1] || 'TD_Updated.zip'
                   triggerDownload(res.data, name)
                 } catch (e: any) {
                   setError('Update failed. Check the files are valid.')
@@ -632,7 +632,7 @@ export default function DocumentGenerator() {
               }}
               disabled={loading || !enhTdFile || !enhIflowFile}>
               {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-              {loading ? 'Updating TD...' : 'Update TD (.docx)'}
+              {loading ? 'Updating TD...' : 'Update TD + Mapping (.zip)'}
             </button>
 
             <button
