@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import { FileText, Loader2, Download, Upload, Wand2, ArrowRight, FileCode2, CheckCircle } from 'lucide-react'
 import axios from 'axios'
 import { iflowAPI } from '../api/client'
@@ -109,7 +109,7 @@ export default function DocumentGenerator() {
     } finally { setLoading(false) }
   }
 
-  // ── TD + iFlow → Enhanced TD state ────────────────────────────────────────
+  // â”€â”€ TD + iFlow â†’ Enhanced TD state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [enhTdFile,    setEnhTdFile]    = useState<File | null>(null)
   const [enhIflowFile, setEnhIflowFile] = useState<File | null>(null)
   const enhTdRef    = useRef<HTMLInputElement>(null)
@@ -133,10 +133,10 @@ export default function DocumentGenerator() {
 
   const tabs: { id: Tab; label: string; icon: typeof Wand2; badge?: string }[] = [
     { id: 'fd',         label: 'FD Generator', icon: FileText,  badge: 'AI' },
-    { id: 'fd-to-td',  label: 'FD → TD',       icon: ArrowRight },
-    { id: 'iflow-to-td', label: 'iFlow → TD',  icon: FileCode2 },
+    { id: 'fd-to-td',  label: 'FD â†’ TD',       icon: ArrowRight },
+    { id: 'iflow-to-td', label: 'iFlow â†’ TD',  icon: FileCode2 },
     { id: 'enhance-td',       label: 'TD + iFlow',    icon: CheckCircle },
-    { id: 'iflow-to-td-noai', label: 'iFlow → TD',    icon: FileCode2,  badge: '0 AI' },
+    { id: 'iflow-to-td-noai', label: 'iFlow â†’ TD',    icon: FileCode2,  badge: '0 AI' },
     { id: 'update-td',        label: 'Update TD',     icon: ArrowRight, badge: '0 AI' },
   ]
 
@@ -161,7 +161,7 @@ export default function DocumentGenerator() {
         ))}
       </div>
 
-      {/* ── FD Generator ─────────────────────────────────────── */}
+      {/* â”€â”€ FD Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {tab === 'fd' && (
         <div className="card space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -230,11 +230,11 @@ export default function DocumentGenerator() {
         </div>
       )}
 
-      {/* ── FD to TD ─────────────────────────────────────────── */}
+      {/* â”€â”€ FD to TD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {tab === 'fd-to-td' && (
         <div className="card space-y-4">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-300">
-            Upload your FD (.docx) — the AI will read it, extract all details, and generate a complete TD with all sections properly filled (no empty appendix placeholders).
+            Upload your FD (.docx) â€” the AI will read it, extract all details, and generate a complete TD with all sections properly filled (no empty appendix placeholders).
           </div>
 
           <div>
@@ -278,16 +278,16 @@ export default function DocumentGenerator() {
 
           <button className="btn-primary flex items-center gap-2" onClick={generateFDtoTD} disabled={loading || !fdFile}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-            {loading ? 'Converting FD → TD...' : 'Generate TD from FD (.docx)'}
+            {loading ? 'Converting FD â†’ TD...' : 'Generate TD from FD (.docx)'}
           </button>
         </div>
       )}
 
-      {/* ── iFlow to TD ───────────────────────────────────────── */}
+      {/* â”€â”€ iFlow to TD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {tab === 'iflow-to-td' && (
         <div className="card space-y-4">
           <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4 text-sm text-orange-300">
-            Upload an iFlow ZIP or paste the XML — the AI will analyse all adapters, steps, mappings and generate a complete TD document.
+            Upload an iFlow ZIP or paste the XML â€” the AI will analyse all adapters, steps, mappings and generate a complete TD document.
           </div>
 
           {/* ZIP upload */}
@@ -303,13 +303,13 @@ export default function DocumentGenerator() {
             >
               {extractingZip ? (
                 <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-                  <Loader2 size={16} className="animate-spin" /> Extracting .iflw from ZIP…
+                  <Loader2 size={16} className="animate-spin" /> Extracting .iflw from ZIPâ€¦
                 </div>
               ) : iflowZipName ? (
                 <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
                   <CheckCircle size={16} />
                   <span className="font-medium">{iflowZipName}.iflw</span>
-                  <span className="text-green-600 text-xs">— XML loaded below</span>
+                  <span className="text-green-600 text-xs">â€” XML loaded below</span>
                 </div>
               ) : (
                 <div className="text-gray-500 text-sm">
@@ -333,7 +333,7 @@ export default function DocumentGenerator() {
             <textarea
               className="textarea-field"
               rows={10}
-              placeholder="Paste your SAP CPI iFlow XML here, or upload a ZIP above…"
+              placeholder="Paste your SAP CPI iFlow XML here, or upload a ZIP aboveâ€¦"
               value={iflowForm.iflow_xml}
               onChange={e => { setIflowForm(f => ({ ...f, iflow_xml: e.target.value })); setIflowZipName('') }}
             />
@@ -366,13 +366,13 @@ export default function DocumentGenerator() {
         </div>
       )}
 
-      {/* ── TD + iFlow → Enhanced TD ──────────────────────────── */}
+      {/* â”€â”€ TD + iFlow â†’ Enhanced TD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {tab === 'enhance-td' && (
         <div className="card space-y-5">
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-sm text-blue-300">
-            <p className="font-semibold mb-1">📎 TD + iFlow → Enhanced TD with Developer Guide</p>
-            <p>Upload your existing Technical Design document (TD) and the iFlow ZIP. A new <strong>"Developer Implementation Guide"</strong> section is <strong>appended</strong> — original content is untouched.</p>
-            <p className="mt-2 text-blue-400/80">The appended section includes: flow diagram · step-by-step palette config · all adapter properties · Groovy scripts · parameters table · deployment checklist.</p>
+            <p className="font-semibold mb-1">ðŸ“Ž TD + iFlow â†’ Enhanced TD with Developer Guide</p>
+            <p>Upload your existing Technical Design document (TD) and the iFlow ZIP. A new <strong>"Developer Implementation Guide"</strong> section is <strong>appended</strong> â€” original content is untouched.</p>
+            <p className="mt-2 text-blue-400/80">The appended section includes: flow diagram Â· step-by-step palette config Â· all adapter properties Â· Groovy scripts Â· parameters table Â· deployment checklist.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
@@ -385,7 +385,7 @@ export default function DocumentGenerator() {
               >
                 <FileText size={28} className="mx-auto mb-2 text-gray-500" />
                 {enhTdFile
-                  ? <p className="text-sm text-green-400 font-medium">{enhTdFile.name}</p>
+                  ? <div><p className="text-xs font-semibold text-green-400 truncate px-1" title={enhTdFile.name}>{enhTdFile.name}</p><p className="text-xs text-gray-500 mt-0.5">{(enhTdFile.size/1024).toFixed(0)} KB</p></div>
                   : <p className="text-sm text-gray-400">Click to upload TD (.docx)</p>}
               </div>
               <input ref={enhTdRef} type="file" accept=".docx" className="hidden"
@@ -401,7 +401,7 @@ export default function DocumentGenerator() {
               >
                 <FileCode2 size={28} className="mx-auto mb-2 text-gray-500" />
                 {enhIflowFile
-                  ? <p className="text-sm text-green-400 font-medium">{enhIflowFile.name}</p>
+                  ? <div><p className="text-xs font-semibold text-green-400 truncate px-1" title={enhIflowFile.name}>{enhIflowFile.name}</p><p className="text-xs text-gray-500 mt-0.5">{(enhIflowFile.size/1024).toFixed(0)} KB</p></div>
                   : <p className="text-sm text-gray-400">Click to upload iFlow (.zip)</p>}
               </div>
               <input ref={enhIflowRef} type="file" accept=".zip" className="hidden"
@@ -411,12 +411,12 @@ export default function DocumentGenerator() {
 
           <div className="bg-gray-800/50 rounded-lg p-4 text-sm text-gray-400 space-y-1">
             <p className="text-gray-300 font-medium">What gets appended:</p>
-            <p>✅ Flow diagram (ASCII) showing all steps and adapters in order</p>
-            <p>✅ Step-by-step palette configuration for every iFlow step</p>
-            <p>✅ All adapter connection properties (URL, auth, timeout, headers)</p>
-            <p>✅ Full Groovy script code with explanation</p>
-            <p>✅ Externalized parameters table with defaults</p>
-            <p>✅ Deployment steps checklist</p>
+            <p>âœ… Flow diagram (ASCII) showing all steps and adapters in order</p>
+            <p>âœ… Step-by-step palette configuration for every iFlow step</p>
+            <p>âœ… All adapter connection properties (URL, auth, timeout, headers)</p>
+            <p>âœ… Full Groovy script code with explanation</p>
+            <p>âœ… Externalized parameters table with defaults</p>
+            <p>âœ… Deployment steps checklist</p>
           </div>
 
           <button
@@ -430,12 +430,12 @@ export default function DocumentGenerator() {
         </div>
       )}
 
-      {/* ── iFlow → TD (Zero AI) ─────────────────────────────── */}
+      {/* â”€â”€ iFlow â†’ TD (Zero AI) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {tab === 'iflow-to-td-noai' && (
         <div className="card space-y-5">
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-green-300">
-            <p className="font-semibold mb-1">⚡ iFlow ZIP → Complete TD — Zero AI, 100% Accurate</p>
-            <p>Upload any iFlow ZIP exported from SAP CPI. All technical sections are extracted directly from the iFlow XML — no AI, no hallucination, no token cost.</p>
+            <p className="font-semibold mb-1">âš¡ iFlow ZIP â†’ Complete TD â€” Zero AI, 100% Accurate</p>
+            <p>Upload any iFlow ZIP exported from SAP CPI. All technical sections are extracted directly from the iFlow XML â€” no AI, no hallucination, no token cost.</p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
@@ -445,7 +445,7 @@ export default function DocumentGenerator() {
                 className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center cursor-pointer hover:border-green-500 transition-colors">
                 <FileCode2 size={32} className="mx-auto mb-2 text-gray-500" />
                 {enhIflowFile
-                  ? <p className="text-sm text-green-400 font-medium">{enhIflowFile.name}</p>
+                  ? <div><p className="text-xs font-semibold text-green-400 truncate px-1" title={enhIflowFile.name}>{enhIflowFile.name}</p><p className="text-xs text-gray-500 mt-0.5">{(enhIflowFile.size/1024).toFixed(0)} KB</p></div>
                   : <p className="text-sm text-gray-400">Click to upload iFlow ZIP</p>}
               </div>
               <input ref={enhIflowRef} type="file" accept=".zip" className="hidden"
@@ -468,20 +468,20 @@ export default function DocumentGenerator() {
           <div className="bg-gray-800/50 rounded-lg p-4 text-sm text-gray-400 grid grid-cols-2 gap-2">
             <div>
               <p className="text-white font-medium mb-2">What's auto-filled from iFlow XML:</p>
-              <p>✅ SAP-themed flow diagram (PNG)</p>
-              <p>✅ Sender + receiver adapter properties</p>
-              <p>✅ Every step with palette config</p>
-              <p>✅ Full Groovy script code</p>
-              <p>✅ All externalized parameters</p>
-              <p>✅ Security credential references</p>
+              <p>âœ… SAP-themed flow diagram (PNG)</p>
+              <p>âœ… Sender + receiver adapter properties</p>
+              <p>âœ… Every step with palette config</p>
+              <p>âœ… Full Groovy script code</p>
+              <p>âœ… All externalized parameters</p>
+              <p>âœ… Security credential references</p>
             </div>
             <div>
               <p className="text-white font-medium mb-2">What needs manual completion:</p>
-              <p>📝 Business process description</p>
-              <p>📝 Assumptions &amp; constraints</p>
-              <p>📝 Monitoring contacts</p>
-              <p>📝 Test scenarios</p>
-              <p>📝 Go-live date &amp; plan</p>
+              <p>ðŸ“ Business process description</p>
+              <p>ðŸ“ Assumptions &amp; constraints</p>
+              <p>ðŸ“ Monitoring contacts</p>
+              <p>ðŸ“ Test scenarios</p>
+              <p>ðŸ“ Go-live date &amp; plan</p>
               <p className="text-green-400 mt-2">All marked as TBD for easy editing</p>
             </div>
           </div>
@@ -505,56 +505,102 @@ export default function DocumentGenerator() {
             }}
             disabled={loading || !enhIflowFile}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <FileCode2 size={16} />}
-            {loading ? 'Generating TD (No AI)...' : 'Generate Complete TD — Zero AI (.docx)'}
+            {loading ? 'Generating TD (No AI)...' : 'Generate Complete TD â€” Zero AI (.docx)'}
           </button>
         </div>
       )}
 
-      {/* ── Update TD with iFlow (Zero AI) ────────────────────── */}
+      {/* â”€â”€ Update TD with iFlow (Zero AI) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {tab === 'update-td' && (
-        <div className="card space-y-5">
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-green-300">
-            <p className="font-semibold mb-1">⚡ Update Existing TD with iFlow — Zero AI</p>
-            <p>Upload your existing TD (.docx) and the iFlow ZIP. The app will:</p>
-            <ul className="mt-2 space-y-1 ml-3">
-              <li>• Copy Appendix section data into the correct main body tables</li>
-              <li>• Fill iFlow name, package, mapping name from the actual ZIP</li>
-              <li>• Add iFlow design steps with full step-by-step config</li>
-              <li>• Add message mapping field table (all source → target fields)</li>
-              <li>• Embed SAP-themed flow diagram with correct adapter icons</li>
-              <li>• Add Groovy scripts, parameters, and XSD references</li>
-            </ul>
+        <div className="card space-y-4">
+          {/* Compact info banner */}
+          <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-300">
+            <span className="text-lg flex-shrink-0">âš¡</span>
+            <div>
+              <p className="font-semibold">Update TD with iFlow â€” Zero AI</p>
+              <p className="text-green-400/70 text-xs mt-0.5">
+                Fills iFlow name Â· package Â· mmap name Â· steps Â· diagram Â· scripts Â· parameters â€” all from the ZIP, no AI needed.
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          {/* Upload row */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* TD file */}
             <div>
-              <label className="label">Existing TD Document (.docx) *</label>
-              <div onClick={() => enhTdRef.current?.click()}
-                className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 transition-colors">
-                <FileText size={28} className="mx-auto mb-2 text-gray-500" />
-                {enhTdFile
-                  ? <p className="text-sm text-green-400 font-medium">{enhTdFile.name}</p>
-                  : <p className="text-sm text-gray-400">Click to upload TD (.docx)</p>}
-              </div>
+              <label className="label">Existing TD (.docx) *</label>
+              {enhTdFile ? (
+                <div className="flex items-center gap-3 bg-gray-800/80 border border-green-500/40 rounded-lg px-3 py-2.5">
+                  <FileText size={18} className="text-green-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-green-400 truncate" title={enhTdFile.name}>
+                      {enhTdFile.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{(enhTdFile.size / 1024).toFixed(0)} KB</p>
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); setEnhTdFile(null) }}
+                    className="text-gray-500 hover:text-red-400 flex-shrink-0 text-base leading-none">âœ•</button>
+                </div>
+              ) : (
+                <div onClick={() => enhTdRef.current?.click()}
+                  className="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center cursor-pointer hover:border-green-500 transition-colors">
+                  <FileText size={22} className="mx-auto mb-1 text-gray-500" />
+                  <p className="text-xs text-gray-400">Click to upload TD (.docx)</p>
+                </div>
+              )}
               <input ref={enhTdRef} type="file" accept=".docx" className="hidden"
                 onChange={e => setEnhTdFile(e.target.files?.[0] ?? null)} />
+              {!enhTdFile && (
+                <button onClick={() => enhTdRef.current?.click()}
+                  className="mt-1.5 w-full text-xs text-gray-500 hover:text-gray-300 text-center">
+                  Browse file
+                </button>
+              )}
             </div>
+
+            {/* iFlow ZIP */}
             <div>
-              <label className="label">iFlow ZIP (from CPI export) *</label>
-              <div onClick={() => enhIflowRef.current?.click()}
-                className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 transition-colors">
-                <FileCode2 size={28} className="mx-auto mb-2 text-gray-500" />
-                {enhIflowFile
-                  ? <p className="text-sm text-green-400 font-medium">{enhIflowFile.name}</p>
-                  : <p className="text-sm text-gray-400">Click to upload iFlow (.zip)</p>}
-              </div>
+              <label className="label">iFlow ZIP (CPI export) *</label>
+              {enhIflowFile ? (
+                <div className="flex items-center gap-3 bg-gray-800/80 border border-purple-500/40 rounded-lg px-3 py-2.5">
+                  <FileCode2 size={18} className="text-purple-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-purple-400 truncate" title={enhIflowFile.name}>
+                      {enhIflowFile.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{(enhIflowFile.size / 1024).toFixed(0)} KB</p>
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); setEnhIflowFile(null) }}
+                    className="text-gray-500 hover:text-red-400 flex-shrink-0 text-base leading-none">âœ•</button>
+                </div>
+              ) : (
+                <div onClick={() => enhIflowRef.current?.click()}
+                  className="border-2 border-dashed border-gray-700 rounded-lg p-4 text-center cursor-pointer hover:border-purple-500 transition-colors">
+                  <FileCode2 size={22} className="mx-auto mb-1 text-gray-500" />
+                  <p className="text-xs text-gray-400">Click to upload iFlow (.zip)</p>
+                </div>
+              )}
               <input ref={enhIflowRef} type="file" accept=".zip" className="hidden"
                 onChange={e => setEnhIflowFile(e.target.files?.[0] ?? null)} />
+              {!enhIflowFile && (
+                <button onClick={() => enhIflowRef.current?.click()}
+                  className="mt-1.5 w-full text-xs text-gray-500 hover:text-gray-300 text-center">
+                  Browse file
+                </button>
+              )}
             </div>
           </div>
 
+          {/* Status chips when both uploaded */}
+          {enhTdFile && enhIflowFile && (
+            <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/40 rounded-lg px-3 py-2">
+              <CheckCircle size={13} className="text-green-400" />
+              Both files ready â€” click below to generate the updated TD
+            </div>
+          )}
+
           <button
-            className="btn-primary flex items-center gap-2 w-full justify-center py-3"
+            className="btn-primary flex items-center gap-2 w-full justify-center py-2.5"
             onClick={async () => {
               if (!enhTdFile || !enhIflowFile) return
               setLoading(true); setError(''); setDownloadUrl(null)
@@ -572,7 +618,7 @@ export default function DocumentGenerator() {
             }}
             disabled={loading || !enhTdFile || !enhIflowFile}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-            {loading ? 'Updating TD (No AI)...' : 'Update TD with iFlow Details (.docx)'}
+            {loading ? 'Updating TD...' : 'Update TD with iFlow Details (.docx)'}
           </button>
         </div>
       )}
@@ -599,3 +645,4 @@ export default function DocumentGenerator() {
     </div>
   )
 }
+
