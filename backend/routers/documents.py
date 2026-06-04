@@ -381,10 +381,12 @@ async def mapping_excel(
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail="No message mapping (.mmap) found in iFlow ZIP")
     xlsx_bytes, filename = result
+    # Use RFC 5987 encoding to avoid filename corruption in some browsers
+    safe_name = filename.replace('"', '').replace("'", '').strip()
     return StreamingResponse(
         BytesIO(xlsx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename=\"{safe_name}\""},
     )
 
 
