@@ -3,7 +3,7 @@ import { FileText, Loader2, Download, Upload, Wand2, ArrowRight, FileCode2, Chec
 import axios from 'axios'
 import { iflowAPI } from '../api/client'
 
-type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td' | 'enhance-td' | 'iflow-to-td-noai'
+type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td' | 'enhance-td' | 'iflow-to-td-noai' | 'update-td'
 
 const adapters = ['HTTP', 'HTTPS', 'SOAP', 'REST', 'OData', 'SFTP', 'JDBC', 'Mail', 'AS2', 'AMQP', 'IDoc', 'RFC']
 const processingTypes = ['IDOC', 'REST API', 'SOAP', 'File Transfer', 'RFC', 'OData', 'Event-based']
@@ -137,6 +137,7 @@ export default function DocumentGenerator() {
     { id: 'iflow-to-td', label: 'iFlow → TD',  icon: FileCode2 },
     { id: 'enhance-td',       label: 'TD + iFlow',    icon: CheckCircle },
     { id: 'iflow-to-td-noai', label: 'iFlow → TD',    icon: FileCode2,  badge: '0 AI' },
+    { id: 'update-td',        label: 'Update TD',     icon: ArrowRight, badge: '0 AI' },
   ]
 
   return (
@@ -505,6 +506,73 @@ export default function DocumentGenerator() {
             disabled={loading || !enhIflowFile}>
             {loading ? <Loader2 size={16} className="animate-spin" /> : <FileCode2 size={16} />}
             {loading ? 'Generating TD (No AI)...' : 'Generate Complete TD — Zero AI (.docx)'}
+          </button>
+        </div>
+      )}
+
+      {/* ── Update TD with iFlow (Zero AI) ────────────────────── */}
+      {tab === 'update-td' && (
+        <div className="card space-y-5">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-green-300">
+            <p className="font-semibold mb-1">⚡ Update Existing TD with iFlow — Zero AI</p>
+            <p>Upload your existing TD (.docx) and the iFlow ZIP. The app will:</p>
+            <ul className="mt-2 space-y-1 ml-3">
+              <li>• Copy Appendix section data into the correct main body tables</li>
+              <li>• Fill iFlow name, package, mapping name from the actual ZIP</li>
+              <li>• Add iFlow design steps with full step-by-step config</li>
+              <li>• Add message mapping field table (all source → target fields)</li>
+              <li>• Embed SAP-themed flow diagram with correct adapter icons</li>
+              <li>• Add Groovy scripts, parameters, and XSD references</li>
+            </ul>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="label">Existing TD Document (.docx) *</label>
+              <div onClick={() => enhTdRef.current?.click()}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-green-500 transition-colors">
+                <FileText size={28} className="mx-auto mb-2 text-gray-500" />
+                {enhTdFile
+                  ? <p className="text-sm text-green-400 font-medium">{enhTdFile.name}</p>
+                  : <p className="text-sm text-gray-400">Click to upload TD (.docx)</p>}
+              </div>
+              <input ref={enhTdRef} type="file" accept=".docx" className="hidden"
+                onChange={e => setEnhTdFile(e.target.files?.[0] ?? null)} />
+            </div>
+            <div>
+              <label className="label">iFlow ZIP (from CPI export) *</label>
+              <div onClick={() => enhIflowRef.current?.click()}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center cursor-pointer hover:border-purple-500 transition-colors">
+                <FileCode2 size={28} className="mx-auto mb-2 text-gray-500" />
+                {enhIflowFile
+                  ? <p className="text-sm text-green-400 font-medium">{enhIflowFile.name}</p>
+                  : <p className="text-sm text-gray-400">Click to upload iFlow (.zip)</p>}
+              </div>
+              <input ref={enhIflowRef} type="file" accept=".zip" className="hidden"
+                onChange={e => setEnhIflowFile(e.target.files?.[0] ?? null)} />
+            </div>
+          </div>
+
+          <button
+            className="btn-primary flex items-center gap-2 w-full justify-center py-3"
+            onClick={async () => {
+              if (!enhTdFile || !enhIflowFile) return
+              setLoading(true); setError(''); setDownloadUrl(null)
+              try {
+                const form = new FormData()
+                form.append('td_file',   enhTdFile)
+                form.append('iflow_zip', enhIflowFile)
+                const res = await axios.post('/api/docs/update-td', form, { responseType: 'blob' })
+                const cd  = res.headers['content-disposition'] || ''
+                const name = cd.match(/filename=(.+)/)?.[1] || 'TD_Updated.docx'
+                triggerDownload(res.data, name)
+              } catch (e: any) {
+                setError('Update failed. Check the files are valid.')
+              } finally { setLoading(false) }
+            }}
+            disabled={loading || !enhTdFile || !enhIflowFile}>
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
+            {loading ? 'Updating TD (No AI)...' : 'Update TD with iFlow Details (.docx)'}
           </button>
         </div>
       )}

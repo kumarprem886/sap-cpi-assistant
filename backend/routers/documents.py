@@ -350,6 +350,26 @@ IMPORTANT for diagram fields:
 
 # ── TD + iFlow → Enhanced TD ──────────────────────────────────────────────────
 
+@router.post("/update-td")
+async def update_td(
+    td_file:   UploadFile = File(...),
+    iflow_zip: UploadFile = File(...),
+):
+    """
+    Update an existing TD document with iFlow ZIP data — ZERO AI.
+    - Copies Appendix data to main body sections
+    - Fills iFlow name, mmap name, description from actual ZIP
+    - Adds iFlow design steps, diagram, mapping table, scripts
+    """
+    from services.td_updater import update_td_with_iflow
+    td_bytes    = await td_file.read()
+    iflow_bytes = await iflow_zip.read()
+    result   = update_td_with_iflow(td_bytes, iflow_bytes)
+    base     = (td_file.filename or "TD").replace(".docx", "")
+    filename = f"{base}_Updated.docx"
+    return _docx_response(result, filename)
+
+
 @router.post("/iflow-to-td-noai")
 async def iflow_to_td_noai(
     iflow_zip:    UploadFile = File(...),
