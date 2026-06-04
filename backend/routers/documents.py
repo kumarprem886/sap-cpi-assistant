@@ -350,6 +350,24 @@ IMPORTANT for diagram fields:
 
 # ── TD + iFlow → Enhanced TD ──────────────────────────────────────────────────
 
+@router.post("/iflow-to-td-noai")
+async def iflow_to_td_noai(
+    iflow_zip:    UploadFile = File(...),
+    author:       str = Form(""),
+    project_team: str = Form(""),
+):
+    """
+    Generate a complete TD document from an iFlow ZIP — ZERO AI.
+    Technical sections are 100% accurate (from iFlow XML).
+    Business sections have TBD placeholders for manual completion.
+    """
+    from services.td_enhancer import build_td_from_iflow
+    iflow_bytes = await iflow_zip.read()
+    content  = build_td_from_iflow(iflow_bytes, author=author, project_team=project_team)
+    filename = (iflow_zip.filename or "iFlow").replace(".zip", "") + "_TD.docx"
+    return _docx_response(content, filename)
+
+
 @router.post("/enhance-td")
 async def enhance_td(
     td_file:   UploadFile = File(...),

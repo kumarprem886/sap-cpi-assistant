@@ -3,7 +3,7 @@ import { FileText, Loader2, Download, Upload, Wand2, ArrowRight, FileCode2, Chec
 import axios from 'axios'
 import { iflowAPI } from '../api/client'
 
-type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td' | 'enhance-td'
+type Tab = 'fd' | 'fd-to-td' | 'iflow-to-td' | 'enhance-td' | 'iflow-to-td-noai'
 
 const adapters = ['HTTP', 'HTTPS', 'SOAP', 'REST', 'OData', 'SFTP', 'JDBC', 'Mail', 'AS2', 'AMQP', 'IDoc', 'RFC']
 const processingTypes = ['IDOC', 'REST API', 'SOAP', 'File Transfer', 'RFC', 'OData', 'Event-based']
@@ -135,7 +135,8 @@ export default function DocumentGenerator() {
     { id: 'fd',         label: 'FD Generator', icon: FileText,  badge: 'AI' },
     { id: 'fd-to-td',  label: 'FD → TD',       icon: ArrowRight },
     { id: 'iflow-to-td', label: 'iFlow → TD',  icon: FileCode2 },
-    { id: 'enhance-td', label: 'TD + iFlow',    icon: CheckCircle, badge: 'New' },
+    { id: 'enhance-td',       label: 'TD + iFlow',    icon: CheckCircle },
+    { id: 'iflow-to-td-noai', label: 'iFlow → TD',    icon: FileCode2,  badge: '0 AI' },
   ]
 
   return (
@@ -424,6 +425,86 @@ export default function DocumentGenerator() {
           >
             {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
             {loading ? 'Appending Developer Guide...' : 'Append Developer Guide to TD (.docx)'}
+          </button>
+        </div>
+      )}
+
+      {/* ── iFlow → TD (Zero AI) ─────────────────────────────── */}
+      {tab === 'iflow-to-td-noai' && (
+        <div className="card space-y-5">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-green-300">
+            <p className="font-semibold mb-1">⚡ iFlow ZIP → Complete TD — Zero AI, 100% Accurate</p>
+            <p>Upload any iFlow ZIP exported from SAP CPI. All technical sections are extracted directly from the iFlow XML — no AI, no hallucination, no token cost.</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">
+              <label className="label">iFlow ZIP (export from CPI) *</label>
+              <div onClick={() => enhIflowRef.current?.click()}
+                className="border-2 border-dashed border-gray-700 rounded-lg p-8 text-center cursor-pointer hover:border-green-500 transition-colors">
+                <FileCode2 size={32} className="mx-auto mb-2 text-gray-500" />
+                {enhIflowFile
+                  ? <p className="text-sm text-green-400 font-medium">{enhIflowFile.name}</p>
+                  : <p className="text-sm text-gray-400">Click to upload iFlow ZIP</p>}
+              </div>
+              <input ref={enhIflowRef} type="file" accept=".zip" className="hidden"
+                onChange={e => setEnhIflowFile(e.target.files?.[0] ?? null)} />
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="label">Author</label>
+                <input className="input-field" placeholder="Your name"
+                  onChange={e => setIflowForm(f => ({...f, author: e.target.value}))} value={iflowForm.author} />
+              </div>
+              <div>
+                <label className="label">Project Team</label>
+                <input className="input-field" placeholder="Team name"
+                  onChange={e => setIflowForm(f => ({...f, project_team: e.target.value}))} value={iflowForm.project_team} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-800/50 rounded-lg p-4 text-sm text-gray-400 grid grid-cols-2 gap-2">
+            <div>
+              <p className="text-white font-medium mb-2">What's auto-filled from iFlow XML:</p>
+              <p>✅ SAP-themed flow diagram (PNG)</p>
+              <p>✅ Sender + receiver adapter properties</p>
+              <p>✅ Every step with palette config</p>
+              <p>✅ Full Groovy script code</p>
+              <p>✅ All externalized parameters</p>
+              <p>✅ Security credential references</p>
+            </div>
+            <div>
+              <p className="text-white font-medium mb-2">What needs manual completion:</p>
+              <p>📝 Business process description</p>
+              <p>📝 Assumptions &amp; constraints</p>
+              <p>📝 Monitoring contacts</p>
+              <p>📝 Test scenarios</p>
+              <p>📝 Go-live date &amp; plan</p>
+              <p className="text-green-400 mt-2">All marked as TBD for easy editing</p>
+            </div>
+          </div>
+
+          <button className="btn-primary flex items-center gap-2 w-full justify-center py-3"
+            onClick={async () => {
+              if (!enhIflowFile) return
+              setLoading(true); setError(''); setDownloadUrl(null)
+              try {
+                const form = new FormData()
+                form.append('iflow_zip', enhIflowFile)
+                form.append('author', iflowForm.author)
+                form.append('project_team', iflowForm.project_team)
+                const res = await axios.post('/api/docs/iflow-to-td-noai', form, { responseType: 'blob' })
+                const cd = res.headers['content-disposition'] || ''
+                const name = cd.match(/filename=(.+)/)?.[1] || 'TD_from_iFlow.docx'
+                triggerDownload(res.data, name)
+              } catch (e: any) {
+                setError('TD generation failed. Check the iFlow ZIP is valid.')
+              } finally { setLoading(false) }
+            }}
+            disabled={loading || !enhIflowFile}>
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <FileCode2 size={16} />}
+            {loading ? 'Generating TD (No AI)...' : 'Generate Complete TD — Zero AI (.docx)'}
           </button>
         </div>
       )}
