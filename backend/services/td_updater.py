@@ -393,6 +393,7 @@ _ALWAYS_REPLACE_LABELS = {
     'artifact',        # Artifact (CPI)
     'package',         # Package / Folder name
     'folder',          # Folder name (PO)
+    'workingname',     # Working Name of Interface → iFlow name
     'mappingname',     # Mapping name row
     'mmapping',        # Mapping name
     'description',     # iFlow description
@@ -1177,10 +1178,13 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
     if facts['iflow_name']:
         overrides[_norm('IFlow (PO) or Artifact')] = facts['iflow_name']
         overrides[_norm('Artifact (CPI)')] = facts['iflow_name']
+        # Working Name of Interface should be the iFlow name, not the mmap name
+        overrides[_norm('Working Name of Interface')] = facts['iflow_name']
     if facts['description']:
         overrides[_norm('Description')] = facts['description']
-    if facts['mmap_name']:
-        overrides[_norm('Name:')] = facts['mmap_name']
+    # NOTE: 'Name:' override for mmap deliberately removed — it matched too broadly
+    # (e.g. 'name' is a substring of 'nameofapplication', 'workingnameofinterface').
+    # Mmap name in Mapping tables is handled by the dedicated targeted fix below.
     if facts['iflow_version']:
         overrides[_norm('Version')] = facts['iflow_version']
 
@@ -1353,35 +1357,6 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
 
     # ── Narrative step-by-step guide ──────────────────────────────────────────
     _build_narrative_steps(doc, facts, senders, receivers)
-
-    # ── Message Mapping ───────────────────────────────────────────────────────
-    if facts['mmap_name']:
-        doc.add_page_break()
-        h6 = doc.add_heading('Message Mapping', level=2)
-        for r in h6.runs: r.font.color.rgb = SAP_BLUE
-
-        _add_para(doc, f'Mapping Artifact: {facts["mmap_name"]}.mmap', bold=True, size=10)
-        _add_para(doc,
-            f'Source fields: {len(facts["mmap_src_fields"])} | '
-            f'Target fields: {len(facts["mmap_dst_fields"])}',
-            size=9, color=MID_GREY)
-        doc.add_paragraph()
-
-        # Show source → target field mapping table
-        # Match src to dst by position (both lists are ordered by occurrence in XML)
-        n = max(len(facts['mmap_src_fields']), len(facts['mmap_dst_fields']))
-        rows = []
-        for i in range(min(n, 60)):
-            src_f = facts['mmap_src_fields'][i] if i < len(facts['mmap_src_fields']) else ''
-            dst_f = facts['mmap_dst_fields'][i] if i < len(facts['mmap_dst_fields']) else ''
-            if src_f != dst_f or src_f:
-                rows.append((src_f, '→', dst_f))
-        if rows:
-            _add_table(doc,
-                ['Source Field (IDoc)', '', 'Target Field (IDoc-XML)'],
-                rows, col_widths=[6, 1, 10.5])
-        if n > 60:
-            _add_para(doc, f'... {n - 60} more fields (see mmap artifact in CPI)', size=9, color=MID_GREY)
 
     # ── Groovy Scripts ────────────────────────────────────────────────────────
     if facts['scripts']:
