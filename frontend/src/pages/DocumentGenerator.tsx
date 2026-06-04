@@ -434,7 +434,7 @@ export default function DocumentGenerator() {
       {tab === 'iflow-to-td-noai' && (
         <div className="card space-y-5">
           <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 text-sm text-green-300">
-            <p className="font-semibold mb-1">âš¡ iFlow ZIP  to  Complete TD  -  Zero AI, 100% Accurate</p>
+            <p className="font-semibold mb-1">iFlow ZIP to Complete TD - Zero AI, 100% Accurate</p>
             <p>Upload any iFlow ZIP exported from SAP CPI. All technical sections are extracted directly from the iFlow XML  -  no AI, no hallucination, no token cost.</p>
           </div>
 
@@ -515,11 +515,10 @@ export default function DocumentGenerator() {
         <div className="card space-y-4">
           {/* Compact info banner */}
           <div className="flex items-start gap-3 bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-sm text-green-300">
-            <span className="text-lg flex-shrink-0">âš¡</span>
             <div>
-              <p className="font-semibold">Update TD with iFlow  -  Zero AI</p>
+              <p className="font-semibold">Update TD with iFlow - Zero AI</p>
               <p className="text-green-400/70 text-xs mt-0.5">
-                Fills iFlow name ,  package ,  mmap name ,  steps ,  diagram ,  scripts ,  parameters  -  all from the ZIP, no AI needed.
+                Fills iFlow name, package, mmap name, steps, diagram, scripts, parameters - all from the ZIP, no AI needed.
               </p>
             </div>
           </div>
