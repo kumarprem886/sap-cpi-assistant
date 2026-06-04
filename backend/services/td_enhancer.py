@@ -1,10 +1,12 @@
 """Append a Developer Implementation Guide section to an existing TD document."""
 import io
 from docx import Document
-from docx.shared import Pt, RGBColor, Cm
+from docx.shared import Pt, RGBColor, Cm, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from services.iflow_parser import parse_iflow_zip
+from services.flowchart_builder import generate_flowchart
 
 SAP_BLUE  = RGBColor(0x00, 0x6D, 0xB3)
 SAP_DARK  = RGBColor(0x1A, 0x1A, 0x2E)
@@ -119,28 +121,57 @@ def enhance_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes) -> bytes:
         f'Groovy scripts, and parameters are documented below.',
         size=10)
 
-    # ── Overview: correct flow diagram ────────────────────────────────────────
-    doc.add_heading('Flow Overview', level=2)
+    # ── Flow diagram (SAP-themed PNG) ─────────────────────────────────────────
+    doc.add_heading('Integration Flow Diagram', level=2)
 
-    # Build ASCII flow from steps
     senders   = [a for a in data['adapters'] if a['direction'] == 'Sender']
     receivers = [a for a in data['adapters'] if a['direction'] == 'Receiver']
 
-    sender_str = f"{senders[0]['source_name']} [{senders[0]['component']}]" if senders else 'Source'
+    # Build data dict for generate_flowchart
+    src_name  = senders[0]['source_name']   if senders   else 'Source System'
+    src_comp  = senders[0]['component']     if senders   else 'HTTPS'
+    # Append adapter component to receiver name so the icon classifier can detect type
+    # e.g. "Manogna" + "SFTP" → "Manogna SFTP" → shows folder icon
+    tgt_names = ', '.join(
+        f"{r['target_name']} {r['component']}" if r['component'] else r['target_name']
+        for r in receivers
+    ) if receivers else 'Target System'
+    tgt_comp  = receivers[0]['component']   if receivers else 'HTTP'
 
     main_steps = [s for s in data['steps']
                   if s['element_type'] not in ('endEvent',)
                   and 'Error' not in s.get('id', '')
                   and 'Error' not in s.get('name', '')]
 
-    flow_lines = [f"  {sender_str}"]
-    for s in main_steps:
-        label = STEP_LABELS.get(s['activity_type'], s['element_type'])
-        flow_lines.append(f"    → {s['name']} [{label}]")
-    for recv in receivers:
-        flow_lines.append(f"    → {recv['target_name']} [{recv['component']}]")
+    step_desc = ', '.join(
+        f"{s['name']} [{STEP_LABELS.get(s['activity_type'], s['element_type'])}]"
+        for s in main_steps
+    )
+    activity_types = [s['activity_type'] for s in main_steps]
+    mapping_type = (
+        'Groovy' if any(a in ('Script', 'GroovyScript') for a in activity_types)
+        else 'Message Mapping' if 'Mapping' in activity_types
+        else ''
+    )
 
-    _code(doc, '\n'.join(flow_lines))
+    chart_data = {
+        'interface_name':  data['name'],
+        'source_app_name': src_name,
+        'source_protocol': src_comp,
+        'target_app_name': tgt_names,
+        'target_protocol': tgt_comp,
+        'integration_logic': step_desc,
+        'mapping_type':    mapping_type,
+    }
+
+    try:
+        png_bytes = generate_flowchart(chart_data)
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run()
+        run.add_picture(io.BytesIO(png_bytes), width=Inches(6.0))
+    except Exception as e:
+        _para(doc, f'[Diagram could not be generated: {e}]', size=9, color=RED_C)
 
     # ── Adapters section ──────────────────────────────────────────────────────
     doc.add_heading('Adapters Configuration', level=2)
