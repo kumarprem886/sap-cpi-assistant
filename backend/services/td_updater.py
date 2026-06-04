@@ -1337,7 +1337,6 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
             if _xlsx_result:
                 _xlsx_bytes, _xlsx_embed_name = _xlsx_result
                 _rId_obj  = f"rIdMmap{_uuid.uuid4().hex[:8]}"
-                _rId_img  = f"rIdMmapImg{_uuid.uuid4().hex[:6]}"
                 _shape_id = f"_x0000_i{_uuid.uuid4().int % 90000 + 10000}"
                 _obj_id   = f"_{_uuid.uuid4().int % 2000000000}"
                 _NS_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -1345,16 +1344,36 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                 _NS_O = 'urn:schemas-microsoft-com:office:office'
                 _NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 
-                # Build OLE paragraph XML (shape + OLEObject)
-                # Shape references an image (Excel icon placeholder) via rId_img
+                # Build OLE paragraph XML.
+                # IMPORTANT: No <v:imagedata> — a PNG imagedata makes Word treat the
+                # whole thing as a picture (Picture Format ribbon) instead of an OLE
+                # object.  Use a solid-filled rectangle (type t1) with o:ole="" so
+                # Word recognises it as an OLE container and allows double-click.
+                _short_name = _xlsx_embed_name.replace('_MappingSpec.xlsx', '')
                 _ole_xml = (
                     f'<w:p xmlns:w="{_NS_W}" xmlns:v="{_NS_V}" '
                     f'xmlns:o="{_NS_O}" xmlns:r="{_NS_R}">'
                     f'<w:pPr><w:jc w:val="left"/></w:pPr>'
-                    f'<w:r><w:object w:dxaOrig="2880" w:dyaOrig="2016">'
-                    f'<v:shape id="{_shape_id}" type="#_x0000_t75" '
-                    f'style="width:2in;height:1.4in" o:ole="">'
-                    f'<v:imagedata r:id="{_rId_img}" o:title="{_xlsx_embed_name}"/>'
+                    f'<w:r><w:object w:dxaOrig="4320" w:dyaOrig="1008">'
+                    # type #_x0000_t1 = plain rectangle — no imagedata needed,
+                    # solid green fill, white border, OLE container marker
+                    f'<v:shape id="{_shape_id}" type="#_x0000_t1" '
+                    f'fillcolor="#217346" strokecolor="#FFFFFF" strokeweight="1pt" '
+                    f'style="width:3in;height:0.7in" o:ole="">'
+                    f'<v:fill type="solid" color="#217346"/>'
+                    f'<v:stroke color="#FFFFFF" weight="1pt"/>'
+                    f'<v:textbox style="mso-direction-alt:auto;mso-fit-shape-to-text:false" '
+                    f'inset="4pt,4pt,4pt,4pt">'
+                    f'<w:txbxContent>'
+                    f'<w:p><w:pPr><w:jc w:val="left"/></w:pPr>'
+                    f'<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/>'
+                    f'<w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>'
+                    f'<w:t xml:space="preserve">■ {_short_name}.xlsx</w:t></w:r></w:p>'
+                    f'<w:p><w:r><w:rPr><w:color w:val="C8FFD4"/>'
+                    f'<w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
+                    f'<w:t>Double-click to open mapping specification</w:t>'
+                    f'</w:r></w:p>'
+                    f'</w:txbxContent></v:textbox>'
                     f'</v:shape>'
                     f'<o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" '
                     f'ShapeID="{_shape_id}" DrawAspect="Icon" '
@@ -1364,39 +1383,17 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                 )
                 _ole_elem = _ET.fromstring(_ole_xml)
 
-                # Also build a label paragraph
-                _lbl_xml = (
-                    f'<w:p xmlns:w="{_NS_W}">'
-                    f'<w:r><w:rPr><w:sz w:val="18"/><w:color w:val="555555"/></w:rPr>'
-                    f'<w:t xml:space="preserve">Mapping specification — double-click to open in Excel:</w:t>'
-                    f'</w:r></w:p>'
-                )
-                _lbl_elem = _ET.fromstring(_lbl_xml)
-
                 # Find the FIRST Mapping table in main body and insert after it
                 _inserted = False
                 for _mt in doc.tables[:main_body_limit]:
                     _mhdr = _mt.rows[0].cells[0].text.strip() if _mt.rows else ''
                     if 'Mapping' in _mhdr and len(_mhdr) < 20:
                         _mt._tbl.addnext(_ole_elem)
-                        _mt._tbl.addnext(_lbl_elem)
                         _inserted = True
                         break
-                if not _inserted:
-                    # Fallback: append at end of iFlow Design section
-                    doc.add_paragraph()
-                    _p = doc.add_paragraph()
-                    _r_elem = _ET.SubElement(_p._p, qn('w:r'))
-                    _r_elem.append(_ET.fromstring(
-                        _ole_xml.replace(f'<w:p xmlns:w="{_NS_W}" xmlns:v="{_NS_V}" '
-                                         f'xmlns:o="{_NS_O}" xmlns:r="{_NS_R}">'
-                                         f'<w:pPr><w:jc w:val="left"/></w:pPr>'
-                                         f'<w:r>', '').replace('</w:r></w:p>', '')
-                    ))
 
                 _ole_ids = {
                     'rId_obj':    _rId_obj,
-                    'rId_img':    _rId_img,
                     'embed_name': _xlsx_embed_name,
                 }
         except Exception as _exc:
@@ -1531,18 +1528,15 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                             fn.lower().endswith('.png') and len(data) > 30000):
                         data = correct_png
 
-                    # ② Inject OLE + image relationships for embedded Excel
+                    # ② Inject OLE relationship for embedded Excel
                     elif _ole_ids and fn == 'word/_rels/document.xml.rels':
                         data = data.decode('utf-8')
-                        new_rels = (
+                        new_rel = (
                             f'<Relationship Id="{_ole_ids["rId_obj"]}" '
                             f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject" '
                             f'Target="embeddings/{_ole_ids["embed_name"]}"/>'
-                            f'<Relationship Id="{_ole_ids["rId_img"]}" '
-                            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
-                            f'Target="media/mmap_icon.png"/>'
                         )
-                        data = data.replace('</Relationships>', new_rels + '</Relationships>')
+                        data = data.replace('</Relationships>', new_rel + '</Relationships>')
                         data = data.encode('utf-8')
 
                     # ③ Register xlsx content-type so Word recognises it
@@ -1558,41 +1552,12 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
 
                     zout.writestr(item, data)
 
-                # ④ Write embedded xlsx file + icon image into the docx package
+                # ④ Write embedded xlsx file into the docx package
                 if _ole_ids and _xlsx_bytes:
                     zout.writestr(
                         f'word/embeddings/{_ole_ids["embed_name"]}',
                         _xlsx_bytes,
                     )
-                    # Generate a small Excel-green icon PNG for the OLE shape display
-                    try:
-                        import matplotlib.pyplot as _plt
-                        import matplotlib.patches as _patches
-                        _fig, _ax = _plt.subplots(figsize=(1.6, 1.0), dpi=80)
-                        _ax.set_xlim(0, 1.6); _ax.set_ylim(0, 1.0); _ax.axis('off')
-                        _fig.patch.set_facecolor('#217346')
-                        _ax.add_patch(_patches.Rectangle((0, 0), 1.6, 1.0,
-                                      facecolor='#217346', edgecolor='none'))
-                        _ax.text(0.12, 0.65, 'X', fontsize=36, fontweight='bold',
-                                 color='white', va='center')
-                        _ax.text(0.55, 0.60, 'XLSX', fontsize=14, fontweight='bold',
-                                 color='white', va='center')
-                        _ax.text(0.55, 0.30, _ole_ids["embed_name"][:22],
-                                 fontsize=6, color='#c8ffc8', va='center')
-                        _icon_buf = io.BytesIO()
-                        _plt.savefig(_icon_buf, format='png', bbox_inches='tight',
-                                     facecolor='#217346', dpi=80)
-                        _plt.close(_fig)
-                        zout.writestr('word/media/mmap_icon.png', _icon_buf.getvalue())
-                    except Exception:
-                        # Fallback: minimal valid 1x1 green PNG
-                        _green1px = (
-                            b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
-                            b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde'
-                            b'\x00\x00\x00\x0cIDATx\x9cc\x18\xe4\xe0\x00\x00'
-                            b'\x00\x08\x00\x01\xe0\xe0\x87&\x00\x00\x00\x00IEND\xaeB`\x82'
-                        )
-                        zout.writestr('word/media/mmap_icon.png', _green1px)
 
             return buf2.getvalue()
         except Exception:
