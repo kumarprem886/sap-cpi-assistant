@@ -388,6 +388,63 @@ def _extract_appendix_data(doc: Document) -> dict:
     return data
 
 
+def _check_middleware_checkboxes(doc, solutions: set):
+    """
+    Tick the W14 SDT checkbox controls that precede matching solution labels.
+    solutions: e.g. {'CPI', 'Event Mesh'}
+    Word stores these as:
+      <w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="0"/></w14:checkbox>...
+      <w:sdtContent><w:r><w:t>☐</w:t></w:r></w:sdtContent></w:sdt>
+      <w:r><w:t> CPI</w:t></w:r>   ← label follows immediately
+    """
+    _W14 = 'http://schemas.microsoft.com/office/word/2010/wordml'
+
+    def _w14(tag):
+        return f'{{{_W14}}}{tag}'
+
+    for sdt in doc.element.body.iter(qn('w:sdt')):
+        sdtPr = sdt.find(qn('w:sdtPr'))
+        if sdtPr is None:
+            continue
+        cb = sdtPr.find(_w14('checkbox'))
+        if cb is None:
+            continue  # not a checkbox SDT
+
+        # Read the label in the sibling run(s) that immediately follow this SDT
+        parent = sdt.getparent()
+        if parent is None:
+            continue
+        siblings = list(parent)
+        try:
+            idx = siblings.index(sdt)
+        except ValueError:
+            continue
+
+        label = ''
+        for sib in siblings[idx + 1: idx + 4]:
+            for t in sib.iter(qn('w:t')):
+                label += (t.text or '')
+            if label.strip():
+                break
+
+        # Does this checkbox's label match any solution we want to tick?
+        label_u = label.strip().upper()
+        if not any(s.upper() in label_u for s in solutions):
+            continue
+
+        # ── Mark checked ──────────────────────────────────────────────────────
+        checked_elem = cb.find(_w14('checked'))
+        if checked_elem is not None:
+            checked_elem.set(_w14('val'), '1')
+
+        # Update the visible character inside sdtContent  ☐ → ☑
+        sdt_content = sdt.find(qn('w:sdtContent'))
+        if sdt_content is not None:
+            for t_elem in sdt_content.iter(qn('w:t')):
+                if t_elem.text in ('☐', '□', '◻', ''):
+                    t_elem.text = '☑'  # ☑ Ballot Box With Check Mark
+
+
 # Labels where we ALWAYS replace the current value (even if not empty)
 # because the TD may have wrong placeholder names from the FD
 _ALWAYS_REPLACE_LABELS = {
@@ -1290,6 +1347,23 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                     for old_t, new_t in fix_pairs_final:
                         if old_t in cell.text:
                             _replace_text_in_cell(cell, old_t, new_t)
+
+    # ── Tick Middleware Solutions checkboxes ──────────────────────────────────
+    # Always check CPI (this is a CPI iFlow).
+    # Also check Event Mesh if the sender is SAP AEM.
+    _all_adapters = facts.get('adapters', [])
+    _has_aem = any(
+        any(k in (a.get('source_name', '') + a.get('name', '')).lower()
+            for k in ('aem', 'event', 'mesh'))
+        for a in _all_adapters
+    )
+    _middleware_solutions = {'CPI'}
+    if _has_aem:
+        _middleware_solutions.add('Event Mesh')
+    try:
+        _check_middleware_checkboxes(doc, _middleware_solutions)
+    except Exception:
+        pass  # best-effort
 
     # ── Fix "Within Sender" monitoring section ────────────────────────────────
     _real_sender = appendix_data.get(_norm('Source system'), '') or 'S/4HANA'
