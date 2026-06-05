@@ -440,6 +440,187 @@ def _map_proto_to_cb(proto_text: str) -> set:
     return result
 
 
+def _value_to_cb(label_text: str, value_text: str) -> set:
+    """
+    Given an appendix row label + its text value, return the set of checkbox
+    labels that should be ticked in the corresponding main-body row.
+    Returns empty set when the row is not a checkbox row.
+    """
+    lbl = label_text.lower().replace('\xa0', ' ')
+    val = value_text.strip()
+    val_u = val.upper()
+
+    if 'middleware' in lbl:
+        # Value might be "CPI" or "CPI, Event Mesh" etc.
+        result = set()
+        for part in re.split(r'[,;/]', val):
+            p = part.strip()
+            if p:
+                result.add(p)
+        return result
+
+    if 'business criticality' in lbl or 'criticality' in lbl:
+        if 'HIGHLY' in val_u:     return {'Highly critical'}
+        if 'NON' in val_u:        return {'Non-critical'}
+        if 'CRITICAL' in val_u:   return {'Critical'}
+        return set()
+
+    if 'data flow direction' in lbl or ('direction' in lbl and 'communication' not in lbl):
+        if 'UNIDIRECTIONAL' in val_u: return {'Unidirectional'}
+        if 'BIDIRECTIONAL' in val_u:  return {'Bidirectional'}
+        if 'MULTIPLE' in val_u:       return {'Multiple'}
+        return set()
+
+    if 'type of system' in lbl:
+        return _map_systype_to_cb(val)
+
+    if 'communication protocol' in lbl:
+        return _map_proto_to_cb(val)
+
+    if 'mode' in lbl and ('asynchronous' in val.lower() or 'synchronous' in val.lower()):
+        # Asynchronous/Synchronous checkboxes
+        if 'EVENT MESH' in val_u or 'AEM' in val_u:
+            return {'Asynchronous via Event Mesh'}
+        if 'ASYNCHRONOUS' in val_u:
+            return {'Asynchronous'}
+        if 'SYNCHRONOUS' in val_u:
+            return {'Synchronous'}
+        return set()
+
+    return set()
+
+
+# Labels (normalised) whose values must come from the iFlow ZIP, not the appendix
+_IFLOW_OVERRIDE_LABELS = {
+    _norm('IFlow (PO) or Artifact (CPI)'),
+    _norm('IFlow or Artifact'),
+    _norm('Folder name (PO) or Package (CPI)'),
+    _norm('Folder name (PO) or Package'),
+    _norm('Working Name of Interface'),
+    # Mapping table: Name row (mmap name) and Namespace/Artifact row
+    # These are matched by prefix since the full label can vary
+}
+# Short prefixes that trigger iFlow override (first 18 chars of normalised label)
+_IFLOW_OVERRIDE_PREFIXES = {
+    _norm('IFlow (PO) or Artifact')[:18],   # 'iflowpoorartifactc'
+    _norm('Folder name (PO) or')[:18],       # 'foldernamepoororp'  <- adjusted
+    _norm('Working Name of Interfa')[:18],   # 'workingnameofinter'
+}
+
+
+def _row_has_checkboxes(row) -> bool:
+    """Return True if any cell in this table row contains w14:checkbox SDTs."""
+    W14 = 'http://schemas.microsoft.com/office/word/2010/wordml'
+    for sdt in row._tr.iter(qn('w:sdt')):
+        pr = sdt.find(qn('w:sdtPr'))
+        if pr is not None and pr.find(f'{{{W14}}}checkbox') is not None:
+            return True
+    return False
+
+
+def _apply_appendix_to_main_body(doc, main_body_limit: int):
+    """
+    Comprehensive fill: for every row in every appendix table, find the
+    matching main-body table and copy the value — unless the label is one
+    of the 4 iFlow-override fields (package, iflow name, interface name,
+    mmap name).  Checkbox rows are handled by ticking the right boxes
+    instead of overwriting text.
+    """
+    n = len(doc.tables)
+    appendix_start = max(0, n - 20)
+
+    # Index appendix tables by normalised-header → table
+    app_tbls: dict = {}
+    for tbl in doc.tables[appendix_start:]:
+        if not tbl.rows:
+            continue
+        hdr = _norm(tbl.rows[0].cells[0].text.strip())
+        if hdr:
+            app_tbls.setdefault(hdr, tbl)   # first match wins
+
+    # These table headers are handled by iFlow ZIP logic — skip them here
+    _SKIP_HEADERS = {
+        _norm('Mapping')[:12],
+        _norm('IFlow (PO)')[:12],
+        _norm('IFlow or Art')[:12],
+    }
+
+    def _find_app_tbl(norm_hdr: str):
+        """Find the appendix table whose header matches (exact → prefix-12)."""
+        if norm_hdr in app_tbls:
+            return app_tbls[norm_hdr]
+        short = norm_hdr[:12]
+        return next((t for h, t in app_tbls.items() if h[:12] == short), None)
+
+    for mb_tbl in doc.tables[:main_body_limit]:
+        if not mb_tbl.rows:
+            continue
+        mb_hdr = _norm(mb_tbl.rows[0].cells[0].text.strip())
+
+        # Skip tables handled by iFlow ZIP logic
+        if any(mb_hdr[:12] == s for s in _SKIP_HEADERS):
+            continue
+
+        app_tbl = _find_app_tbl(mb_hdr)
+        if app_tbl is None:
+            continue
+
+        # Build label → value map from the appendix table
+        # Take the FIRST non-duplicate cell as label, second as value
+        app_map: dict = {}
+        for row in app_tbl.rows[1:]:
+            cells = [c.text.strip() for c in row.cells]
+            uniq = list(dict.fromkeys(c for c in cells if c))
+            if len(uniq) >= 2:
+                norm_lbl = _norm(uniq[0])
+                app_map[norm_lbl] = uniq[1]
+
+        # Apply to main-body table rows
+        for mb_row in mb_tbl.rows[1:]:
+            mb_cells = mb_row.cells
+            if len(mb_cells) < 2:
+                continue
+            lbl_text  = mb_cells[0].text.strip()
+            norm_lbl  = _norm(lbl_text)
+
+            # ── Skip iFlow-override labels ───────────────────────────────────
+            if norm_lbl in _IFLOW_OVERRIDE_LABELS:
+                continue
+            if any(norm_lbl[:18] == pfx for pfx in _IFLOW_OVERRIDE_PREFIXES):
+                continue
+
+            # Find appendix value: exact → one contains the other as prefix
+            app_val = app_map.get(norm_lbl)
+            if app_val is None:
+                app_val = next(
+                    (v for k, v in app_map.items()
+                     if (k.startswith(norm_lbl) or norm_lbl.startswith(k))
+                     and len(min(k, norm_lbl, key=len)) >= 8),
+                    None
+                )
+            if not app_val:
+                continue
+
+            # Get the value cell
+            val_cell = next((c for c in mb_cells[1:] if c != mb_cells[0]), None)
+            if val_cell is None:
+                continue
+
+            # ── Checkbox row ─────────────────────────────────────────────────
+            if _row_has_checkboxes(mb_row):
+                cb_labels = _value_to_cb(lbl_text, app_val)
+                if cb_labels:
+                    try:
+                        _check_middleware_checkboxes(mb_row._tr, cb_labels)
+                    except Exception:
+                        pass
+                continue
+
+            # ── Regular text cell ─────────────────────────────────────────────
+            # Always copy from appendix — it is the source of truth
+            _set_cell(val_cell, app_val)
+
+
 def _extract_appendix_data(doc: Document) -> dict:
     """
     Extract data from appendix tables (last ~14 tables in the document).
@@ -1336,6 +1517,14 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
     n_tables = len(doc.tables)
     main_body_limit = max(0, n_tables - 14)
 
+    # ── Comprehensive appendix → main body fill ──────────────────────────────
+    # Copy EVERY appendix row to the matching main-body row.
+    # The 4 iFlow-override fields (package, iflow name, interface name, mmap)
+    # are skipped here and applied below by the hard-replace section.
+    _apply_appendix_to_main_body(doc, main_body_limit)
+
+    # Keep the old per-table fill as a fallback for rows that weren't matched
+    # by the header-based approach above.
     for i, table in enumerate(doc.tables[:main_body_limit]):
         _fill_table_from_appendix(table, appendix_data, overrides)
 
@@ -1483,71 +1672,12 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                             _set_cell(cells[1], f'SAP {_real_sender} system monitoring (Transaction SXMB_MONI / Cloud ALM)')
                 break
 
-    # ── Fill Source/Target from appendix data (not hardcoded iFlow logic) ───────
-    # The appendix has consultant-filled Source/Target tables with exact values:
-    # Type of System (e.g. "SAP S/4HANA"), Communication Protocol (e.g. "IDOC")
-    # Use those values to fill/check the main-body tables.
-    _a_src = _app_st.get('source', {})
-    _a_tgt = _app_st.get('target', {})
-
-    # Name of application: appendix > iFlow adapter > fallback
+    # Source/Target names needed for diagram — read from appendix helper
     _real_recv_adapters = [a for a in _all_adapters
                            if a.get('direction') == 'Receiver'
                            and a.get('component') not in ('ProcessDirect',)]
-    _src_app = (_a_src.get('name', '')
-                or appendix_data.get(_norm('Source system'), '')
-                or _real_sender)
-    _tgt_app = (_a_tgt.get('name', '')
-                or appendix_data.get(_norm('Target system'), '')
-                or (_real_recv_adapters[0].get('target_name') or _real_recv_adapters[0].get('name', '')
-                    if _real_recv_adapters else 'Target'))
-
-    # Checkboxes from appendix — zero guesswork
-    _src_cb = (_map_systype_to_cb(_a_src.get('type_of_system', '')) |
-               _map_proto_to_cb(_a_src.get('protocol', '')))
-    _tgt_cb = (_map_systype_to_cb(_a_tgt.get('type_of_system', '')) |
-               _map_proto_to_cb(_a_tgt.get('protocol', '')))
-
-    for _tbl in doc.tables[:main_body_limit]:
-        _hdr = _tbl.rows[0].cells[0].text.strip() if _tbl.rows else ''
-
-        if _hdr in ('Source', 'Source System'):
-            # Name of application
-            for _row in _tbl.rows[1:]:
-                if len(_row.cells) >= 2 and 'name of application' in _row.cells[0].text.lower():
-                    _set_cell(_row.cells[1], _src_app)
-                    break
-            # Fill Use of System from appendix (always — overwrite generic placeholder)
-            if _a_src.get('use_of_system'):
-                for _row in _tbl.rows[1:]:
-                    if len(_row.cells) >= 2 and 'use of system' in _row.cells[0].text.lower():
-                        _set_cell(_row.cells[1], _a_src['use_of_system'])
-                        break
-            # Checkboxes from appendix values
-            if _src_cb:
-                try:
-                    _check_middleware_checkboxes(_tbl._tbl, _src_cb)
-                except Exception:
-                    pass
-
-        elif _hdr in ('Target', 'Target System'):
-            # Name of application
-            for _row in _tbl.rows[1:]:
-                if len(_row.cells) >= 2 and 'name of application' in _row.cells[0].text.lower():
-                    _set_cell(_row.cells[1], _tgt_app)
-                    break
-            # Fill Use of System from appendix (always — overwrite generic placeholder)
-            if _a_tgt.get('use_of_system'):
-                for _row in _tbl.rows[1:]:
-                    if len(_row.cells) >= 2 and 'use of system' in _row.cells[0].text.lower():
-                        _set_cell(_row.cells[1], _a_tgt['use_of_system'])
-                        break
-            # Checkboxes from appendix values
-            if _tgt_cb:
-                try:
-                    _check_middleware_checkboxes(_tbl._tbl, _tgt_cb)
-                except Exception:
-                    pass
+    _a_src = _app_st.get('source', {})
+    _a_tgt = _app_st.get('target', {})
 
     # ── Embed mapping Excel OLE into the existing Mapping Objects table ───────
     # Generates the xlsx, then inserts an OLE paragraph directly after the
