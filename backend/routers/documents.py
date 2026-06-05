@@ -359,18 +359,40 @@ async def update_td(
 ):
     """
     Update an existing TD document with iFlow ZIP data — ZERO AI.
-    Returns updated DOCX with mapping table inserted in the Mapping section.
-    Use the /mapping-excel endpoint for the standalone .xlsx file.
+    Returns a ZIP bundle containing:
+      • <name>_Updated.docx  — updated Technical Design (mapping table inside)
+      • <MappingName>_MappingSpec.xlsx  — standalone mapping Excel (if mmap found)
     """
+    import zipfile as _zf
     from services.td_updater import update_td_with_iflow
+    from services.mapping_excel import generate_mapping_excel
+
     td_bytes    = await td_file.read()
     iflow_bytes = await iflow_zip.read()
-    result   = update_td_with_iflow(td_bytes, iflow_bytes,
-                                    author=author,
-                                    package_name=package_name)
-    base     = (td_file.filename or "TD").replace(".docx", "")
-    filename = f"{base}_Updated.docx"
-    return _docx_response(result, filename)
+
+    docx_bytes  = update_td_with_iflow(td_bytes, iflow_bytes,
+                                       author=author,
+                                       package_name=package_name)
+    xlsx_result = generate_mapping_excel(iflow_bytes)
+
+    base      = (td_file.filename or "TD").replace(".docx", "")
+    docx_name = f"{base}_Updated.docx"
+
+    if xlsx_result:
+        xlsx_bytes, xlsx_name = xlsx_result
+        buf = BytesIO()
+        with _zf.ZipFile(buf, 'w', compression=_zf.ZIP_DEFLATED) as zout:
+            zout.writestr(docx_name, docx_bytes)
+            zout.writestr(xlsx_name, xlsx_bytes)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{base}_Updated.zip"'},
+        )
+
+    # No mapping found — just return the DOCX
+    return _docx_response(docx_bytes, docx_name)
 
 
 @router.post("/mapping-excel")
