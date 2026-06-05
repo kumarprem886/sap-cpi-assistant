@@ -113,6 +113,7 @@ export default function DocumentGenerator() {
   const [enhTdFile,    setEnhTdFile]    = useState<File | null>(null)
   const [enhIflowFile, setEnhIflowFile] = useState<File | null>(null)
   const [updateAuthor, setUpdateAuthor] = useState('')
+  const [updatePackage, setUpdatePackage] = useState('')
   const enhTdRef    = useRef<HTMLInputElement>(null)
   const enhIflowRef = useRef<HTMLInputElement>(null)
 
@@ -591,15 +592,26 @@ export default function DocumentGenerator() {
             </div>
           </div>
 
-          {/* Author name */}
-          <div>
-            <label className="label">Author Name (optional)</label>
-            <input
-              className="input-field"
-              placeholder="Your full name — written into the TD Author field"
-              value={updateAuthor}
-              onChange={e => setUpdateAuthor(e.target.value)}
-            />
+          {/* Author + Package row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Author Name (optional)</label>
+              <input
+                className="input-field"
+                placeholder="e.g. Prem Kumar"
+                value={updateAuthor}
+                onChange={e => setUpdateAuthor(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label">Package Name (optional)</label>
+              <input
+                className="input-field"
+                placeholder="e.g. IT - ITALTRANS  (leave blank to auto-derive)"
+                value={updatePackage}
+                onChange={e => setUpdatePackage(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Status chips when both uploaded */}
@@ -621,7 +633,8 @@ export default function DocumentGenerator() {
                   const form = new FormData()
                   form.append('td_file',   enhTdFile)
                   form.append('iflow_zip', enhIflowFile)
-                  if (updateAuthor.trim()) form.append('author', updateAuthor.trim())
+                  if (updateAuthor.trim())  form.append('author',       updateAuthor.trim())
+                  if (updatePackage.trim()) form.append('package_name', updatePackage.trim())
                   const res = await axios.post('/api/docs/update-td', form, { responseType: 'blob' })
                   const cd  = res.headers['content-disposition'] || ''
                   const name = cd.match(/filename="?([^"]+)"?/)?.[1] || 'TD_Updated.docx'

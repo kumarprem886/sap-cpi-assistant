@@ -352,9 +352,10 @@ IMPORTANT for diagram fields:
 
 @router.post("/update-td")
 async def update_td(
-    td_file:   UploadFile = File(...),
-    iflow_zip: UploadFile = File(...),
-    author:    str = Form(""),
+    td_file:      UploadFile = File(...),
+    iflow_zip:    UploadFile = File(...),
+    author:       str = Form(""),
+    package_name: str = Form(""),
 ):
     """
     Update an existing TD document with iFlow ZIP data — ZERO AI.
@@ -363,7 +364,9 @@ async def update_td(
     from services.td_updater import update_td_with_iflow
     td_bytes    = await td_file.read()
     iflow_bytes = await iflow_zip.read()
-    result   = update_td_with_iflow(td_bytes, iflow_bytes, author=author)
+    result   = update_td_with_iflow(td_bytes, iflow_bytes,
+                                    author=author,
+                                    package_name=package_name)
     base     = (td_file.filename or "TD").replace(".docx", "")
     filename = f"{base}_Updated.docx"
     return _docx_response(result, filename)

@@ -1393,7 +1393,8 @@ def _replace_artifact_names_everywhere(doc: Document, facts: dict, appendix_data
                     _set_cell(val_cell, f'Artifact: {mmap_name} (CPI)')
 
 
-def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = '') -> bytes:
+def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes,
+                         author: str = '', package_name: str = '') -> bytes:
     """
     Update an existing TD document with iFlow ZIP data.
     - Fills main body tables from Appendix data
@@ -1550,7 +1551,10 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
     mmap_name_from_zip  = facts['mmap_name']
     # Pass appendix text so country detection finds "Italy" from "Italy Italtrans 3PL"
     _appendix_text = ' '.join(str(v) for v in appendix_data.values())
-    pkg_from_appendix   = derive_package_name(facts, extra_text=_appendix_text)
+    # Manual package_name from UI overrides auto-derivation
+    pkg_from_appendix = (package_name.strip()
+                         if package_name and package_name.strip()
+                         else derive_package_name(facts, extra_text=_appendix_text))
 
     for table in doc.tables[:main_body_limit]:
         for row in table.rows:
@@ -1761,7 +1765,7 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
 
     # Use iflow_name (Bundle-Name) which is now set by parse_iflow_zip
     iflow_display_name = facts.get('iflow_name') or facts.get('name', 'Integration Process')
-    pkg_name = derive_package_name(facts, extra_text=_appendix_text)
+    pkg_name = pkg_from_appendix  # already computed above (manual or derived)
 
     _add_para(doc,
         f'iFlow: {iflow_display_name} | Version: {facts.get("iflow_version","1.0")} | '
