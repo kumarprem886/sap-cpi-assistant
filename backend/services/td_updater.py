@@ -363,6 +363,83 @@ def _join_wrapped(text):
     return re.sub(r'\s+', ' ', text.replace('\n ', '')).strip()
 
 
+def _get_appendix_source_target(doc) -> dict:
+    """
+    Read the Source and Target appendix tables (in the last ~20 tables) and
+    return their key field values so main-body tables can be filled without
+    guessing.  Returns:
+      {'source': {'name','type_of_system','protocol','use_of_system'},
+       'target': {...}}
+    """
+    n = len(doc.tables)
+    appendix_start = max(0, n - 20)
+    result = {'source': {}, 'target': {}}
+
+    for tbl in doc.tables[appendix_start:]:
+        hdr_text = tbl.rows[0].cells[0].text.strip() if tbl.rows else ''
+        which = ('source' if hdr_text == 'Source'
+                 else 'target' if hdr_text == 'Target'
+                 else None)
+        if which is None:
+            continue
+
+        data = result[which]
+        for row in tbl.rows[1:]:
+            cells = [c.text.strip() for c in row.cells]
+            # Skip fully-duplicate rows (merged cells)
+            uniq = list(dict.fromkeys(c for c in cells if c))
+            if len(uniq) < 2:
+                continue
+            lbl = uniq[0].lower().replace('\xa0', ' ')
+            val = uniq[1]
+
+            if 'name' in lbl and 'application' in lbl:
+                data.setdefault('name', val)
+            elif 'type of system' in lbl:
+                data.setdefault('type_of_system', val)  # first occurrence wins
+            elif 'communication protocol' in lbl:
+                data.setdefault('protocol', val)
+            elif 'use of system' in lbl:
+                data.setdefault('use_of_system', val)
+
+    return result
+
+
+def _map_systype_to_cb(type_text: str) -> set:
+    """Map appendix Type of System text → checkbox label(s) to tick."""
+    t = type_text.upper()
+    if any(k in t for k in ('NON-SAP', 'NON SAP', 'NONSAP', 'THIRD', 'B2B',
+                             'OTHER', '3PL', 'EXTERNAL', 'VENDOR')):
+        return {'Third-Party System', 'Other (including non-SAP'}
+    if 'SAP' in t:
+        return {'SAP System'}
+    return set()
+
+
+def _map_proto_to_cb(proto_text: str) -> set:
+    """Map appendix Communication Protocol text → checkbox label(s) to tick."""
+    _MAP = {
+        'IDOC': 'IDoc', 'IDOCXML': 'IDoc',
+        'AS2': 'AS2',
+        'HTTPS': 'HTTPS', 'HTTP': 'HTTPS',
+        'AMQP': 'AMQP',
+        'SFTP': 'SFTP',
+        'SOAP': 'SOAP',
+        'RFC': 'RFC',
+        'JDBC': 'JDBC',
+        'XI': 'XI',
+        'RFC': 'RFC',
+        'ODATA': 'OData',
+        'REST': 'HTTPS',
+    }
+    result = set()
+    for token in re.split(r'[\s,;/]+', proto_text.upper()):
+        t = token.strip()
+        if t in _MAP:
+            result.add(_MAP[t])
+    return result
+
+
 def _extract_appendix_data(doc: Document) -> dict:
     """
     Extract data from appendix tables (last ~14 tables in the document).
@@ -1158,6 +1235,9 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
     except Exception:
         pass  # fall back to _extract_iflow_facts data if parse fails
     appendix_data = _extract_appendix_data(doc)
+    # Read Source/Target appendix tables separately so we can fill main-body
+    # checkboxes from the actual consultant-filled values, not from iFlow logic
+    _app_st = _get_appendix_source_target(doc)
 
     # ── Step 0: Extract what the TD currently has (to know what to replace) ──
     # Collect all "wrong" artifact names already in the document that need replacing.
@@ -1403,30 +1483,30 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                             _set_cell(cells[1], f'SAP {_real_sender} system monitoring (Transaction SXMB_MONI / Cloud ALM)')
                 break
 
-    # ── Fix Source/Target "Name of application" + Type of System + Protocol ──
-    _src_app = appendix_data.get(_norm('Source system'), '') or _real_sender
+    # ── Fill Source/Target from appendix data (not hardcoded iFlow logic) ───────
+    # The appendix has consultant-filled Source/Target tables with exact values:
+    # Type of System (e.g. "SAP S/4HANA"), Communication Protocol (e.g. "IDOC")
+    # Use those values to fill/check the main-body tables.
+    _a_src = _app_st.get('source', {})
+    _a_tgt = _app_st.get('target', {})
 
-    # Use adapter target_name directly — avoids wrong participant names like
-    # "TriggerException" that _extract_vendor_name may return
+    # Name of application: appendix > iFlow adapter > fallback
     _real_recv_adapters = [a for a in _all_adapters
                            if a.get('direction') == 'Receiver'
                            and a.get('component') not in ('ProcessDirect',)]
-    _tgt_app = (
-        (_real_recv_adapters[0].get('target_name') or _real_recv_adapters[0].get('name', ''))
-        if _real_recv_adapters
-        else (appendix_data.get(_norm('Target system'), '') or 'Target')
-    )
+    _src_app = (_a_src.get('name', '')
+                or appendix_data.get(_norm('Source system'), '')
+                or _real_sender)
+    _tgt_app = (_a_tgt.get('name', '')
+                or appendix_data.get(_norm('Target system'), '')
+                or (_real_recv_adapters[0].get('target_name') or _real_recv_adapters[0].get('name', '')
+                    if _real_recv_adapters else 'Target'))
 
-    # Adapter protocols for checkbox labelling
-    _sender_proto  = (_all_adapters[next((i for i, a in enumerate(_all_adapters)
-                                          if a.get('direction') == 'Sender'), -1)]
-                      .get('component', 'HTTPS') if any(a.get('direction') == 'Sender'
-                                                         for a in _all_adapters) else 'HTTPS')
-    _target_proto  = (_real_recv_adapters[0].get('component', '') if _real_recv_adapters else '')
-
-    # Determine system types
-    _src_is_sap = any(k in _src_app.upper() for k in ('S4', 'S/4', 'HANA', 'ECC', 'ERP', 'SAP'))
-    _tgt_is_sap = any(k in _tgt_app.upper() for k in ('S4', 'S/4', 'HANA', 'ECC', 'ERP', 'SAP'))
+    # Checkboxes from appendix — zero guesswork
+    _src_cb = (_map_systype_to_cb(_a_src.get('type_of_system', '')) |
+               _map_proto_to_cb(_a_src.get('protocol', '')))
+    _tgt_cb = (_map_systype_to_cb(_a_tgt.get('type_of_system', '')) |
+               _map_proto_to_cb(_a_tgt.get('protocol', '')))
 
     for _tbl in doc.tables[:main_body_limit]:
         _hdr = _tbl.rows[0].cells[0].text.strip() if _tbl.rows else ''
@@ -1437,21 +1517,18 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                 if len(_row.cells) >= 2 and 'name of application' in _row.cells[0].text.lower():
                     _set_cell(_row.cells[1], _src_app)
                     break
-            # Checkboxes: Type of System + Communication Protocol
-            try:
-                _src_cb = set()
-                if _src_is_sap:
-                    _src_cb.add('SAP System')
-                else:
-                    _src_cb.add('Other (including non-SAP')
-                if _sender_proto:
-                    _src_cb.add(_sender_proto)   # e.g. 'HTTPS', 'AMQP'
-                if _has_aem:
-                    _src_cb.add('AMQP')          # S/4→AEM uses AMQP
-                if _src_cb:
+            # Fill Use of System from appendix (always — overwrite generic placeholder)
+            if _a_src.get('use_of_system'):
+                for _row in _tbl.rows[1:]:
+                    if len(_row.cells) >= 2 and 'use of system' in _row.cells[0].text.lower():
+                        _set_cell(_row.cells[1], _a_src['use_of_system'])
+                        break
+            # Checkboxes from appendix values
+            if _src_cb:
+                try:
                     _check_middleware_checkboxes(_tbl._tbl, _src_cb)
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
         elif _hdr in ('Target', 'Target System'):
             # Name of application
@@ -1459,20 +1536,18 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                 if len(_row.cells) >= 2 and 'name of application' in _row.cells[0].text.lower():
                     _set_cell(_row.cells[1], _tgt_app)
                     break
-            # Checkboxes: Type of System + Communication Protocol
-            try:
-                _tgt_cb = set()
-                if _tgt_is_sap:
-                    _tgt_cb.add('SAP System')
-                else:
-                    _tgt_cb.add('Third-Party System')
-                    _tgt_cb.add('Other (including non-SAP')  # some TDs use this label
-                if _target_proto:
-                    _tgt_cb.add(_target_proto)   # e.g. 'AS2', 'SFTP'
-                if _tgt_cb:
+            # Fill Use of System from appendix (always — overwrite generic placeholder)
+            if _a_tgt.get('use_of_system'):
+                for _row in _tbl.rows[1:]:
+                    if len(_row.cells) >= 2 and 'use of system' in _row.cells[0].text.lower():
+                        _set_cell(_row.cells[1], _a_tgt['use_of_system'])
+                        break
+            # Checkboxes from appendix values
+            if _tgt_cb:
+                try:
                     _check_middleware_checkboxes(_tbl._tbl, _tgt_cb)
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
     # ── Embed mapping Excel OLE into the existing Mapping Objects table ───────
     # Generates the xlsx, then inserts an OLE paragraph directly after the
