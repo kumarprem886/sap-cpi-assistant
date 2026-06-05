@@ -389,21 +389,19 @@ def _extract_appendix_data(doc: Document) -> dict:
     return data
 
 
-def _check_middleware_checkboxes(doc, solutions: set):
+def _check_middleware_checkboxes(element_or_doc, solutions: set):
     """
     Tick the W14 SDT checkbox controls that precede matching solution labels.
-    solutions: e.g. {'CPI', 'Event Mesh'}
-    Word stores these as:
-      <w:sdt><w:sdtPr><w14:checkbox><w14:checked w14:val="0"/></w14:checkbox>...
-      <w:sdtContent><w:r><w:t>☐</w:t></w:r></w:sdtContent></w:sdt>
-      <w:r><w:t> CPI</w:t></w:r>   ← label follows immediately
+    element_or_doc: doc (whole document) OR a table._tbl element (single table only)
+    solutions: e.g. {'CPI', 'Event Mesh', 'SAP System', 'HTTPS'}
     """
+    root = element_or_doc.element.body if hasattr(element_or_doc, 'element') else element_or_doc
     _W14 = 'http://schemas.microsoft.com/office/word/2010/wordml'
 
     def _w14(tag):
         return f'{{{_W14}}}{tag}'
 
-    for sdt in doc.element.body.iter(qn('w:sdt')):
+    for sdt in root.iter(qn('w:sdt')):
         sdtPr = sdt.find(qn('w:sdtPr'))
         if sdtPr is None:
             continue
@@ -1405,23 +1403,76 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                             _set_cell(cells[1], f'SAP {_real_sender} system monitoring (Transaction SXMB_MONI / Cloud ALM)')
                 break
 
-    # ── Fix Source/Target "Name of application" fields ───────────────────────
-    # These rows may have wrong values (e.g. mmap name) from a previous run.
-    # Use appendix data (Source system / Target system) + adapter names.
+    # ── Fix Source/Target "Name of application" + Type of System + Protocol ──
     _src_app = appendix_data.get(_norm('Source system'), '') or _real_sender
-    _tgt_app = _extract_vendor_name(facts) or appendix_data.get(_norm('Target system'), '') or 'Target'
+
+    # Use adapter target_name directly — avoids wrong participant names like
+    # "TriggerException" that _extract_vendor_name may return
+    _real_recv_adapters = [a for a in _all_adapters
+                           if a.get('direction') == 'Receiver'
+                           and a.get('component') not in ('ProcessDirect',)]
+    _tgt_app = (
+        (_real_recv_adapters[0].get('target_name') or _real_recv_adapters[0].get('name', ''))
+        if _real_recv_adapters
+        else (appendix_data.get(_norm('Target system'), '') or 'Target')
+    )
+
+    # Adapter protocols for checkbox labelling
+    _sender_proto  = (_all_adapters[next((i for i, a in enumerate(_all_adapters)
+                                          if a.get('direction') == 'Sender'), -1)]
+                      .get('component', 'HTTPS') if any(a.get('direction') == 'Sender'
+                                                         for a in _all_adapters) else 'HTTPS')
+    _target_proto  = (_real_recv_adapters[0].get('component', '') if _real_recv_adapters else '')
+
+    # Determine system types
+    _src_is_sap = any(k in _src_app.upper() for k in ('S4', 'S/4', 'HANA', 'ECC', 'ERP', 'SAP'))
+    _tgt_is_sap = any(k in _tgt_app.upper() for k in ('S4', 'S/4', 'HANA', 'ECC', 'ERP', 'SAP'))
+
     for _tbl in doc.tables[:main_body_limit]:
         _hdr = _tbl.rows[0].cells[0].text.strip() if _tbl.rows else ''
+
         if _hdr in ('Source', 'Source System'):
+            # Name of application
             for _row in _tbl.rows[1:]:
                 if len(_row.cells) >= 2 and 'name of application' in _row.cells[0].text.lower():
                     _set_cell(_row.cells[1], _src_app)
                     break
+            # Checkboxes: Type of System + Communication Protocol
+            try:
+                _src_cb = set()
+                if _src_is_sap:
+                    _src_cb.add('SAP System')
+                else:
+                    _src_cb.add('Other (including non-SAP')
+                if _sender_proto:
+                    _src_cb.add(_sender_proto)   # e.g. 'HTTPS', 'AMQP'
+                if _has_aem:
+                    _src_cb.add('AMQP')          # S/4→AEM uses AMQP
+                if _src_cb:
+                    _check_middleware_checkboxes(_tbl._tbl, _src_cb)
+            except Exception:
+                pass
+
         elif _hdr in ('Target', 'Target System'):
+            # Name of application
             for _row in _tbl.rows[1:]:
                 if len(_row.cells) >= 2 and 'name of application' in _row.cells[0].text.lower():
                     _set_cell(_row.cells[1], _tgt_app)
                     break
+            # Checkboxes: Type of System + Communication Protocol
+            try:
+                _tgt_cb = set()
+                if _tgt_is_sap:
+                    _tgt_cb.add('SAP System')
+                else:
+                    _tgt_cb.add('Third-Party System')
+                    _tgt_cb.add('Other (including non-SAP')  # some TDs use this label
+                if _target_proto:
+                    _tgt_cb.add(_target_proto)   # e.g. 'AS2', 'SFTP'
+                if _tgt_cb:
+                    _check_middleware_checkboxes(_tbl._tbl, _tgt_cb)
+            except Exception:
+                pass
 
     # ── Embed mapping Excel OLE into the existing Mapping Objects table ───────
     # Generates the xlsx, then inserts an OLE paragraph directly after the
