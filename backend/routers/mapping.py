@@ -554,6 +554,34 @@ NODE:
 4. Direct copy -> return exactly: ""
 5. If description mentions multiple fields, look them up from available source fields
 6. Return ONLY the expression on one line -- no explanation, no markdown
+
+== CONFIRMED WORKING EXAMPLES (learn from these) ==
+
+"uppercase" / "to upper" / "make uppercase"                          -> toUpperCase((/FieldName))
+"lowercase" / "to lower"                                             -> toLowerCase((/FieldName))
+"trim whitespace" / "remove spaces"                                  -> trim((/FieldName))
+"character count" / "string length"                                  -> length((/FieldName))
+"first 4 characters" / "extract first 4 chars"                       -> substring((/FieldName), 0, 4)
+"chars 3 to 8" / "extract positions 3 to 8"                         -> substring((/FieldName), 3, 8)
+"join Date and Time with T"                                          -> (/Date)+T+(/Time)
+"combine Company and Doc with dash"                                   -> (/CompanyCode)+- +(/DocNumber)
+"remove dashes" / "delete hyphens"                                   -> replaceAll((/FieldName), -, )
+"replace spaces with underscore"                                      -> replaceAll((/FieldName),  , _)
+"split by comma"                                                     -> SplitByValue((/FieldName), ",")
+"split by pipe"                                                      -> SplitByValue((/FieldName), "|")
+"reformat date YYYYMMDD to YYYY-MM-DD"                               -> formatDate((/DateField), yyyyMMdd, yyyy-MM-dd)
+"reformat date to dd/MM/yyyy"                                        -> formatDate((/DateField), yyyyMMdd, dd/MM/yyyy)
+"today's date" / "current date"                                     -> currentDate()
+"add field1 and field2"                                              -> add((/Field1), (/Field2))
+"multiply quantity by price"                                         -> multiply((/Quantity), (/Price))
+"subtract discount from total"                                       -> subtract((/TotalAmount), (/Discount))
+"total of all items" / "sum of quantities"                           -> sum((/Items/Item/Quantity))
+"count of line items"                                                -> count((/Items/Item))
+"if status equals OPEN" / "when status is OPEN"                      -> Equals((/Status), OPEN)
+"if currency is not EUR"                                             -> notEquals((/Currency), EUR)
+"use default NET30 if payment terms missing"                         -> mapWithDefault((/PaymentTerms), NET30)
+"repeat header date for each item"                                   -> useOneAsMany((/Header/Date), (/Items/Item), (/Items/Item/LineNum))
+"direct copy" / "same value" / "copy as is"                         -> ""
 """
 
 
