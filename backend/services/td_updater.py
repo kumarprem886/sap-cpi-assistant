@@ -595,7 +595,7 @@ def _apply_appendix_to_main_body(doc, main_body_limit: int):
                 app_val = next(
                     (v for k, v in app_map.items()
                      if (k.startswith(norm_lbl) or norm_lbl.startswith(k))
-                     and len(min(k, norm_lbl, key=len)) >= 8),
+                     and len(min(k, norm_lbl, key=len)) >= 3),
                     None
                 )
             if not app_val:
@@ -711,6 +711,9 @@ _ALWAYS_REPLACE_LABELS = {
     'folder',          # Folder name (PO)
     'workingname',     # Working Name of Interface → iFlow name
     'mappingname',     # Mapping name row
+    # NOTE: 'mode' intentionally excluded — handled by checkbox logic in
+    # _apply_appendix_to_main_body; adding it here would overwrite SDT
+    # checkbox cells with plain text, destroying the checkbox formatting.
     'mmapping',        # Mapping name
     'description',     # iFlow description
     'mode',            # Asynchronous/Synchronous
