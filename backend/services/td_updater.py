@@ -370,8 +370,9 @@ def _extract_appendix_data(doc: Document) -> dict:
     """
     data = {}
     n = len(doc.tables)
-    # Appendix tables are typically the last 14 (43-56 of 56)
-    appendix_start = max(0, n - 15)
+    # Appendix tables: widen to last ~20 to capture business-info tables
+    # that sometimes sit just before the technical appendix block
+    appendix_start = max(0, n - 20)
     
     for table in doc.tables[appendix_start:]:
         for row in table.rows:
@@ -1348,20 +1349,43 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes, author: str = 
                         if old_t in cell.text:
                             _replace_text_in_cell(cell, old_t, new_t)
 
-    # ── Tick Middleware Solutions checkboxes ──────────────────────────────────
-    # Always check CPI (this is a CPI iFlow).
-    # Also check Event Mesh if the sender is SAP AEM.
+    # ── Tick all relevant checkboxes from iFlow/appendix data ─────────────────
     _all_adapters = facts.get('adapters', [])
+
+    # ① Middleware Solutions — CPI always; Event Mesh if SAP AEM sender
     _has_aem = any(
         any(k in (a.get('source_name', '') + a.get('name', '')).lower()
             for k in ('aem', 'event', 'mesh'))
         for a in _all_adapters
     )
-    _middleware_solutions = {'CPI'}
+    _cb_to_check = {'CPI'}
     if _has_aem:
-        _middleware_solutions.add('Event Mesh')
+        _cb_to_check.add('Event Mesh')
+
+    # ② Business Criticality — read from appendix data
+    _biz_crit_val = ''
+    for _ak, _av in appendix_data.items():
+        if 'businesscriticality' in _ak or ('business' in _ak and 'critica' in _ak):
+            _biz_crit_val = str(_av).strip().lower()
+            break
+    if 'highly' in _biz_crit_val:
+        _cb_to_check.add('Highly critical')
+    elif 'non' in _biz_crit_val or 'not' in _biz_crit_val:
+        _cb_to_check.add('Non-critical')
+    elif 'critical' in _biz_crit_val:
+        _cb_to_check.add('Critical')
+
+    # ③ Data flow direction — Unidirectional / Multiple from adapter count
+    _real_receivers = [a for a in _all_adapters
+                       if a.get('direction') == 'Receiver'
+                       and a.get('component') not in ('ProcessDirect',)]
+    if len(_real_receivers) > 1:
+        _cb_to_check.add('Multiple')
+    else:
+        _cb_to_check.add('Unidirectional')
+
     try:
-        _check_middleware_checkboxes(doc, _middleware_solutions)
+        _check_middleware_checkboxes(doc, _cb_to_check)
     except Exception:
         pass  # best-effort
 
