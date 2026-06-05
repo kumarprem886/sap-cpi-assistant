@@ -1686,79 +1686,110 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes,
     _a_src = _app_st.get('source', {})
     _a_tgt = _app_st.get('target', {})
 
-    # ── Embed mapping Excel OLE into the existing Mapping Objects table ───────
-    # Generates the xlsx, then inserts an OLE paragraph directly after the
-    # Mapping table (section 3.1.2) in the main body using XML manipulation.
+    # ── Insert mapping table into the Mapping Objects section ────────────────
+    # OLE embedding is unreliable (blocked by enterprise security settings).
+    # Instead, insert the full mapping as a formatted table directly after
+    # the existing Mapping table — always visible, no interaction needed.
     if facts.get('mmap_name'):
         try:
-            from services.mapping_excel import generate_mapping_excel
-            from lxml import etree as _ET
-            import uuid as _uuid
-            _xlsx_result = generate_mapping_excel(iflow_zip_bytes)
-            if _xlsx_result:
-                _xlsx_bytes, _xlsx_embed_name = _xlsx_result
-                _rId_obj  = f"rIdMmap{_uuid.uuid4().hex[:8]}"
-                _shape_id = f"_x0000_i{_uuid.uuid4().int % 90000 + 10000}"
-                _obj_id   = f"_{_uuid.uuid4().int % 2000000000}"
+            from services.mapping_excel import _parse_mmap_xml, _extract_mmap_meta
+            import zipfile as _zf_inner
+            with _zf_inner.ZipFile(io.BytesIO(iflow_zip_bytes)) as _zinner:
+                _mmap_files = [f for f in _zinner.namelist() if f.endswith('.mmap')]
+                if _mmap_files:
+                    _mmap_xml = _zinner.read(_mmap_files[0]).decode('utf-8', 'replace')
+                    _mmap_pairs = _parse_mmap_xml(_mmap_xml)
+                    _mmap_meta  = _extract_mmap_meta(_mmap_xml)
+                    # Only mapped rows
+                    _mmap_pairs = [(d, s) for d, s in _mmap_pairs if s.strip()]
+
+            if _mmap_pairs:
+                from lxml import etree as _ET
                 _NS_W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
-                _NS_V = 'urn:schemas-microsoft-com:vml'
-                _NS_O = 'urn:schemas-microsoft-com:office:office'
-                _NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 
-                # Build OLE paragraph XML.
-                # IMPORTANT: No <v:imagedata> — a PNG imagedata makes Word treat the
-                # whole thing as a picture (Picture Format ribbon) instead of an OLE
-                # object.  Use a solid-filled rectangle (type t1) with o:ole="" so
-                # Word recognises it as an OLE container and allows double-click.
-                _short_name = _xlsx_embed_name.replace('_MappingSpec.xlsx', '')
-                _ole_xml = (
-                    f'<w:p xmlns:w="{_NS_W}" xmlns:v="{_NS_V}" '
-                    f'xmlns:o="{_NS_O}" xmlns:r="{_NS_R}">'
-                    f'<w:pPr><w:jc w:val="left"/></w:pPr>'
-                    f'<w:r><w:object w:dxaOrig="4320" w:dyaOrig="1008">'
-                    # type #_x0000_t1 = plain rectangle — no imagedata needed,
-                    # solid green fill, white border, OLE container marker
-                    f'<v:shape id="{_shape_id}" type="#_x0000_t1" '
-                    f'fillcolor="#217346" strokecolor="#FFFFFF" strokeweight="1pt" '
-                    f'style="width:3in;height:0.7in" o:ole="">'
-                    f'<v:fill type="solid" color="#217346"/>'
-                    f'<v:stroke color="#FFFFFF" weight="1pt"/>'
-                    f'<v:textbox style="mso-direction-alt:auto;mso-fit-shape-to-text:false" '
-                    f'inset="4pt,4pt,4pt,4pt">'
-                    f'<w:txbxContent>'
-                    f'<w:p><w:pPr><w:jc w:val="left"/></w:pPr>'
-                    f'<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/>'
-                    f'<w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr>'
-                    f'<w:t xml:space="preserve">■ {_short_name}.xlsx</w:t></w:r></w:p>'
-                    f'<w:p><w:r><w:rPr><w:color w:val="C8FFD4"/>'
-                    f'<w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
-                    f'<w:t>Double-click to open mapping specification</w:t>'
-                    f'</w:r></w:p>'
-                    f'</w:txbxContent></v:textbox>'
-                    f'</v:shape>'
-                    f'<o:OLEObject Type="Embed" ProgID="Excel.Sheet.12" '
-                    f'ShapeID="{_shape_id}" DrawAspect="Icon" '
-                    f'ObjectID="{_obj_id}" r:id="{_rId_obj}"/>'
-                    f'</w:object></w:r>'
-                    f'</w:p>'
+                # Build a label paragraph for context
+                _lbl_xml = (
+                    f'<w:p xmlns:w="{_NS_W}">'
+                    f'<w:pPr><w:spacing w:before="120" w:after="60"/></w:pPr>'
+                    f'<w:r><w:rPr><w:sz w:val="18"/><w:color w:val="555555"/><w:i/></w:rPr>'
+                    f'<w:t xml:space="preserve">Mapping: {facts["mmap_name"]}.mmap'
+                    f'  ({len(_mmap_pairs)} fields)</w:t></w:r></w:p>'
                 )
-                _ole_elem = _ET.fromstring(_ole_xml)
+                _lbl_elem = _ET.fromstring(_lbl_xml)
 
-                # Find the FIRST Mapping table in main body and insert after it
-                _inserted = False
+                # Build mapping table XML (SAP blue header, alternating rows)
+                _BLUE  = '1A3A6B'
+                _EVEN  = 'EEF2F7'
+                _WHITE = 'FFFFFF'
+
+                def _tc(text, bold=False, bg=_WHITE, width=4500):
+                    """Build a <w:tc> XML string."""
+                    b = '<w:b/>' if bold else ''
+                    return (
+                        f'<w:tc xmlns:w="{_NS_W}">'
+                        f'<w:tcPr><w:tcW w:w="{width}" w:type="dxa"/>'
+                        f'<w:shd w:val="clear" w:color="auto" w:fill="{bg}"/></w:tcPr>'
+                        f'<w:p><w:pPr><w:spacing w:before="40" w:after="40"/></w:pPr>'
+                        f'<w:r><w:rPr>{b}<w:sz w:val="16"/>'
+                        + (f'<w:color w:val="FFFFFF"/>' if bold and bg == _BLUE else '')
+                        + f'</w:rPr><w:t xml:space="preserve">{_xml_esc(text)}</w:t></w:r></w:p></w:tc>'
+                    )
+
+                def _xml_esc(s):
+                    return (s.replace('&','&amp;').replace('<','&lt;')
+                             .replace('>','&gt;').replace('"','&quot;'))
+
+                rows_xml = ''
+                # Header row
+                rows_xml += (
+                    f'<w:tr xmlns:w="{_NS_W}">'
+                    + _tc('TARGET',          bold=True, bg=_BLUE, width=4500)
+                    + _tc('MAPPING (SOURCE)', bold=True, bg=_BLUE, width=4500)
+                    + '</w:tr>'
+                )
+                # Data rows
+                for i, (dst, src) in enumerate(_mmap_pairs[:60]):  # cap at 60
+                    bg = _EVEN if i % 2 == 0 else _WHITE
+                    rows_xml += (
+                        f'<w:tr xmlns:w="{_NS_W}">'
+                        + _tc(dst, bg=bg, width=4500)
+                        + _tc(src, bg=bg, width=4500)
+                        + '</w:tr>'
+                    )
+                if len(_mmap_pairs) > 60:
+                    rows_xml += (
+                        f'<w:tr xmlns:w="{_NS_W}">'
+                        + _tc(f'... {len(_mmap_pairs)-60} more rows', bg=_EVEN, width=4500)
+                        + _tc('', bg=_EVEN, width=4500)
+                        + '</w:tr>'
+                    )
+
+                _tbl_xml = (
+                    f'<w:tbl xmlns:w="{_NS_W}">'
+                    f'<w:tblPr><w:tblStyle w:val="TableGrid"/>'
+                    f'<w:tblW w:w="9000" w:type="dxa"/>'
+                    f'<w:tblBorders>'
+                    f'<w:top w:val="single" w:sz="4" w:color="B0B8C4"/>'
+                    f'<w:left w:val="single" w:sz="4" w:color="B0B8C4"/>'
+                    f'<w:bottom w:val="single" w:sz="4" w:color="B0B8C4"/>'
+                    f'<w:right w:val="single" w:sz="4" w:color="B0B8C4"/>'
+                    f'<w:insideH w:val="single" w:sz="4" w:color="B0B8C4"/>'
+                    f'<w:insideV w:val="single" w:sz="4" w:color="B0B8C4"/>'
+                    f'</w:tblBorders></w:tblPr>'
+                    + rows_xml
+                    + f'</w:tbl>'
+                )
+                _tbl_elem = _ET.fromstring(_tbl_xml)
+
+                # Insert label + table after the first Mapping table in main body
                 for _mt in doc.tables[:main_body_limit]:
                     _mhdr = _mt.rows[0].cells[0].text.strip() if _mt.rows else ''
                     if 'Mapping' in _mhdr and len(_mhdr) < 20:
-                        _mt._tbl.addnext(_ole_elem)
-                        _inserted = True
+                        _mt._tbl.addnext(_tbl_elem)
+                        _mt._tbl.addnext(_lbl_elem)
                         break
-
-                _ole_ids = {
-                    'rId_obj':    _rId_obj,
-                    'embed_name': _xlsx_embed_name,
-                }
-        except Exception as _exc:
-            pass  # silent — OLE is best-effort
+        except Exception:
+            pass  # silent best-effort
 
     # ── Add new page with iFlow Design Steps ─────────────────────────────────
     doc.add_page_break()
@@ -1873,8 +1904,8 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes,
     doc.save(out)
     raw = out.getvalue()
 
-    # ── ZIP surgery: replace diagrams + embed mapping Excel OLE ─────────────
-    if correct_png or _ole_ids:
+    # ── ZIP surgery: replace stale flowchart diagrams ────────────────────────
+    if correct_png:
         try:
             import zipfile as _zf
             buf2 = io.BytesIO()
@@ -1883,45 +1914,13 @@ def update_td_with_iflow(td_bytes: bytes, iflow_zip_bytes: bytes,
                 for item in zin.infolist():
                     data = zin.read(item.filename)
                     fn   = item.filename
-
-                    # ① Replace stale flowchart PNGs with correct diagram
-                    if (correct_png and fn.startswith('word/media/') and
+                    # Replace any large PNG (>30 KB) that is an embedded flowchart
+                    if (fn.startswith('word/media/') and
                             fn.lower().endswith('.png') and len(data) > 30000):
                         data = correct_png
-
-                    # ② Inject OLE relationship for embedded Excel
-                    elif _ole_ids and fn == 'word/_rels/document.xml.rels':
-                        data = data.decode('utf-8')
-                        new_rel = (
-                            f'<Relationship Id="{_ole_ids["rId_obj"]}" '
-                            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject" '
-                            f'Target="embeddings/{_ole_ids["embed_name"]}"/>'
-                        )
-                        data = data.replace('</Relationships>', new_rel + '</Relationships>')
-                        data = data.encode('utf-8')
-
-                    # ③ Register xlsx content-type so Word recognises it
-                    elif _ole_ids and fn == '[Content_Types].xml':
-                        data = data.decode('utf-8')
-                        ct = ('application/vnd.openxmlformats-officedocument'
-                              '.spreadsheetml.sheet')
-                        if 'xlsx' not in data:
-                            data = data.replace('</Types>',
-                                f'<Default Extension="xlsx" ContentType="{ct}"/>'
-                                '</Types>')
-                        data = data.encode('utf-8')
-
                     zout.writestr(item, data)
-
-                # ④ Write embedded xlsx file into the docx package
-                if _ole_ids and _xlsx_bytes:
-                    zout.writestr(
-                        f'word/embeddings/{_ole_ids["embed_name"]}',
-                        _xlsx_bytes,
-                    )
-
             return buf2.getvalue()
         except Exception:
-            pass  # fall back to unmodified saved bytes
+            pass
 
     return raw

@@ -618,7 +618,7 @@ export default function DocumentGenerator() {
           {enhTdFile && enhIflowFile && (
             <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-800/40 rounded-lg px-3 py-2">
               <CheckCircle size={13} className="text-green-400" />
-              Both files ready — generates the updated TD (.docx) with mapping Excel embedded inside
+              Both files ready — generates the updated TD (.docx) with mapping table inside + diagram
             </div>
           )}
 

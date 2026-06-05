@@ -359,7 +359,8 @@ async def update_td(
 ):
     """
     Update an existing TD document with iFlow ZIP data — ZERO AI.
-    The mapping Excel (.xlsx) is embedded as an OLE object inside the returned DOCX.
+    Returns updated DOCX with mapping table inserted in the Mapping section.
+    Use the /mapping-excel endpoint for the standalone .xlsx file.
     """
     from services.td_updater import update_td_with_iflow
     td_bytes    = await td_file.read()
