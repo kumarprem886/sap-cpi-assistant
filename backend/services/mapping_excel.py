@@ -225,6 +225,50 @@ def _parse_mmap_xml(mmap_xml: str) -> list[tuple[str, str]]:
 
 # ── Excel generation ───────────────────────────────────────────────────────────
 
+def _extract_mmap_meta(mmap_xml: str) -> dict:
+    """
+    Extract metadata from the mmap XML:
+      - source_msg:  root element name of the source message
+      - target_msg:  root element name of the target message
+      - source_file: XSD filename for source
+      - target_file: XSD filename for target
+      - description: mapping description (if any)
+    """
+    meta = {
+        'source_msg': '', 'target_msg': '',
+        'source_file': '', 'target_file': '',
+        'description': '',
+    }
+
+    # Description
+    desc_m = re.search(r'<description>([^<]*)</description>', mmap_xml)
+    if desc_m:
+        meta['description'] = desc_m.group(1).strip()
+
+    # lnkRole sections  (SOURCE_IFR_MESS / TARGET_IFR_MESS)
+    for role_m in re.finditer(
+        r'<lnkRole[^>]*\brole="(SOURCE_IFR_MESS|TARGET_IFR_MESS)"[^>]*>(.*?)</lnkRole>',
+        mmap_xml, re.DOTALL
+    ):
+        role   = role_m.group(1)
+        body   = role_m.group(2)
+        # Extract <elem> values: [filename, path, root-element]
+        elems  = re.findall(r'<elem>([^<]*)</elem>', body)
+        if not elems:
+            continue
+        xsd_file = elems[0] if len(elems) > 0 else ''
+        root_msg = elems[2] if len(elems) > 2 else elems[0]
+
+        if role == 'SOURCE_IFR_MESS':
+            meta['source_file'] = xsd_file
+            meta['source_msg']  = root_msg
+        else:
+            meta['target_file'] = xsd_file
+            meta['target_msg']  = root_msg
+
+    return meta
+
+
 def generate_mapping_excel(iflow_zip_bytes: bytes) -> tuple[bytes, str] | None:
     """
     Parse the iFlow ZIP, find the .mmap file, and generate an Excel mapping spec.
@@ -245,9 +289,12 @@ def generate_mapping_excel(iflow_zip_bytes: bytes) -> tuple[bytes, str] | None:
         mmap_path = mmap_files[0]
         mmap_name = mmap_path.split('/')[-1].replace('.mmap', '')
         mmap_xml  = z.read(mmap_path).decode('utf-8', 'replace')
-        xsd_files = [f.split('/')[-1] for f in files if f.endswith('.xsd')]
 
-    pairs = _parse_mmap_xml(mmap_xml)
+    # Extract full field pair list — filter to only mapped rows (non-empty source)
+    all_pairs = _parse_mmap_xml(mmap_xml)
+    pairs = [(dst, src) for dst, src in all_pairs if src.strip()]
+
+    meta = _extract_mmap_meta(mmap_xml)
 
     # ── Workbook ────────────────────────────────────────────────────────────────
     wb = openpyxl.Workbook()
@@ -289,15 +336,16 @@ def generate_mapping_excel(iflow_zip_bytes: bytes) -> tuple[bytes, str] | None:
     # Row 2: Column headers
     _hdr(2, 1, "PARAMETER", COL_FILL); _hdr(2, 2, "VALUE", COL_FILL); _hdr(2, 3, "", COL_FILL)
 
-    # Rows 3-8: Metadata
-    meta = [
+    # Rows 3-8: Metadata (using values extracted from mmap lnkRole sections)
+    meta_rows = [
         ("Name of Mapping",            f"{mmap_name}.mmap"),
-        ("Description",                ""),
-        ("Name of the Source Messages", ""),
-        ("Name of the Source Files",    ", ".join(xsd_files) if xsd_files else ""),
-        ("Name of the Target Messages", ""),
-        ("Name of the Target Files",    ", ".join(xsd_files) if xsd_files else ""),
+        ("Description",                meta['description']),
+        ("Name of the Source Messages", f"[{meta['source_msg']}]" if meta['source_msg'] else ""),
+        ("Name of the Source Files",    f"[{meta['source_file']}]" if meta['source_file'] else ""),
+        ("Name of the Target Messages", f"[{meta['target_msg']}]" if meta['target_msg'] else ""),
+        ("Name of the Target Files",    f"[{meta['target_file']}]" if meta['target_file'] else ""),
     ]
+    meta = meta_rows
     for i, (label, value) in enumerate(meta):
         row  = 3 + i
         fill = EVEN_FILL if i % 2 == 0 else ODD_FILL
